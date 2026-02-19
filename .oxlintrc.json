@@ -1,0 +1,21 @@
+{
+  "$schema": "./node_modules/oxlint/configuration_schema.json",
+  "plugins": ["typescript", "oxc", "import", "node", "promise", "unicorn"],
+  "categories": {
+    "correctness": "error",
+    "suspicious": "error",
+    "pedantic": "error",
+    "restriction": "error"
+  },
+  "ignorePatterns": ["dist/**", "node_modules/**"],
+  "rules": {
+    "eslint/no-shadow": "off",
+    "import/no-duplicates": "error",
+    "no-async-await": "off",
+    "promise/prefer-await-to-callbacks": "error",
+    "promise/prefer-await-to-then": "error",
+    "typescript/consistent-type-imports": "error",
+    "typescript/explicit-function-return-type": "off",
+    "typescript/no-unnecessary-condition": "error"
+  }
+}
