@@ -8,7 +8,7 @@ export function createFastifyServer(): FastifyInstance {
   server.get("/health", () => {
     return {
       status: "ok",
-    } as const;
+    };
   });
 
   return server;
