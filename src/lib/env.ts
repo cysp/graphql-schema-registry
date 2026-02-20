@@ -2,14 +2,18 @@
 
 import { z } from "zod";
 
+import { optionalNonBlankString } from "./zod.ts";
+
 export type Env = {
   host: string;
   port: number;
+  databaseUrl: string | undefined;
 };
 
 const envSchema = z.object({
   HOST: z.string().trim().min(1).default("0.0.0.0"),
   PORT: z.coerce.number().int().min(0).max(65_535).default(3000),
+  DATABASE_URL: optionalNonBlankString,
 });
 
 export function parseEnv(env: typeof process.env = process.env): Env {
@@ -22,6 +26,7 @@ export function parseEnv(env: typeof process.env = process.env): Env {
   }
 
   return {
+    databaseUrl: parsedEnv.data.DATABASE_URL,
     host: parsedEnv.data.HOST,
     port: parsedEnv.data.PORT,
   };
