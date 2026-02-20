@@ -4,13 +4,13 @@
   "private": true,
   "type": "module",
   "scripts": {
-    "dev": "node --env-file-if-exists=.env --watch src/index.ts",
+    "dev": "node --env-file-if-exists=.env --experimental-strip-types --watch src/index.ts",
     "format": "oxfmt .",
     "format:check": "oxfmt --check .",
     "lint": "oxlint --type-aware --type-check .",
     "lint:fix": "oxlint --type-aware --type-check --fix .",
-    "start": "node src/index.ts",
-    "test": "node --env-file-if-exists=.env --env-file-if-exists=.env.test --test --experimental-strip-types --enable-source-maps"
+    "start": "node --experimental-strip-types src/index.ts",
+    "test": "node --env-file-if-exists=.env --env-file-if-exists=.env.test --experimental-strip-types --enable-source-maps --test"
   },
   "dependencies": {
     "fastify": "5.7.4",
