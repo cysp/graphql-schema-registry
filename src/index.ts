@@ -1,3 +1,6 @@
+import { drizzle } from "drizzle-orm/postgres-js";
+import postgres from "postgres";
+
 import { createProcessSignalAbortController } from "./lib/abort.ts";
 import { parseEnv } from "./lib/env.ts";
 import { waitForFastifyServerStop } from "./lib/fastify.ts";
@@ -8,19 +11,34 @@ async function main(): Promise<void> {
 
   const abortController = createProcessSignalAbortController();
 
-  const server = createFastifyServer();
+  let postgresClient;
+  let database;
+  if (env.databaseUrl) {
+    postgresClient = postgres(env.databaseUrl);
+    database = drizzle({ client: postgresClient });
+  }
 
-  const serverClosedPromise = waitForFastifyServerStop(server);
+  try {
+    const server = createFastifyServer({
+      database,
+    });
 
-  const listeningAddress = await server.listen({
-    host: env.host,
-    port: env.port,
-    signal: abortController.signal,
-  });
+    const serverClosedPromise = waitForFastifyServerStop(server);
 
-  server.log.info({}, "server started: %s", listeningAddress);
+    const listeningAddress = await server.listen({
+      host: env.host,
+      port: env.port,
+      signal: abortController.signal,
+    });
 
-  await serverClosedPromise;
+    server.log.info({}, "server started: %s", listeningAddress);
+
+    await serverClosedPromise;
+  } finally {
+    await postgresClient?.end({
+      timeout: 5,
+    });
+  }
 }
 
 await main();
