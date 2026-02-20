@@ -13,6 +13,7 @@ async function main(): Promise<void> {
   const serverClosedPromise = waitForFastifyServerStop(server);
 
   const listeningAddress = await server.listen({
+    host: env.host,
     port: env.port,
     signal: abortController.signal,
   });
