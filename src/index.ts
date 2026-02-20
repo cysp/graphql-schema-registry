@@ -12,12 +12,12 @@ async function main(): Promise<void> {
 
   const serverClosedPromise = waitForFastifyServerStop(server);
 
-  const listening = await server.listen({
+  const listeningAddress = await server.listen({
     port: env.port,
     signal: abortController.signal,
   });
 
-  server.log.info({}, "server started: %s", listening);
+  server.log.info({}, "server started: %s", listeningAddress);
 
   await serverClosedPromise;
 }
