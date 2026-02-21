@@ -1,6 +1,7 @@
 import fastify, { type FastifyInstance } from "fastify";
 import { serializerCompiler, validatorCompiler } from "fastify-type-provider-zod";
 
+import { databaseProbe } from "./db/probe.ts";
 import { healthcheckPlugin } from "./lib/fastify/healthcheck/plugin.ts";
 
 export function createFastifyServer(): FastifyInstance {
@@ -12,7 +13,9 @@ export function createFastifyServer(): FastifyInstance {
   server.setSerializerCompiler(serializerCompiler);
 
   server.register(healthcheckPlugin, {
-    probes: {},
+    probes: {
+      database: databaseProbe,
+    },
   });
 
   return server;

@@ -3,11 +3,13 @@
 import { z } from "zod";
 
 export type Env = {
+  databaseUrl: string;
   host: string;
   port: number;
 };
 
 const envSchema = z.object({
+  DATABASE_URL: z.string().trim().min(1),
   HOST: z.string().trim().min(1).default("0.0.0.0"),
   PORT: z.coerce.number().int().min(0).max(65_535).default(3000),
 });
@@ -22,6 +24,7 @@ export function parseEnv(env: typeof process.env = process.env): Env {
   }
 
   return {
+    databaseUrl: parsedEnv.data.DATABASE_URL,
     host: parsedEnv.data.HOST,
     port: parsedEnv.data.PORT,
   };
