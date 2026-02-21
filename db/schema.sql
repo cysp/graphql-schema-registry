@@ -1,0 +1,1 @@
+-- Desired PostgreSQL schema state for pgschema.

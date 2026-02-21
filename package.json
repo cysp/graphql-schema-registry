@@ -4,8 +4,9 @@
   "private": true,
   "type": "module",
   "scripts": {
-    "db:generate": "node --env-file-if-exists=.env ./node_modules/drizzle-kit/bin.cjs generate",
-    "db:migrate": "node --env-file-if-exists=.env --experimental-strip-types src/db/migrate.ts",
+    "db:generate": "node --env-file-if-exists=.env --experimental-strip-types src/db/pgschema.ts dump --file db/schema.sql",
+    "db:plan": "node --env-file-if-exists=.env --experimental-strip-types src/db/pgschema.ts plan --file db/schema.sql",
+    "db:migrate": "node --env-file-if-exists=.env --experimental-strip-types src/db/pgschema.ts apply --file db/schema.sql",
     "db:seed": "node --env-file-if-exists=.env --experimental-strip-types src/db/seed.ts",
     "dev": "node --env-file-if-exists=.env --watch src/index.ts",
     "format": "oxfmt .",
@@ -17,7 +18,6 @@
   },
   "dependencies": {
     "@neondatabase/serverless": "1.0.1",
-    "drizzle-kit": "0.31.4",
     "drizzle-orm": "0.44.2",
     "fastify": "5.7.4",
     "fastify-plugin": "5.1.0",
