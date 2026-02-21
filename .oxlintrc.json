@@ -9,6 +9,7 @@
   },
   "ignorePatterns": ["dist/**", "node_modules/**"],
   "rules": {
+    "eslint/max-lines-per-function": "off",
     "eslint/no-shadow": "off",
     "import/no-duplicates": "error",
     "no-async-await": "off",
