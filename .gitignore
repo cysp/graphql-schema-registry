@@ -1,3 +1,4 @@
 .env
 dist
+lcov.info
 node_modules

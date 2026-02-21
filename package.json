@@ -10,7 +10,7 @@
     "lint": "oxlint --type-aware --type-check .",
     "lint:fix": "oxlint --type-aware --type-check --fix .",
     "start": "node src/index.ts",
-    "test": "node --env-file-if-exists=.env --env-file-if-exists=.env.test --test --experimental-strip-types --enable-source-maps"
+    "test": "node --env-file-if-exists=.env --env-file-if-exists=.env.test --test --experimental-test-coverage --experimental-strip-types --enable-source-maps --test-reporter=spec --test-reporter-destination=stdout --test-reporter=lcov --test-reporter-destination=lcov.info"
   },
   "dependencies": {
     "fastify": "5.7.4",
