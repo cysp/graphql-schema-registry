@@ -14,9 +14,12 @@
   },
   "dependencies": {
     "fastify": "5.7.4",
+    "fastify-plugin": "5.1.0",
+    "fastify-type-provider-zod": "6.1.0",
     "zod": "4.3.6"
   },
   "devDependencies": {
+    "@fastify/swagger": "9.7.0",
     "@tsconfig/node24": "24.0.4",
     "@types/node": "24.10.13",
     "oxfmt": "0.33.0",
