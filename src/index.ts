@@ -1,7 +1,7 @@
-import { drizzle } from "drizzle-orm/postgres-js";
 import postgres from "postgres";
 
 import { loadJwtVerificationPublicKeyFromFile } from "./domain/jwt.ts";
+import { createDrizzleClient } from "./drizzle/client.ts";
 import { createProcessSignalAbortController } from "./lib/abort.ts";
 import { parseEnv } from "./lib/env.ts";
 import { waitForFastifyServerStop } from "./lib/fastify.ts";
@@ -16,7 +16,7 @@ async function main(): Promise<void> {
   let database;
   if (env.databaseUrl) {
     postgresClient = postgres(env.databaseUrl);
-    database = drizzle({ client: postgresClient });
+    database = createDrizzleClient({ client: postgresClient });
   }
 
   let jwtVerification;

@@ -1,11 +1,11 @@
 import fastifyJwt, { type FastifyJWTOptions } from "@fastify/jwt";
 import fastifySensible from "@fastify/sensible";
 import { sql } from "drizzle-orm";
-import type { PostgresJsDatabase } from "drizzle-orm/postgres-js";
 import fastify, { type FastifyInstance } from "fastify";
 import { serializerCompiler, validatorCompiler } from "fastify-type-provider-zod";
 
 import { formatUser } from "./domain/authorization/user.ts";
+import type { PostgresJsDatabase } from "./drizzle/types.ts";
 import { healthcheckPlugin } from "./lib/fastify/healthcheck/plugin.ts";
 import { registryPlugin } from "./lib/fastify/registry/plugin.ts";
 
