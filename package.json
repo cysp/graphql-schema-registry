@@ -13,6 +13,8 @@
     "test": "node --env-file-if-exists=.env --env-file-if-exists=.env.test --test --experimental-test-coverage --experimental-strip-types --enable-source-maps --test-reporter=spec --test-reporter-destination=stdout --test-reporter=lcov --test-reporter-destination=lcov.info"
   },
   "dependencies": {
+    "@fastify/jwt": "10.0.0",
+    "@fastify/sensible": "6.0.4",
     "drizzle-orm": "1.0.0-beta.15-9485290",
     "fastify": "5.7.4",
     "fastify-plugin": "5.1.0",
