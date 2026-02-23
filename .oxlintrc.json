@@ -13,12 +13,21 @@
     "eslint/no-undefined": "off",
     "eslint/no-shadow": "off",
     "import/no-duplicates": "error",
+    "import/no-relative-parent-imports": "off",
     "no-async-await": "off",
     "no-optional-chaining": "off",
     "promise/prefer-await-to-callbacks": "error",
     "promise/prefer-await-to-then": "error",
     "typescript/consistent-type-imports": "error",
     "typescript/explicit-function-return-type": "off",
+    "typescript/no-misused-promises": [
+      "error",
+      {
+        "checksVoidReturn": {
+          "properties": false
+        }
+      }
+    ],
     "typescript/no-unnecessary-condition": "error",
     "typescript/strict-boolean-expressions": "off"
   }

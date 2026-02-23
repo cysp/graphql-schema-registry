@@ -1,6 +1,7 @@
 import { drizzle } from "drizzle-orm/postgres-js";
 import postgres from "postgres";
 
+import { loadJwtVerificationPublicKeyFromFile } from "./domain/jwt.ts";
 import { createProcessSignalAbortController } from "./lib/abort.ts";
 import { parseEnv } from "./lib/env.ts";
 import { waitForFastifyServerStop } from "./lib/fastify.ts";
@@ -18,9 +19,23 @@ async function main(): Promise<void> {
     database = drizzle({ client: postgresClient });
   }
 
+  let jwtVerification;
+  if (env.jwtVerification) {
+    const verificationPublicKey = await loadJwtVerificationPublicKeyFromFile(
+      env.jwtVerification.publicKeyPath,
+    );
+
+    jwtVerification = {
+      audience: env.jwtVerification.audience,
+      issuer: env.jwtVerification.issuer,
+      verificationPublicKey,
+    };
+  }
+
   try {
     const server = createFastifyServer({
       database,
+      jwtVerification,
     });
 
     const serverClosedPromise = waitForFastifyServerStop(server);

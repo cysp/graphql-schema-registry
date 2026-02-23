@@ -111,3 +111,65 @@ await test("parseEnv DATABASE_URL", async (t) => {
     assert.strictEqual(parsedEnv.databaseUrl, undefined);
   });
 });
+
+await test("parseEnv JWT verification config", async (t) => {
+  await t.test("defaults to disabled JWT verification", () => {
+    const parsedEnv = parseEnv(withDefaultEnv());
+
+    assert.strictEqual(parsedEnv.jwtVerification, undefined);
+  });
+
+  await t.test("parses JWT verification values when fully configured", () => {
+    const parsedEnv = parseEnv(
+      withDefaultEnv({
+        AUTH_JWT_PUBLIC_KEY_PATH: "/run/secrets/service-public-key.pem",
+        AUTH_JWT_ISSUER: "https://auth.example.com",
+        AUTH_JWT_AUDIENCE: "graphql-schema-registry",
+      }),
+    );
+
+    assert.deepStrictEqual(parsedEnv.jwtVerification, {
+      audience: "graphql-schema-registry",
+      issuer: "https://auth.example.com",
+      publicKeyPath: "/run/secrets/service-public-key.pem",
+    });
+  });
+
+  await t.test("throws when AUTH_JWT_PUBLIC_KEY_PATH is set without AUTH_JWT_ISSUER", () => {
+    assertParseEnvThrows(
+      withDefaultEnv({
+        AUTH_JWT_PUBLIC_KEY_PATH: "/run/secrets/service-public-key.pem",
+        AUTH_JWT_AUDIENCE: "graphql-schema-registry",
+      }),
+      /AUTH_JWT_ISSUER: AUTH_JWT_ISSUER is required when AUTH_JWT_PUBLIC_KEY_PATH is set/,
+    );
+  });
+
+  await t.test("throws when AUTH_JWT_PUBLIC_KEY_PATH is set without AUTH_JWT_AUDIENCE", () => {
+    assertParseEnvThrows(
+      withDefaultEnv({
+        AUTH_JWT_PUBLIC_KEY_PATH: "/run/secrets/service-public-key.pem",
+        AUTH_JWT_ISSUER: "https://auth.example.com",
+      }),
+      /AUTH_JWT_AUDIENCE: AUTH_JWT_AUDIENCE is required when AUTH_JWT_PUBLIC_KEY_PATH is set/,
+    );
+  });
+
+  await t.test("throws when AUTH_JWT_ISSUER is set without AUTH_JWT_PUBLIC_KEY_PATH", () => {
+    assertParseEnvThrows(
+      withDefaultEnv({
+        AUTH_JWT_ISSUER: "https://auth.example.com",
+      }),
+      /AUTH_JWT_PUBLIC_KEY_PATH: AUTH_JWT_PUBLIC_KEY_PATH is required when AUTH_JWT_ISSUER is set/,
+    );
+  });
+
+  await t.test("throws when AUTH_JWT_AUDIENCE is set without AUTH_JWT_PUBLIC_KEY_PATH", () => {
+    assertParseEnvThrows(
+      withDefaultEnv({
+        AUTH_JWT_AUDIENCE: "graphql-schema-registry",
+      }),
+      /AUTH_JWT_PUBLIC_KEY_PATH: AUTH_JWT_PUBLIC_KEY_PATH is required when AUTH_JWT_AUDIENCE is set/,
+    );
+  });
+});
