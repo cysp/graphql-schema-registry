@@ -1,0 +1,33 @@
+version: 2
+
+updates:
+  - package-ecosystem: docker
+    directory: /
+    schedule:
+      interval: weekly
+      day: monday
+      time: "17:30"
+      timezone: "Australia/Sydney"
+    commit-message:
+      prefix: "chore(deps)"
+
+  - package-ecosystem: github-actions
+    directory: /
+    schedule:
+      interval: weekly
+      day: monday
+      time: "18:00"
+      timezone: "Australia/Sydney"
+    commit-message:
+      prefix: "chore(github/workflows)"
+
+  - package-ecosystem: npm
+    directory: /
+    schedule:
+      interval: daily
+      time: "18:30"
+      timezone: "Australia/Sydney"
+    versioning-strategy: increase
+    commit-message:
+      prefix: "chore(deps)"
+      prefix-development: "chore(deps-dev)"
