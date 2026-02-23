@@ -1,4 +1,4 @@
-name: lint
+name: format
 
 on:
   push:
@@ -11,7 +11,7 @@ permissions:
   contents: read
 
 jobs:
-  lint:
+  format:
     runs-on: ubuntu-latest
     timeout-minutes: 10
 
@@ -29,4 +29,4 @@ jobs:
 
       - run: pnpm install --frozen-lockfile
 
-      - run: pnpm run lint
+      - run: pnpm run format:check
