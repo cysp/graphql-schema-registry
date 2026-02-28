@@ -8,6 +8,7 @@ import { formatUser } from "./domain/authorization/user.ts";
 import type { PostgresJsDatabase } from "./drizzle/types.ts";
 import { healthcheckPlugin } from "./lib/fastify/healthcheck/plugin.ts";
 import { registryPlugin } from "./lib/fastify/registry/plugin.ts";
+import { fastifyRoutesPlugin } from "./lib/openapi-ts/fastify-routes.gen.ts";
 
 type CreateFastifyServerOptions = {
   database?: PostgresJsDatabase | undefined;
@@ -78,6 +79,35 @@ export function createFastifyServer({
 
   server.register(registryPlugin, {
     database,
+  });
+
+  server.register(fastifyRoutesPlugin, {
+    routes: {
+      listGraphs(_request, reply) {
+        reply.notImplemented();
+      },
+      getGraph(_request, reply) {
+        reply.notImplemented();
+      },
+      upsertGraph(_request, reply) {
+        reply.notImplemented();
+      },
+      deleteGraph(_request, reply) {
+        reply.notImplemented();
+      },
+      listSubgraphs(_request, reply) {
+        reply.notImplemented();
+      },
+      getSubgraph(_request, reply) {
+        reply.notImplemented();
+      },
+      upsertSubgraph(_request, reply) {
+        reply.notImplemented();
+      },
+      deleteSubgraph(_request, reply) {
+        reply.notImplemented();
+      },
+    },
   });
 
   return server;

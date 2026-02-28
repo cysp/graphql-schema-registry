@@ -2,7 +2,7 @@
 // Do not edit manually.
 
 import fastifyPlugin from "fastify-plugin";
-import type { FastifyPluginAsync, RouteShorthandOptions } from "fastify";
+import type { FastifyPluginAsync, RouteShorthandOptionsWithHandler } from "fastify";
 import type { RouteHandlers } from "./fastify.gen.ts";
 import { zDeleteGraphData, zDeleteGraphResponse, zDeleteSubgraphData, zDeleteSubgraphResponse, zGetGraphData, zGetGraphResponse, zGetSubgraphData, zGetSubgraphResponse, zListGraphsResponse, zListSubgraphsData, zListSubgraphsResponse, zUpsertGraphData, zUpsertGraphResponse, zUpsertSubgraphData, zUpsertSubgraphResponse } from "./zod.gen.ts";
 
@@ -55,30 +55,45 @@ export const routeSchemas = {
   },
 } as const;
 
-export type FastifyRouteConfig = Pick<RouteShorthandOptions, "preHandler">;
+type FastifyRouteOptionSubset = Pick<RouteShorthandOptionsWithHandler, "config" | "onRequest" | "preHandler" | "preValidation">;
 
-export type FastifyRouteConfigByOperation = Partial<Record<keyof RouteHandlers, FastifyRouteConfig>>;
+type FastifyRouteEntry<THandler extends RouteHandlers[keyof RouteHandlers]> =
+  | THandler
+  | (FastifyRouteOptionSubset & { handler: THandler });
 
-export type FastifyRoutesPluginOptions = {
-  config?: FastifyRouteConfigByOperation | undefined;
-  handlers: RouteHandlers;
+export type FastifyRouteEntries = {
+  [K in keyof RouteHandlers]: FastifyRouteEntry<RouteHandlers[K]>;
 };
+
+type FastifyRouteOptionsWithHandler<THandler extends RouteHandlers[keyof RouteHandlers]> =
+  FastifyRouteOptionSubset & { handler: THandler };
+
+function normalizeRouteEntry<THandler extends RouteHandlers[keyof RouteHandlers]>(
+  entry: FastifyRouteEntry<THandler>,
+): FastifyRouteOptionsWithHandler<THandler> {
+  if (typeof entry === "function") {
+    return { handler: entry };
+  }
+
+  return entry;
+}
+
+export type FastifyRoutesPluginOptions = { routes: FastifyRouteEntries };
 
 const fastifyRoutesPluginImpl: FastifyPluginAsync<FastifyRoutesPluginOptions> = async (
   server,
   options,
 ): Promise<void> => {
-  const handlers = options.handlers;
-  const config = options.config ?? {};
+  const routes = options.routes;
 
-  server.get(routePaths["listGraphs"], { ...config["listGraphs"], schema: routeSchemas["listGraphs"] }, handlers["listGraphs"]);
-  server.delete(routePaths["deleteGraph"], { ...config["deleteGraph"], schema: routeSchemas["deleteGraph"] }, handlers["deleteGraph"]);
-  server.get(routePaths["getGraph"], { ...config["getGraph"], schema: routeSchemas["getGraph"] }, handlers["getGraph"]);
-  server.put(routePaths["upsertGraph"], { ...config["upsertGraph"], schema: routeSchemas["upsertGraph"] }, handlers["upsertGraph"]);
-  server.get(routePaths["listSubgraphs"], { ...config["listSubgraphs"], schema: routeSchemas["listSubgraphs"] }, handlers["listSubgraphs"]);
-  server.delete(routePaths["deleteSubgraph"], { ...config["deleteSubgraph"], schema: routeSchemas["deleteSubgraph"] }, handlers["deleteSubgraph"]);
-  server.get(routePaths["getSubgraph"], { ...config["getSubgraph"], schema: routeSchemas["getSubgraph"] }, handlers["getSubgraph"]);
-  server.put(routePaths["upsertSubgraph"], { ...config["upsertSubgraph"], schema: routeSchemas["upsertSubgraph"] }, handlers["upsertSubgraph"]);
+  server.get(routePaths["listGraphs"], { ...normalizeRouteEntry(routes["listGraphs"]), schema: routeSchemas["listGraphs"] });
+  server.delete(routePaths["deleteGraph"], { ...normalizeRouteEntry(routes["deleteGraph"]), schema: routeSchemas["deleteGraph"] });
+  server.get(routePaths["getGraph"], { ...normalizeRouteEntry(routes["getGraph"]), schema: routeSchemas["getGraph"] });
+  server.put(routePaths["upsertGraph"], { ...normalizeRouteEntry(routes["upsertGraph"]), schema: routeSchemas["upsertGraph"] });
+  server.get(routePaths["listSubgraphs"], { ...normalizeRouteEntry(routes["listSubgraphs"]), schema: routeSchemas["listSubgraphs"] });
+  server.delete(routePaths["deleteSubgraph"], { ...normalizeRouteEntry(routes["deleteSubgraph"]), schema: routeSchemas["deleteSubgraph"] });
+  server.get(routePaths["getSubgraph"], { ...normalizeRouteEntry(routes["getSubgraph"]), schema: routeSchemas["getSubgraph"] });
+  server.put(routePaths["upsertSubgraph"], { ...normalizeRouteEntry(routes["upsertSubgraph"]), schema: routeSchemas["upsertSubgraph"] });
 };
 
 export const fastifyRoutesPlugin = fastifyPlugin<FastifyRoutesPluginOptions>(

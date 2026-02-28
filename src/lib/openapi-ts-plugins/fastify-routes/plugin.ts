@@ -103,14 +103,14 @@ function generateImports(operations: readonly OperationInfo[]): string {
   if (sortedSymbols.length === 0) {
     return [
       'import fastifyPlugin from "fastify-plugin";',
-      'import type { FastifyPluginAsync, RouteShorthandOptions } from "fastify";',
+      'import type { FastifyPluginAsync, RouteShorthandOptionsWithHandler } from "fastify";',
       'import type { RouteHandlers } from "./fastify.gen.ts";',
     ].join("\n");
   }
 
   return [
     'import fastifyPlugin from "fastify-plugin";',
-    'import type { FastifyPluginAsync, RouteShorthandOptions } from "fastify";',
+    'import type { FastifyPluginAsync, RouteShorthandOptionsWithHandler } from "fastify";',
     'import type { RouteHandlers } from "./fastify.gen.ts";',
     `import { ${sortedSymbols.join(", ")} } from "./zod.gen.ts";`,
   ].join("\n");
@@ -165,21 +165,37 @@ function generateRouteSchemas(operations: readonly OperationInfo[]): string {
 
 function generatePluginTypes(): string {
   return [
-    'export type FastifyRouteConfig = Pick<RouteShorthandOptions, "preHandler">;',
+    'type FastifyRouteOptionSubset = Pick<RouteShorthandOptionsWithHandler, "config" | "onRequest" | "preHandler" | "preValidation">;',
     "",
-    "export type FastifyRouteConfigByOperation = Partial<Record<keyof RouteHandlers, FastifyRouteConfig>>;",
+    "type FastifyRouteEntry<THandler extends RouteHandlers[keyof RouteHandlers]> =",
+    "  | THandler",
+    "  | (FastifyRouteOptionSubset & { handler: THandler });",
     "",
-    "export type FastifyRoutesPluginOptions = {",
-    "  config?: FastifyRouteConfigByOperation | undefined;",
-    "  handlers: RouteHandlers;",
+    "export type FastifyRouteEntries = {",
+    "  [K in keyof RouteHandlers]: FastifyRouteEntry<RouteHandlers[K]>;",
     "};",
+    "",
+    "type FastifyRouteOptionsWithHandler<THandler extends RouteHandlers[keyof RouteHandlers]> =",
+    "  FastifyRouteOptionSubset & { handler: THandler };",
+    "",
+    "function normalizeRouteEntry<THandler extends RouteHandlers[keyof RouteHandlers]>(",
+    "  entry: FastifyRouteEntry<THandler>,",
+    "): FastifyRouteOptionsWithHandler<THandler> {",
+    '  if (typeof entry === "function") {',
+    "    return { handler: entry };",
+    "  }",
+    "",
+    "  return entry;",
+    "}",
+    "",
+    "export type FastifyRoutesPluginOptions = { routes: FastifyRouteEntries };",
   ].join("\n");
 }
 
 function generateFastifyPlugin(operations: readonly OperationInfo[]): string {
   const statements = operations.map(
     (operation) =>
-      `  server.${operation.method}(routePaths["${operation.id}"], { ...config["${operation.id}"], schema: routeSchemas["${operation.id}"] }, handlers["${operation.id}"]);`,
+      `  server.${operation.method}(routePaths["${operation.id}"], { ...normalizeRouteEntry(routes["${operation.id}"]), schema: routeSchemas["${operation.id}"] });`,
   );
 
   return [
@@ -187,8 +203,7 @@ function generateFastifyPlugin(operations: readonly OperationInfo[]): string {
     "  server,",
     "  options,",
     "): Promise<void> => {",
-    "  const handlers = options.handlers;",
-    "  const config = options.config ?? {};",
+    "  const routes = options.routes;",
     "",
     ...statements,
     "};",
