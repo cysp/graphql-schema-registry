@@ -104,17 +104,14 @@ export function createUpsertGraphHandler({
               .insert(graphs)
               .values({
                 createdAt: now,
-                federationVersion: request.body.federationVersion,
-                revisionId: 1,
+                currentRevisionId: 1,
                 slug: request.params.graphSlug,
                 updatedAt: now,
               })
               .returning({
                 createdAt: graphs.createdAt,
                 externalId: graphs.externalId,
-                federationVersion: graphs.federationVersion,
                 id: graphs.id,
-                revisionId: graphs.revisionId,
                 slug: graphs.slug,
                 updatedAt: graphs.updatedAt,
               });
@@ -127,13 +124,21 @@ export function createUpsertGraphHandler({
 
             await transaction.insert(graphRevisions).values({
               createdAt: now,
-              federationVersion: createdGraph.federationVersion,
+              federationVersion: request.body.federationVersion,
               graphId: createdGraph.id,
-              revisionId: createdGraph.revisionId,
+              revisionId: 1,
             });
 
             return {
-              graph: createdGraph,
+              graph: {
+                createdAt: createdGraph.createdAt,
+                externalId: createdGraph.externalId,
+                federationVersion: request.body.federationVersion,
+                id: createdGraph.id,
+                revisionId: 1,
+                slug: createdGraph.slug,
+                updatedAt: createdGraph.updatedAt,
+              },
               statusCode: 201,
             };
           }
@@ -144,8 +149,12 @@ export function createUpsertGraphHandler({
             };
           }
 
-          const currentRevisionId =
-            existingGraph.revisions[0]?.revisionId ?? existingGraph.revisionId;
+          const currentRevision = existingGraph.currentRevision;
+          if (!currentRevision) {
+            throw new Error("Graph is missing a current revision.");
+          }
+
+          const currentRevisionId = currentRevision.revisionId;
           if (currentRevisionId !== providedRevisionId) {
             return {
               conflictDetail: "Revision mismatch. Provide the current revision id to update.",
@@ -156,23 +165,20 @@ export function createUpsertGraphHandler({
           const [updatedGraph] = await transaction
             .update(graphs)
             .set({
-              federationVersion: request.body.federationVersion,
-              revisionId: nextRevisionId,
+              currentRevisionId: nextRevisionId,
               updatedAt: now,
             })
             .where(
               and(
                 eq(graphs.id, existingGraph.id),
                 isNull(graphs.deletedAt),
-                eq(graphs.revisionId, currentRevisionId),
+                eq(graphs.currentRevisionId, currentRevisionId),
               ),
             )
             .returning({
               createdAt: graphs.createdAt,
               externalId: graphs.externalId,
-              federationVersion: graphs.federationVersion,
               id: graphs.id,
-              revisionId: graphs.revisionId,
               slug: graphs.slug,
               updatedAt: graphs.updatedAt,
             });
@@ -185,13 +191,21 @@ export function createUpsertGraphHandler({
 
           await transaction.insert(graphRevisions).values({
             createdAt: now,
-            federationVersion: updatedGraph.federationVersion,
+            federationVersion: request.body.federationVersion,
             graphId: updatedGraph.id,
-            revisionId: updatedGraph.revisionId,
+            revisionId: nextRevisionId,
           });
 
           return {
-            graph: updatedGraph,
+            graph: {
+              createdAt: updatedGraph.createdAt,
+              externalId: updatedGraph.externalId,
+              federationVersion: request.body.federationVersion,
+              id: updatedGraph.id,
+              revisionId: nextRevisionId,
+              slug: updatedGraph.slug,
+              updatedAt: updatedGraph.updatedAt,
+            },
             statusCode: 200,
           };
         },

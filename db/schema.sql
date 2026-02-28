@@ -10,8 +10,7 @@ CREATE TABLE "graphs" (
 	"id" bigserial PRIMARY KEY,
 	"external_id" uuid DEFAULT gen_random_uuid() NOT NULL,
 	"slug" text NOT NULL,
-	"federation_version" text NOT NULL,
-	"revision_id" bigint NOT NULL,
+	"current_revision_id" bigint NOT NULL,
 	"deleted_at" timestamp with time zone,
 	"created_at" timestamp with time zone NOT NULL,
 	"updated_at" timestamp with time zone NOT NULL
@@ -30,8 +29,7 @@ CREATE TABLE "subgraphs" (
 	"external_id" uuid DEFAULT gen_random_uuid() NOT NULL,
 	"graph_id" bigint NOT NULL,
 	"slug" text NOT NULL,
-	"routing_url" text NOT NULL,
-	"revision_id" bigint NOT NULL,
+	"current_revision_id" bigint NOT NULL,
 	"deleted_at" timestamp with time zone,
 	"created_at" timestamp with time zone NOT NULL,
 	"updated_at" timestamp with time zone NOT NULL

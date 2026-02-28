@@ -11,15 +11,14 @@ type GraphQueryClient = {
 
 export type GraphWithLatestRevision = {
   createdAt: Date;
-  deletedAt: Date | null;
-  externalId: string;
-  federationVersion: string;
-  id: number;
-  revisionId: number;
-  revisions: Array<{
+  currentRevision: {
     federationVersion: string;
     revisionId: number;
-  }>;
+  } | null;
+  currentRevisionId: number;
+  deletedAt: Date | null;
+  externalId: string;
+  id: number;
   slug: string;
   updatedAt: Date;
 };
@@ -35,14 +34,10 @@ export async function listGraphs(database: GraphQueryClient): Promise<GraphWithL
       slug: "asc",
     },
     with: {
-      revisions: {
+      currentRevision: {
         columns: {
           federationVersion: true,
           revisionId: true,
-        },
-        limit: 1,
-        orderBy: {
-          revisionId: "desc",
         },
       },
     },
@@ -61,14 +56,10 @@ export async function getGraphBySlug(
       slug,
     },
     with: {
-      revisions: {
+      currentRevision: {
         columns: {
           federationVersion: true,
           revisionId: true,
-        },
-        limit: 1,
-        orderBy: {
-          revisionId: "desc",
         },
       },
     },

@@ -21,8 +21,7 @@ export const graphs = pgTable(
     id: bigserial("id", { mode: "number" }).primaryKey(),
     externalId: uuid("external_id").notNull().defaultRandom(),
     slug: text("slug").notNull(),
-    federationVersion: text("federation_version").notNull(),
-    revisionId: bigint("revision_id", { mode: "number" }).notNull(),
+    currentRevisionId: bigint("current_revision_id", { mode: "number" }).notNull(),
     deletedAt: timestamp("deleted_at", { withTimezone: true }),
     createdAt: timestamp("created_at", { withTimezone: true }).notNull(),
     updatedAt: timestamp("updated_at", { withTimezone: true }).notNull(),
@@ -63,8 +62,7 @@ export const subgraphs = pgTable(
     externalId: uuid("external_id").notNull().defaultRandom(),
     graphId: bigint("graph_id", { mode: "number" }).notNull(),
     slug: text("slug").notNull(),
-    routingUrl: text("routing_url").notNull(),
-    revisionId: bigint("revision_id", { mode: "number" }).notNull(),
+    currentRevisionId: bigint("current_revision_id", { mode: "number" }).notNull(),
     deletedAt: timestamp("deleted_at", { withTimezone: true }),
     createdAt: timestamp("created_at", { withTimezone: true }).notNull(),
     updatedAt: timestamp("updated_at", { withTimezone: true }).notNull(),
@@ -114,6 +112,11 @@ export const relations = defineRelations(
     one,
   }) => ({
     graphs: {
+      currentRevision: one.graphRevisions({
+        from: [graphColumns.id, graphColumns.currentRevisionId],
+        to: [graphRevisionColumns.graphId, graphRevisionColumns.revisionId],
+        optional: true,
+      }),
       revisions: many.graphRevisions({
         from: graphColumns.id,
         to: graphRevisionColumns.graphId,
@@ -131,6 +134,11 @@ export const relations = defineRelations(
       }),
     },
     subgraphs: {
+      currentRevision: one.subgraphRevisions({
+        from: [subgraphColumns.id, subgraphColumns.currentRevisionId],
+        to: [subgraphRevisionColumns.subgraphId, subgraphRevisionColumns.revisionId],
+        optional: true,
+      }),
       graph: one.graphs({
         from: subgraphColumns.graphId,
         to: graphColumns.id,

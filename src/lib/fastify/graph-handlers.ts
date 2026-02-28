@@ -16,19 +16,27 @@ export function createListGraphsHandler({
 
     const rows = await listGraphs(database);
 
-    reply.code(200).send(
-      rows.map((graph) =>
+    const responsePayload = [];
+    for (const graph of rows) {
+      if (!graph.currentRevision) {
+        reply.internalServerError("Graph is missing a current revision.");
+        return;
+      }
+
+      responsePayload.push(
         toGraphResponse({
           createdAt: graph.createdAt,
           externalId: graph.externalId,
-          federationVersion: graph.revisions[0]?.federationVersion ?? graph.federationVersion,
+          federationVersion: graph.currentRevision.federationVersion,
           id: graph.id,
-          revisionId: graph.revisions[0]?.revisionId ?? graph.revisionId,
+          revisionId: graph.currentRevision.revisionId,
           slug: graph.slug,
           updatedAt: graph.updatedAt,
         }),
-      ),
-    );
+      );
+    }
+
+    reply.code(200).send(responsePayload);
   };
 }
 
@@ -67,13 +75,18 @@ export function createGetGraphHandler({
       return;
     }
 
+    if (!graph.currentRevision) {
+      reply.internalServerError("Graph is missing a current revision.");
+      return;
+    }
+
     reply.code(200).send(
       toGraphResponse({
         createdAt: graph.createdAt,
         externalId: graph.externalId,
-        federationVersion: graph.revisions[0]?.federationVersion ?? graph.federationVersion,
+        federationVersion: graph.currentRevision.federationVersion,
         id: graph.id,
-        revisionId: graph.revisions[0]?.revisionId ?? graph.revisionId,
+        revisionId: graph.currentRevision.revisionId,
         slug: graph.slug,
         updatedAt: graph.updatedAt,
       }),
