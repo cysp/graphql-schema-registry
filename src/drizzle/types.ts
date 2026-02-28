@@ -2,4 +2,4 @@ import type { PostgresJsDatabase as DrizzlePostgresJsDatabase } from "drizzle-or
 
 import type * as schema from "./schema.ts";
 
-export type PostgresJsDatabase = DrizzlePostgresJsDatabase<typeof schema>;
+export type PostgresJsDatabase = DrizzlePostgresJsDatabase<typeof schema, typeof schema.relations>;

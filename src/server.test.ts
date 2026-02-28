@@ -2,6 +2,7 @@ import assert from "node:assert/strict";
 import { generateKeyPairSync, sign } from "node:crypto";
 import test from "node:test";
 
+import { authorizationDetailsType } from "./domain/authorization/details.ts";
 import { createFastifyServer } from "./server.ts";
 
 type JwtClaims = Record<string, unknown>;
@@ -157,5 +158,55 @@ await test("createFastifyServer authorization hook", async (t) => {
       message: "Invalid bearer token.",
       statusCode: 401,
     });
+  });
+
+  await t.test("requires bearer auth to list graphs", async () => {
+    const response = await server.inject({
+      method: "GET",
+      url: "/v1/graphs",
+    });
+
+    assert.strictEqual(response.statusCode, 401);
+  });
+
+  await t.test("requires admin grant to list graphs", async () => {
+    const response = await server.inject({
+      method: "GET",
+      url: "/v1/graphs",
+      headers: {
+        authorization: `Bearer ${createToken({
+          authorization_details: [
+            {
+              graph_id: "00000000-0000-4000-8000-000000000001",
+              scope: "graph:read",
+              type: authorizationDetailsType,
+            },
+          ],
+        })}`,
+      },
+    });
+
+    assert.strictEqual(response.statusCode, 403);
+  });
+
+  await t.test("allows admins to list graphs", async () => {
+    const response = await server.inject({
+      method: "GET",
+      url: "/v1/graphs",
+      headers: {
+        authorization: `Bearer ${createToken({
+          authorization_details: [
+            {
+              scope: "admin",
+              type: authorizationDetailsType,
+            },
+          ],
+        })}`,
+      },
+    });
+
+    // No database is configured in this test setup, so authorized access reaches
+    // the handler and returns service unavailable.
+    assert.strictEqual(response.statusCode, 503);
   });
 });

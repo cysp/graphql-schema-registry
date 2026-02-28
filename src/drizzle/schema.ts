@@ -103,7 +103,7 @@ export const subgraphRevisions = pgTable(
   }),
 );
 
-export const registryRelations = defineRelations(
+export const relations = defineRelations(
   { graphs, graphRevisions, subgraphs, subgraphRevisions },
   ({
     graphs: graphColumns,
@@ -151,10 +151,10 @@ export const registryRelations = defineRelations(
   }),
 );
 
-export const graphsRelations = registryRelations.graphs.relations;
-export const graphRevisionsRelations = registryRelations.graphRevisions.relations;
-export const subgraphsRelations = registryRelations.subgraphs.relations;
-export const subgraphRevisionsRelations = registryRelations.subgraphRevisions.relations;
+export const graphsRelations = relations.graphs.relations;
+export const graphRevisionsRelations = relations.graphRevisions.relations;
+export const subgraphsRelations = relations.subgraphs.relations;
+export const subgraphRevisionsRelations = relations.subgraphRevisions.relations;
 
 export type GraphRow = typeof graphs.$inferSelect;
 export type SubgraphRow = typeof subgraphs.$inferSelect;

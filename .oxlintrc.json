@@ -18,6 +18,7 @@
     "eslint/no-undefined": "off",
     "eslint/no-shadow": "off",
     "eslint/require-await": "off",
+    "import/max-dependencies": "off",
     "import/no-duplicates": "error",
     "import/no-relative-parent-imports": "off",
     "no-async-await": "off",

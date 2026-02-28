@@ -6,6 +6,7 @@ import { serializerCompiler, validatorCompiler } from "fastify-type-provider-zod
 
 import { formatUser } from "./domain/authorization/user.ts";
 import type { PostgresJsDatabase } from "./drizzle/types.ts";
+import { requireAdmin } from "./lib/fastify/authorization/guards.ts";
 import { healthcheckPlugin } from "./lib/fastify/healthcheck/plugin.ts";
 import { fastifyRoutesPlugin } from "./lib/openapi-ts/fastify-routes.gen.ts";
 
@@ -78,29 +79,85 @@ export function createFastifyServer({
 
   server.register(fastifyRoutesPlugin, {
     routes: {
-      listGraphs(_request, reply) {
-        reply.notImplemented();
+      listGraphs: {
+        preHandler: requireAdmin,
+        async handler(_request, reply) {
+          if (!database) {
+            reply.serviceUnavailable("Database is not configured.");
+            return;
+          }
+
+          const rows = await database.query.graphs.findMany({
+            where: {
+              deletedAt: {
+                isNull: true,
+              },
+            },
+            orderBy: {
+              slug: "asc",
+            },
+            with: {
+              revisions: {
+                columns: {
+                  federationVersion: true,
+                  revisionId: true,
+                },
+                limit: 1,
+                orderBy: {
+                  revisionId: "desc",
+                },
+              },
+            },
+          });
+
+          const payload = {
+            items: rows.map((graph) => ({
+              id: graph.externalId,
+              slug: graph.slug,
+              revisionId: String(graph.revisions[0]?.revisionId ?? graph.revisionId),
+              federationVersion: graph.revisions[0]?.federationVersion ?? graph.federationVersion,
+              createdAt: graph.createdAt.toISOString(),
+              updatedAt: graph.updatedAt.toISOString(),
+            })),
+          };
+
+          reply.code(200).send(payload);
+        },
       },
-      getGraph(_request, reply) {
-        reply.notImplemented();
+      getGraph: {
+        handler(_request, reply) {
+          reply.notImplemented();
+        },
       },
-      upsertGraph(_request, reply) {
-        reply.notImplemented();
+      upsertGraph: {
+        handler(_request, reply) {
+          reply.notImplemented();
+        },
       },
-      deleteGraph(_request, reply) {
-        reply.notImplemented();
+      deleteGraph: {
+        handler(_request, reply) {
+          reply.notImplemented();
+        },
       },
-      listSubgraphs(_request, reply) {
-        reply.notImplemented();
+      listSubgraphs: {
+        handler(_request, reply) {
+          reply.notImplemented();
+        },
       },
-      getSubgraph(_request, reply) {
-        reply.notImplemented();
+      getSubgraph: {
+        handler(_request, reply) {
+          reply.notImplemented();
+        },
       },
-      upsertSubgraph(_request, reply) {
-        reply.notImplemented();
+      upsertSubgraph: {
+        handler(_request, reply) {
+          reply.notImplemented();
+        },
       },
-      deleteSubgraph(_request, reply) {
-        reply.notImplemented();
+      deleteSubgraph: {
+        handler(_request, reply) {
+          reply.notImplemented();
+        },
       },
     },
   });
