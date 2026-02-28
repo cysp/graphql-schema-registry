@@ -10,7 +10,7 @@ import { healthcheckPlugin } from "./lib/fastify/healthcheck/plugin.ts";
 import { registryPlugin } from "./lib/fastify/registry/plugin.ts";
 
 type CreateFastifyServerOptions = {
-  database?: Pick<PostgresJsDatabase, "execute"> | undefined;
+  database?: PostgresJsDatabase | undefined;
   jwtVerification?:
     | {
         audience: string;
@@ -75,7 +75,9 @@ export function createFastifyServer({
       },
     },
   });
-  server.register(registryPlugin);
+  server.register(registryPlugin, {
+    database,
+  });
 
   return server;
 }

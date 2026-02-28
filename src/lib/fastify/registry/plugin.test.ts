@@ -17,15 +17,14 @@ type RouteCase = {
   method: "DELETE" | "GET" | "POST" | "PUT";
   url: string;
   body?: Buffer | NodeJS.ReadableStream | Record<string, unknown> | string;
+  headers?: Record<string, string>;
   expectedToken: string;
   wrongToken: string;
 };
 
 type InjectOptions = {
   body?: Buffer | NodeJS.ReadableStream | Record<string, unknown> | string;
-  headers?: {
-    authorization: string;
-  };
+  headers?: Record<string, string>;
   method: RouteCase["method"];
   url: string;
 };
@@ -41,9 +40,11 @@ function createInjectOptions(routeCase: RouteCase, authorizationToken?: string):
   }
 
   if (authorizationToken !== undefined) {
-    options.headers = {
+    options.headers = Object.assign({}, routeCase.headers, {
       authorization: authorizationToken,
-    };
+    });
+  } else if (routeCase.headers) {
+    options.headers = routeCase.headers;
   }
 
   return options;
@@ -57,20 +58,23 @@ await test("registry plugin", async (t) => {
       grants: [{ scope: "admin" }],
     },
     graphAlphaRead: {
-      grants: [{ graphId: "alpha", scope: "graph:read" }],
+      grants: [{ graphId: "11111111-1111-4111-8111-111111111111", scope: "graph:read" }],
     },
     subgraphAlphaInventoryWrite: {
-      grants: [{ graphId: "alpha", scope: "subgraph:write", subgraphId: "inventory" }],
+      grants: [
+        {
+          graphId: "11111111-1111-4111-8111-111111111111",
+          scope: "subgraph:write",
+          subgraphId: "22222222-2222-4222-8222-222222222222",
+        },
+      ],
     },
   };
 
   const routeCases: readonly RouteCase[] = [
     {
-      body: {
-        graphId: "alpha",
-      },
       expectedToken: "admin",
-      method: "POST",
+      method: "GET",
       url: "/v1/graphs",
       wrongToken: "graphAlphaRead",
     },
@@ -87,17 +91,20 @@ await test("registry plugin", async (t) => {
       wrongToken: "graphAlphaRead",
     },
     {
+      body: {
+        federationVersion: "v2.9",
+      },
+      headers: {
+        "x-revision": "0",
+      },
       expectedToken: "admin",
       method: "PUT",
       url: "/v1/graphs/alpha",
       wrongToken: "graphAlphaRead",
     },
     {
-      body: {
-        subgraphId: "inventory",
-      },
       expectedToken: "admin",
-      method: "POST",
+      method: "GET",
       url: "/v1/graphs/alpha/subgraphs",
       wrongToken: "graphAlphaRead",
     },
@@ -114,6 +121,12 @@ await test("registry plugin", async (t) => {
       wrongToken: "graphAlphaRead",
     },
     {
+      body: {
+        routingUrl: "https://subgraphs.example.test/inventory",
+      },
+      headers: {
+        "x-revision": "0",
+      },
       expectedToken: "admin",
       method: "PUT",
       url: "/v1/graphs/alpha/subgraphs/inventory",
@@ -127,8 +140,8 @@ await test("registry plugin", async (t) => {
     },
     {
       expectedToken: "subgraphAlphaInventoryWrite",
-      method: "PUT",
-      url: "/v1/graphs/alpha/subgraphs/inventory/schema.graphql",
+      method: "POST",
+      url: "/v1/graphs/alpha/subgraphs/inventory/schema.graphqls",
       wrongToken: "admin",
     },
   ];
@@ -160,12 +173,11 @@ await test("registry plugin", async (t) => {
     await server.close();
   });
 
-  await t.test("authorized tokens receive 501 with empty body on all routes", async () => {
+  await t.test("authorized tokens reach route handlers", async () => {
     for (const routeCase of routeCases) {
       const response = await server.inject(createInjectOptions(routeCase, routeCase.expectedToken));
 
-      assert.strictEqual(response.statusCode, 501);
-      assert.strictEqual(response.body, "");
+      assert.ok([501, 503].includes(response.statusCode));
     }
   });
 
@@ -183,5 +195,34 @@ await test("registry plugin", async (t) => {
 
       assert.strictEqual(response.statusCode, 403);
     }
+  });
+
+  await t.test("put routes require a valid x-revision header", async () => {
+    const graphPutWithoutHeader = await server.inject({
+      method: "PUT",
+      url: "/v1/graphs/alpha",
+      body: {
+        federationVersion: "v2.9",
+      },
+      headers: {
+        authorization: "admin",
+      },
+    });
+
+    assert.strictEqual(graphPutWithoutHeader.statusCode, 422);
+
+    const subgraphPutWithInvalidHeader = await server.inject({
+      method: "PUT",
+      url: "/v1/graphs/alpha/subgraphs/inventory",
+      body: {
+        routingUrl: "https://subgraphs.example.test/inventory",
+      },
+      headers: {
+        authorization: "admin",
+        "x-revision": "-1",
+      },
+    });
+
+    assert.strictEqual(subgraphPutWithInvalidHeader.statusCode, 422);
   });
 });
