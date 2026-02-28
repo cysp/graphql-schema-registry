@@ -69,7 +69,9 @@ function collectOperationInfo(operation: IR.OperationObject): OperationInfo {
     hasHeaders: Boolean(
       operation.parameters?.header && Object.keys(operation.parameters.header).length > 0,
     ),
-    hasPath: Boolean(operation.parameters?.path && Object.keys(operation.parameters.path).length > 0),
+    hasPath: Boolean(
+      operation.parameters?.path && Object.keys(operation.parameters.path).length > 0,
+    ),
     hasQuery: Boolean(
       operation.parameters?.query && Object.keys(operation.parameters.query).length > 0,
     ),
@@ -100,15 +102,17 @@ function generateImports(operations: readonly OperationInfo[]): string {
   const sortedSymbols = Array.from(zodSymbols).toSorted();
   if (sortedSymbols.length === 0) {
     return [
-      'import type { FastifyInstance, RouteShorthandOptions } from "fastify";',
-      'import type { RouteHandlers } from "./fastify.gen.js";',
+      'import fastifyPlugin from "fastify-plugin";',
+      'import type { FastifyPluginAsync, RouteShorthandOptions } from "fastify";',
+      'import type { RouteHandlers } from "./fastify.gen.ts";',
     ].join("\n");
   }
 
   return [
-    'import type { FastifyInstance, RouteShorthandOptions } from "fastify";',
-    'import type { RouteHandlers } from "./fastify.gen.js";',
-    `import { ${sortedSymbols.join(", ")} } from "./zod.gen.js";`,
+    'import fastifyPlugin from "fastify-plugin";',
+    'import type { FastifyPluginAsync, RouteShorthandOptions } from "fastify";',
+    'import type { RouteHandlers } from "./fastify.gen.ts";',
+    `import { ${sortedSymbols.join(", ")} } from "./zod.gen.ts";`,
   ].join("\n");
 }
 
@@ -159,34 +163,42 @@ function generateRouteSchemas(operations: readonly OperationInfo[]): string {
   ].join("\n");
 }
 
-function generateConfigTypes(): string {
+function generatePluginTypes(): string {
   return [
     'export type FastifyRouteConfig = Pick<RouteShorthandOptions, "preHandler">;',
     "",
     "export type FastifyRouteConfigByOperation = Partial<Record<keyof RouteHandlers, FastifyRouteConfig>>;",
     "",
-    "export type RegisterFastifyRoutesOptions = {",
+    "export type FastifyRoutesPluginOptions = {",
     "  config?: FastifyRouteConfigByOperation | undefined;",
+    "  handlers: RouteHandlers;",
     "};",
   ].join("\n");
 }
 
-function generateRegisterFunction(operations: readonly OperationInfo[]): string {
+function generateFastifyPlugin(operations: readonly OperationInfo[]): string {
   const statements = operations.map(
     (operation) =>
       `  server.${operation.method}(routePaths["${operation.id}"], { ...config["${operation.id}"], schema: routeSchemas["${operation.id}"] }, handlers["${operation.id}"]);`,
   );
 
   return [
-    "export function registerFastifyRoutes(",
-    "  server: FastifyInstance,",
-    "  handlers: RouteHandlers,",
-    "  options: RegisterFastifyRoutesOptions = {},",
-    "): void {",
+    "const fastifyRoutesPluginImpl: FastifyPluginAsync<FastifyRoutesPluginOptions> = async (",
+    "  server,",
+    "  options,",
+    "): Promise<void> => {",
+    "  const handlers = options.handlers;",
     "  const config = options.config ?? {};",
     "",
     ...statements,
-    "}",
+    "};",
+    "",
+    "export const fastifyRoutesPlugin = fastifyPlugin<FastifyRoutesPluginOptions>(",
+    "  fastifyRoutesPluginImpl,",
+    "  {",
+    '  name: "fastify-routes",',
+    "  },",
+    ");",
   ].join("\n");
 }
 
@@ -201,9 +213,9 @@ function generateFile(operations: readonly OperationInfo[]): string {
     "",
     generateRouteSchemas(operations),
     "",
-    generateConfigTypes(),
+    generatePluginTypes(),
     "",
-    generateRegisterFunction(operations),
+    generateFastifyPlugin(operations),
     "",
   ].join("\n");
 }
