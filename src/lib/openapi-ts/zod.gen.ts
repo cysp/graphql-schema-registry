@@ -6,7 +6,7 @@ export const zRoot = z.unknown();
 
 export const zSubgraphSlugRoot = z.unknown();
 
-export const zXRevisionRoot = z.unknown();
+export const zXRevisionIdRoot = z.unknown();
 
 /**
  * Conflict
@@ -78,7 +78,7 @@ export const zError = zErrorRoot;
 export const zGraphRoot = z.object({
     id: z.uuid(),
     slug: z.string(),
-    revisionId: z.int().gte(1),
+    revisionId: z.string().regex(/^[1-9][0-9]*$/),
     federationVersion: z.string(),
     createdAt: z.iso.datetime(),
     updatedAt: z.iso.datetime()
@@ -96,7 +96,7 @@ export const zSubgraphRoot = z.object({
     id: z.uuid(),
     graphId: z.uuid(),
     slug: z.string(),
-    revisionId: z.int().gte(1),
+    revisionId: z.string().regex(/^[1-9][0-9]*$/),
     routingUrl: z.url(),
     createdAt: z.iso.datetime(),
     updatedAt: z.iso.datetime()
@@ -128,7 +128,7 @@ export const zGraphSlug = z.string().min(1);
 
 export const zSubgraphSlug = z.string().min(1);
 
-export const zXRevision = z.int().gte(0);
+export const zXRevisionId = z.string().regex(/^(0|[1-9][0-9]*)$/);
 
 export const zListGraphsData = z.object({
     body: z.never().optional(),
@@ -174,7 +174,7 @@ export const zUpsertGraphData = z.object({
     }),
     query: z.never().optional(),
     headers: z.object({
-        'x-revision': z.int().gte(0)
+        'x-revision-id': z.string().regex(/^(0|[1-9][0-9]*)$/)
     })
 });
 
@@ -232,7 +232,7 @@ export const zUpsertSubgraphData = z.object({
     }),
     query: z.never().optional(),
     headers: z.object({
-        'x-revision': z.int().gte(0)
+        'x-revision-id': z.string().regex(/^(0|[1-9][0-9]*)$/)
     })
 });
 

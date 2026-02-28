@@ -28,7 +28,7 @@ import {
   zUpsertGraphResponse,
   zUpsertSubgraphData,
   zUpsertSubgraphResponse,
-  zXRevision,
+  zXRevisionId,
 } from "../../openapi-ts/zod.gen.ts";
 import { requireAdmin } from "../authorization/guards.ts";
 
@@ -69,7 +69,7 @@ function mapGraphRowToResponse(graph: GraphRow) {
   return {
     id: graph.externalId,
     slug: graph.slug,
-    revisionId: graph.revisionId,
+    revisionId: String(graph.revisionId),
     federationVersion: graph.federationVersion,
     createdAt: graph.createdAt.toISOString(),
     updatedAt: graph.updatedAt.toISOString(),
@@ -81,7 +81,7 @@ function mapSubgraphRowToResponse(subgraph: SubgraphRow, graphExternalId: string
     id: subgraph.externalId,
     slug: subgraph.slug,
     graphId: graphExternalId,
-    revisionId: subgraph.revisionId,
+    revisionId: String(subgraph.revisionId),
     routingUrl: subgraph.routingUrl,
     createdAt: subgraph.createdAt.toISOString(),
     updatedAt: subgraph.updatedAt.toISOString(),
@@ -128,39 +128,17 @@ function isUniqueViolation(error: unknown): boolean {
 }
 
 function parseExpectedRevisionHeader(value: unknown): number | undefined {
-  let parsedValue: unknown = value;
-  if (typeof value === "string") {
-    if (!/^(0|[1-9][0-9]*)$/.test(value)) {
-      return undefined;
-    }
-
-    parsedValue = Number(value);
-  }
-
-  const parsed = zXRevision.safeParse(parsedValue);
+  const parsed = zXRevisionId.safeParse(value);
   if (!parsed.success) {
     return undefined;
   }
 
-  const revision = parsed.data;
-
-  if (typeof revision === "number") {
-    if (Number.isSafeInteger(revision) && revision >= 0) {
-      return revision;
-    }
-
+  const revision = Number(parsed.data);
+  if (!Number.isSafeInteger(revision) || revision < 0) {
     return undefined;
   }
 
-  if (typeof revision !== "bigint") {
-    return undefined;
-  }
-
-  if (revision > BigInt(Number.MAX_SAFE_INTEGER)) {
-    return undefined;
-  }
-
-  return Number(revision);
+  return revision;
 }
 
 async function requireGraphReadScope(
@@ -371,11 +349,11 @@ const registryPluginImpl: FastifyPluginCallbackZod<RegistryPluginOptions> = (
       reply,
     ) => {
       const expectedRevision = parseExpectedRevisionHeader(
-        (request.headers as Record<string, unknown>)["x-revision"] ??
-          (request.headers as Record<string, unknown>)["X-Revision"],
+        (request.headers as Record<string, unknown>)["x-revision-id"] ??
+          (request.headers as Record<string, unknown>)["X-Revision-Id"],
       );
       if (expectedRevision === undefined) {
-        reply.unprocessableEntity("Invalid X-Revision header.");
+        reply.unprocessableEntity("Invalid X-Revision-Id header.");
         return;
       }
 
@@ -433,7 +411,7 @@ const registryPluginImpl: FastifyPluginCallbackZod<RegistryPluginOptions> = (
         if (expectedRevision !== 0) {
           return {
             kind: "conflict" as const,
-            detail: "X-Revision must be 0 when creating a new graph.",
+            detail: "X-Revision-Id must be 0 when creating a new graph.",
           };
         }
 
@@ -615,11 +593,11 @@ const registryPluginImpl: FastifyPluginCallbackZod<RegistryPluginOptions> = (
       reply,
     ) => {
       const expectedRevision = parseExpectedRevisionHeader(
-        (request.headers as Record<string, unknown>)["x-revision"] ??
-          (request.headers as Record<string, unknown>)["X-Revision"],
+        (request.headers as Record<string, unknown>)["x-revision-id"] ??
+          (request.headers as Record<string, unknown>)["X-Revision-Id"],
       );
       if (expectedRevision === undefined) {
-        reply.unprocessableEntity("Invalid X-Revision header.");
+        reply.unprocessableEntity("Invalid X-Revision-Id header.");
         return;
       }
 
@@ -693,7 +671,7 @@ const registryPluginImpl: FastifyPluginCallbackZod<RegistryPluginOptions> = (
         if (expectedRevision !== 0) {
           return {
             kind: "conflict" as const,
-            detail: "X-Revision must be 0 when creating a new subgraph.",
+            detail: "X-Revision-Id must be 0 when creating a new subgraph.",
           };
         }
 

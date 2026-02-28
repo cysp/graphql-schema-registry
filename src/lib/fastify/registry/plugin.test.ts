@@ -95,7 +95,7 @@ await test("registry plugin", async (t) => {
         federationVersion: "v2.9",
       },
       headers: {
-        "x-revision": "0",
+        "x-revision-id": "0",
       },
       expectedToken: "admin",
       method: "PUT",
@@ -125,7 +125,7 @@ await test("registry plugin", async (t) => {
         routingUrl: "https://subgraphs.example.test/inventory",
       },
       headers: {
-        "x-revision": "0",
+        "x-revision-id": "0",
       },
       expectedToken: "admin",
       method: "PUT",
@@ -197,7 +197,7 @@ await test("registry plugin", async (t) => {
     }
   });
 
-  await t.test("put routes require a valid x-revision header", async () => {
+  await t.test("put routes require a valid x-revision-id header", async () => {
     const graphPutWithoutHeader = await server.inject({
       method: "PUT",
       url: "/v1/graphs/alpha",
@@ -219,7 +219,7 @@ await test("registry plugin", async (t) => {
       },
       headers: {
         authorization: "admin",
-        "x-revision": "-1",
+        "x-revision-id": "-1",
       },
     });
 

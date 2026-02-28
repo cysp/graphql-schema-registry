@@ -1,11 +1,14 @@
 // oxlint-disable import/no-default-export
 
-import { defineConfig } from "@hey-api/openapi-ts";
+import { fastifyRoutesPlugin } from "./src/lib/openapi-ts-plugins/fastify-routes/plugin.ts";
 
-export default defineConfig({
+export default {
   input: {
     path: "./openapi/openapi.yaml",
   },
-  output: "src/lib/openapi-ts",
-  plugins: ["@hey-api/typescript", "zod", "fastify"],
-});
+  output: {
+    clean: true,
+    path: "src/lib/openapi-ts",
+  },
+  plugins: ["@hey-api/typescript", "zod", "fastify", fastifyRoutesPlugin],
+};

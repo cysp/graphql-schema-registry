@@ -26,7 +26,7 @@ export type Root = unknown;
 
 export type SubgraphSlugRoot = unknown;
 
-export type XRevisionRoot = unknown;
+export type XRevisionIdRoot = unknown;
 
 /**
  * Conflict
@@ -86,7 +86,7 @@ export type GraphListRoot = {
 export type GraphRoot = {
     id: string;
     slug: string;
-    revisionId: number;
+    revisionId: string;
     federationVersion: string;
     createdAt: string;
     updatedAt: string;
@@ -100,7 +100,7 @@ export type SubgraphRoot = {
     id: string;
     graphId: string;
     slug: string;
-    revisionId: number;
+    revisionId: string;
     routingUrl: string;
     createdAt: string;
     updatedAt: string;
@@ -120,7 +120,7 @@ export type GraphSlug = string;
 
 export type SubgraphSlug = string;
 
-export type XRevision = number;
+export type XRevisionId = string;
 
 export type ListGraphsData = {
     body?: never;
@@ -224,7 +224,7 @@ export type GetGraphResponse = GetGraphResponses[keyof GetGraphResponses];
 export type UpsertGraphData = {
     body: UpsertGraphRequestRoot;
     headers: {
-        'x-revision': number;
+        'x-revision-id': string;
     };
     path: {
         graphSlug: string;
@@ -377,7 +377,7 @@ export type GetSubgraphResponse = GetSubgraphResponses[keyof GetSubgraphResponse
 export type UpsertSubgraphData = {
     body: UpsertSubgraphRequestRoot;
     headers: {
-        'x-revision': number;
+        'x-revision-id': string;
     };
     path: {
         graphSlug: string;
