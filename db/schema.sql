@@ -44,5 +44,5 @@ CREATE INDEX "subgraphs_graph_active_slug_idx" ON "subgraphs" ("graph_id","slug"
 ALTER TABLE "graph_revisions" ADD CONSTRAINT "graph_revisions_graph_fk" FOREIGN KEY ("graph_id") REFERENCES "graphs"("id");
 ALTER TABLE "graphs" ADD CONSTRAINT "graphs_current_revision_fk" FOREIGN KEY ("id","current_revision_id") REFERENCES "graph_revisions"("graph_id","revision_id") DEFERRABLE INITIALLY DEFERRED;
 ALTER TABLE "subgraph_revisions" ADD CONSTRAINT "subgraph_revisions_subgraph_fk" FOREIGN KEY ("subgraph_id") REFERENCES "subgraphs"("id");
-ALTER TABLE "subgraphs" ADD CONSTRAINT "subgraphs_current_revision_fk" FOREIGN KEY ("id","current_revision_id") REFERENCES "subgraph_revisions"("subgraph_id","revision_id") DEFERRABLE INITIALLY DEFERRED;
 ALTER TABLE "subgraphs" ADD CONSTRAINT "subgraphs_graph_fk" FOREIGN KEY ("graph_id") REFERENCES "graphs"("id");
+ALTER TABLE "subgraphs" ADD CONSTRAINT "subgraphs_current_revision_fk" FOREIGN KEY ("id","current_revision_id") REFERENCES "subgraph_revisions"("subgraph_id","revision_id") DEFERRABLE INITIALLY DEFERRED;

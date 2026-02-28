@@ -2,7 +2,7 @@
 
 import type { FastifyReply, FastifyRequest, RouteGenericInterface } from "fastify";
 
-import type { AuthorizationGrant } from "../../../domain/authorization/user.ts";
+import type { AuthorizationGrant, RequestUser } from "../../../domain/authorization/user.ts";
 
 export type AdminRouteParams = unknown;
 
@@ -20,22 +20,54 @@ type GuardMatcher<TRequest extends FastifyRequest> = (
   request: TRequest,
 ) => boolean;
 
+export function getAuthenticatedUser(
+  request: FastifyRequest,
+  reply: FastifyReply,
+): RequestUser | undefined {
+  const user = request.user;
+  if (!user) {
+    reply.unauthorized();
+    return undefined;
+  }
+
+  return user;
+}
+
+export function requireAdminUser(
+  request: FastifyRequest,
+  reply: FastifyReply,
+): RequestUser | undefined {
+  const user = getAuthenticatedUser(request, reply);
+  if (!user) {
+    return undefined;
+  }
+
+  if (!user.grants.some((grant) => grant.scope === "admin")) {
+    reply.forbidden();
+    return undefined;
+  }
+
+  return user;
+}
+
 function createGuard<RouteGeneric extends RouteGenericInterface>(
   matcher: GuardMatcher<FastifyRequest<RouteGeneric>>,
 ): (request: FastifyRequest<RouteGeneric>, reply: FastifyReply) => Promise<void> {
   return async (request, reply) => {
-    const user = request.user;
+    const user = getAuthenticatedUser(request, reply);
     if (!user) {
-      return reply.unauthorized();
+      return;
     }
 
     if (!user.grants.some((grant) => matcher(grant, request))) {
-      return reply.forbidden();
+      reply.forbidden();
     }
   };
 }
 
-export const requireAdmin = createGuard<RouteGenericInterface>((grant) => grant.scope === "admin");
+export const requireAdmin = createGuard<RouteGenericInterface>(
+  (grant) => grant.scope === "admin",
+);
 
 export const requireGraphRead = createGuard<{
   Params: GraphRouteParams;

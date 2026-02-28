@@ -4,15 +4,18 @@ import { sql } from "drizzle-orm";
 import fastify, { type FastifyInstance } from "fastify";
 import { serializerCompiler, validatorCompiler } from "fastify-type-provider-zod";
 
+import { deleteGraphHandler } from "./domain/routes/delete-graph.ts";
+import { deleteSubgraphHandler } from "./domain/routes/delete-subgraph.ts";
+import { getGraphHandler } from "./domain/routes/get-graph.ts";
+import { getSubgraphHandler } from "./domain/routes/get-subgraph.ts";
+import { listGraphsHandler } from "./domain/routes/list-graphs.ts";
+import { listSubgraphsHandler } from "./domain/routes/list-subgraphs.ts";
+import { upsertGraphHandler } from "./domain/routes/upsert-graph.ts";
+import { upsertSubgraphHandler } from "./domain/routes/upsert-subgraph.ts";
 import { formatUser } from "./domain/authorization/user.ts";
 import type { PostgresJsDatabase } from "./drizzle/types.ts";
-import { requireAdmin } from "./lib/fastify/authorization/guards.ts";
-import { createListGraphsHandler, createGetGraphHandler } from "./lib/fastify/graph-handlers.ts";
-import {
-  createDeleteGraphHandler,
-  createUpsertGraphHandler,
-} from "./lib/fastify/graph-write-handlers.ts";
 import { healthcheckPlugin } from "./lib/fastify/healthcheck/plugin.ts";
+import { fastifyHandlerWithDependencies } from "./lib/fastify/handler-with-dependencies.ts";
 import { fastifyRoutesPlugin } from "./lib/openapi-ts/fastify-routes.gen.ts";
 
 type CreateFastifyServerOptions = {
@@ -82,43 +85,17 @@ export function createFastifyServer({
     },
   });
 
+
   server.register(fastifyRoutesPlugin, {
     routes: {
-      listGraphs: {
-        preHandler: requireAdmin,
-        handler: createListGraphsHandler({ database }),
-      },
-      getGraph: {
-        handler: createGetGraphHandler({ database }),
-      },
-      upsertGraph: {
-        preHandler: requireAdmin,
-        handler: createUpsertGraphHandler({ database }),
-      },
-      deleteGraph: {
-        preHandler: requireAdmin,
-        handler: createDeleteGraphHandler({ database }),
-      },
-      listSubgraphs: {
-        handler(_request, reply) {
-          reply.notImplemented();
-        },
-      },
-      getSubgraph: {
-        handler(_request, reply) {
-          reply.notImplemented();
-        },
-      },
-      upsertSubgraph: {
-        handler(_request, reply) {
-          reply.notImplemented();
-        },
-      },
-      deleteSubgraph: {
-        handler(_request, reply) {
-          reply.notImplemented();
-        },
-      },
+      listGraphs: fastifyHandlerWithDependencies(listGraphsHandler, { database }),
+      getGraph: fastifyHandlerWithDependencies(getGraphHandler, { database }),
+      upsertGraph: fastifyHandlerWithDependencies(upsertGraphHandler, { database }),
+      deleteGraph: fastifyHandlerWithDependencies(deleteGraphHandler, { database }),
+      listSubgraphs: listSubgraphsHandler,
+      getSubgraph: getSubgraphHandler,
+      upsertSubgraph: upsertSubgraphHandler,
+      deleteSubgraph: deleteSubgraphHandler,
     },
   });
 
