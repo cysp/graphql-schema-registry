@@ -1,6 +1,6 @@
 import type { PostgresJsDatabase } from "../../drizzle/types.ts";
 
-type GraphQueryClient = {
+type GraphDataClient = {
   query: {
     graphs: {
       findFirst: PostgresJsDatabase["query"]["graphs"]["findFirst"];
@@ -9,7 +9,7 @@ type GraphQueryClient = {
   };
 };
 
-export type GraphWithLatestRevision = {
+export type GraphWithCurrentRevision = {
   createdAt: Date;
   currentRevision: {
     federationVersion: string;
@@ -23,7 +23,9 @@ export type GraphWithLatestRevision = {
   updatedAt: Date;
 };
 
-export async function listGraphs(database: GraphQueryClient): Promise<GraphWithLatestRevision[]> {
+export async function listActiveGraphs(
+  database: GraphDataClient,
+): Promise<GraphWithCurrentRevision[]> {
   return database.query.graphs.findMany({
     where: {
       deletedAt: {
@@ -44,10 +46,10 @@ export async function listGraphs(database: GraphQueryClient): Promise<GraphWithL
   });
 }
 
-export async function getGraphBySlug(
-  database: GraphQueryClient,
+export async function getActiveGraphBySlug(
+  database: GraphDataClient,
   slug: string,
-): Promise<GraphWithLatestRevision | undefined> {
+): Promise<GraphWithCurrentRevision | undefined> {
   return database.query.graphs.findFirst({
     where: {
       deletedAt: {

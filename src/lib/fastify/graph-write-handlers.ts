@@ -3,7 +3,7 @@ import { and, eq, isNull } from "drizzle-orm";
 import { graphRevisions, graphs } from "../../drizzle/schema.ts";
 import type { PostgresJsDatabase } from "../../drizzle/types.ts";
 import type { RouteHandlers } from "../openapi-ts/fastify.gen.ts";
-import { getGraphBySlug } from "./graph-database.ts";
+import { getActiveGraphBySlug } from "./graph-database.ts";
 import type { PersistedGraph } from "./graph-response.ts";
 import { toGraphResponse } from "./graph-response.ts";
 
@@ -91,10 +91,10 @@ export function createUpsertGraphHandler({
     try {
       const result: UpsertGraphTransactionResult = await database.transaction(
         async (transaction) => {
-          const existingGraph = await getGraphBySlug(transaction, request.params.graphSlug);
+          const activeGraph = await getActiveGraphBySlug(transaction, request.params.graphSlug);
 
           if (providedRevisionId === 0) {
-            if (existingGraph) {
+            if (activeGraph) {
               return {
                 conflictDetail: "Graph already exists. Use the current revision id to update it.",
               };
@@ -143,13 +143,13 @@ export function createUpsertGraphHandler({
             };
           }
 
-          if (!existingGraph) {
+          if (!activeGraph) {
             return {
               conflictDetail: "Revision mismatch. Provide the current revision id to update.",
             };
           }
 
-          const currentRevision = existingGraph.currentRevision;
+          const currentRevision = activeGraph.currentRevision;
           if (!currentRevision) {
             throw new Error("Graph is missing a current revision.");
           }
@@ -170,7 +170,7 @@ export function createUpsertGraphHandler({
             })
             .where(
               and(
-                eq(graphs.id, existingGraph.id),
+                eq(graphs.id, activeGraph.id),
                 isNull(graphs.deletedAt),
                 eq(graphs.currentRevisionId, currentRevisionId),
               ),

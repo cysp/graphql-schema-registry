@@ -1,6 +1,6 @@
 import type { PostgresJsDatabase } from "../../drizzle/types.ts";
 import type { RouteHandlers } from "../openapi-ts/fastify.gen.ts";
-import { getGraphBySlug, listGraphs } from "./graph-database.ts";
+import { getActiveGraphBySlug, listActiveGraphs } from "./graph-database.ts";
 import { toGraphResponse } from "./graph-response.ts";
 
 export function createListGraphsHandler({
@@ -14,16 +14,16 @@ export function createListGraphsHandler({
       return;
     }
 
-    const rows = await listGraphs(database);
+    const activeGraphs = await listActiveGraphs(database);
 
-    const responsePayload = [];
-    for (const graph of rows) {
+    const graphResponses = [];
+    for (const graph of activeGraphs) {
       if (!graph.currentRevision) {
         reply.internalServerError("Graph is missing a current revision.");
         return;
       }
 
-      responsePayload.push(
+      graphResponses.push(
         toGraphResponse({
           createdAt: graph.createdAt,
           externalId: graph.externalId,
@@ -36,7 +36,7 @@ export function createListGraphsHandler({
       );
     }
 
-    reply.code(200).send(responsePayload);
+    reply.code(200).send(graphResponses);
   };
 }
 
@@ -57,9 +57,9 @@ export function createGetGraphHandler({
       return;
     }
 
-    const graph = await getGraphBySlug(database, request.params.graphSlug);
+    const activeGraph = await getActiveGraphBySlug(database, request.params.graphSlug);
 
-    if (!graph) {
+    if (!activeGraph) {
       reply.notFound("Graph not found.");
       return;
     }
@@ -67,7 +67,7 @@ export function createGetGraphHandler({
     const canReadGraph = user.grants.some(
       (grant) =>
         grant.scope === "admin" ||
-        (grant.scope === "graph:read" && grant.graphId === graph.externalId),
+        (grant.scope === "graph:read" && grant.graphId === activeGraph.externalId),
     );
 
     if (!canReadGraph) {
@@ -75,20 +75,20 @@ export function createGetGraphHandler({
       return;
     }
 
-    if (!graph.currentRevision) {
+    if (!activeGraph.currentRevision) {
       reply.internalServerError("Graph is missing a current revision.");
       return;
     }
 
     reply.code(200).send(
       toGraphResponse({
-        createdAt: graph.createdAt,
-        externalId: graph.externalId,
-        federationVersion: graph.currentRevision.federationVersion,
-        id: graph.id,
-        revisionId: graph.currentRevision.revisionId,
-        slug: graph.slug,
-        updatedAt: graph.updatedAt,
+        createdAt: activeGraph.createdAt,
+        externalId: activeGraph.externalId,
+        federationVersion: activeGraph.currentRevision.federationVersion,
+        id: activeGraph.id,
+        revisionId: activeGraph.currentRevision.revisionId,
+        slug: activeGraph.slug,
+        updatedAt: activeGraph.updatedAt,
       }),
     );
   };
