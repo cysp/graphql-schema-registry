@@ -1,0 +1,238 @@
+openapi: 3.1.0
+
+info:
+  title: GraphQL Schema Registry
+  version: 0.1.0
+
+servers:
+  - url: http://localhost:3000
+
+paths:
+  /v1/graphs:
+    get:
+      operationId: listGraphs
+      security:
+        - bearerAuth: []
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/GraphList"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+
+  /v1/graphs/{graphSlug}:
+    get:
+      operationId: getGraph
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: "#/components/parameters/GraphSlug"
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Graph"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+
+    put:
+      operationId: upsertGraph
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: "#/components/parameters/GraphSlug"
+        - $ref: "#/components/parameters/XRevision"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/UpsertGraphRequest"
+      responses:
+        "200":
+          description: Updated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Graph"
+        "201":
+          description: Created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Graph"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "409":
+          $ref: "#/components/responses/Conflict"
+        "422":
+          $ref: "#/components/responses/UnprocessableEntity"
+
+    delete:
+      operationId: deleteGraph
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: "#/components/parameters/GraphSlug"
+      responses:
+        "204":
+          description: No Content
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+
+  /v1/graphs/{graphSlug}/subgraphs:
+    get:
+      operationId: listSubgraphs
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: "#/components/parameters/GraphSlug"
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SubgraphList"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+
+  /v1/graphs/{graphSlug}/subgraphs/{subgraphSlug}:
+    get:
+      operationId: getSubgraph
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: "#/components/parameters/GraphSlug"
+        - $ref: "#/components/parameters/SubgraphSlug"
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Subgraph"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+
+    put:
+      operationId: upsertSubgraph
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: "#/components/parameters/GraphSlug"
+        - $ref: "#/components/parameters/SubgraphSlug"
+        - $ref: "#/components/parameters/XRevision"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/UpsertSubgraphRequest"
+      responses:
+        "200":
+          description: Updated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Subgraph"
+        "201":
+          description: Created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Subgraph"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "409":
+          $ref: "#/components/responses/Conflict"
+        "422":
+          $ref: "#/components/responses/UnprocessableEntity"
+
+    delete:
+      operationId: deleteSubgraph
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: "#/components/parameters/GraphSlug"
+        - $ref: "#/components/parameters/SubgraphSlug"
+      responses:
+        "204":
+          description: No Content
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+
+components:
+  securitySchemes:
+    bearerAuth:
+      $ref: "./components/security-schemes/bearer-auth.yaml"
+  parameters:
+    GraphSlug:
+      $ref: "./components/parameters/graph-slug.yaml"
+    SubgraphSlug:
+      $ref: "./components/parameters/subgraph-slug.yaml"
+    XRevision:
+      $ref: "./components/parameters/x-revision.yaml"
+  schemas:
+    Error:
+      $ref: "./components/schemas/error.yaml"
+    FieldError:
+      $ref: "./components/schemas/field-error.yaml"
+    Diagnostic:
+      $ref: "./components/schemas/diagnostic.yaml"
+    Graph:
+      $ref: "./components/schemas/graph.yaml"
+    GraphList:
+      $ref: "./components/schemas/graph-list.yaml"
+    UpsertGraphRequest:
+      $ref: "./components/schemas/upsert-graph-request.yaml"
+    Subgraph:
+      $ref: "./components/schemas/subgraph.yaml"
+    SubgraphList:
+      $ref: "./components/schemas/subgraph-list.yaml"
+    UpsertSubgraphRequest:
+      $ref: "./components/schemas/upsert-subgraph-request.yaml"
+  responses:
+    Unauthorized:
+      $ref: "./components/responses/unauthorized.yaml"
+    Forbidden:
+      $ref: "./components/responses/forbidden.yaml"
+    NotFound:
+      $ref: "./components/responses/not-found.yaml"
+    Conflict:
+      $ref: "./components/responses/conflict.yaml"
+    UnprocessableEntity:
+      $ref: "./components/responses/unprocessable-entity.yaml"

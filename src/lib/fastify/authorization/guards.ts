@@ -7,12 +7,12 @@ import type { AuthorizationGrant } from "../../../domain/authorization/user.ts";
 export type AdminRouteParams = unknown;
 
 export type GraphRouteParams = {
-  graphId: string;
+  graphSlug: string;
 };
 
 export type SubgraphRouteParams = {
-  graphId: string;
-  subgraphId: string;
+  graphSlug: string;
+  subgraphSlug: string;
 };
 
 type GuardMatcher<TRequest extends FastifyRequest> = (
@@ -41,13 +41,13 @@ export const requireAdmin = createGuard<{ Params: AdminRouteParams }>(
 
 export const requireGraphRead = createGuard<{
   Params: GraphRouteParams;
-}>((grant, request) => grant.scope === "graph:read" && grant.graphId === request.params.graphId);
+}>((grant, request) => grant.scope === "graph:read" && grant.graphId === request.params.graphSlug);
 
 export const requireSubgraphWrite = createGuard<{
   Params: SubgraphRouteParams;
 }>(
   (grant, request) =>
     grant.scope === "subgraph:write" &&
-    grant.graphId === request.params.graphId &&
-    grant.subgraphId === request.params.subgraphId,
+    grant.graphId === request.params.graphSlug &&
+    grant.subgraphId === request.params.subgraphSlug,
 );

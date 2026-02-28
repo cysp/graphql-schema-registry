@@ -7,17 +7,30 @@ import type { FastifyPluginCallbackZod } from "fastify-type-provider-zod";
 
 import { graphRevisions, graphs, subgraphRevisions, subgraphs } from "../../../drizzle/schema.ts";
 import type { PostgresJsDatabase } from "../../../drizzle/types.ts";
-import { requireAdmin } from "../authorization/guards.ts";
+import type {
+  DeleteGraphData,
+  DeleteSubgraphData,
+  GetGraphData,
+  GetSubgraphData,
+  ListSubgraphsData,
+  UpsertGraphData,
+  UpsertSubgraphData,
+} from "../../openapi-ts/types.gen.ts";
 import {
-  graphListSchema,
-  graphParamsSchema,
-  graphSchema,
-  subgraphListSchema,
-  subgraphParamsSchema,
-  subgraphSchema,
-  upsertGraphBodySchema,
-  upsertSubgraphBodySchema,
-} from "./schemas.ts";
+  zGetGraphData,
+  zGetGraphResponse,
+  zGetSubgraphData,
+  zGetSubgraphResponse,
+  zListGraphsResponse,
+  zListSubgraphsData,
+  zListSubgraphsResponse,
+  zUpsertGraphData,
+  zUpsertGraphResponse,
+  zUpsertSubgraphData,
+  zUpsertSubgraphResponse,
+  zXRevision,
+} from "../../openapi-ts/zod.gen.ts";
+import { requireAdmin } from "../authorization/guards.ts";
 
 type RegistryPluginOptions = {
   database?: PostgresJsDatabase | undefined;
@@ -25,6 +38,16 @@ type RegistryPluginOptions = {
 
 type GraphRow = typeof graphs.$inferSelect;
 type SubgraphRow = typeof subgraphs.$inferSelect;
+const graphParamsSchema = zGetGraphData.shape.path;
+const subgraphParamsSchema = zGetSubgraphData.shape.path;
+const upsertGraphBodySchema = zUpsertGraphData.shape.body;
+const upsertSubgraphBodySchema = zUpsertSubgraphData.shape.body;
+const graphSchema = zGetGraphResponse;
+const subgraphSchema = zGetSubgraphResponse;
+const graphListSchema = zListGraphsResponse;
+const subgraphListSchema = zListSubgraphsResponse;
+const upsertGraphResponseSchema = zUpsertGraphResponse;
+const upsertSubgraphResponseSchema = zUpsertSubgraphResponse;
 
 function sendNotImplemented(_request: FastifyRequest, reply: FastifyReply): void {
   reply.code(501).send();
@@ -105,24 +128,43 @@ function isUniqueViolation(error: unknown): boolean {
 }
 
 function parseExpectedRevisionHeader(value: unknown): number | undefined {
-  if (typeof value !== "string") {
+  let parsedValue: unknown = value;
+  if (typeof value === "string") {
+    if (!/^(0|[1-9][0-9]*)$/.test(value)) {
+      return undefined;
+    }
+
+    parsedValue = Number(value);
+  }
+
+  const parsed = zXRevision.safeParse(parsedValue);
+  if (!parsed.success) {
     return undefined;
   }
 
-  if (!/^(0|[1-9][0-9]*)$/.test(value)) {
+  const revision = parsed.data;
+
+  if (typeof revision === "number") {
+    if (Number.isSafeInteger(revision) && revision >= 0) {
+      return revision;
+    }
+
     return undefined;
   }
 
-  const parsed = Number(value);
-  if (!Number.isSafeInteger(parsed)) {
+  if (typeof revision !== "bigint") {
     return undefined;
   }
 
-  return parsed;
+  if (revision > BigInt(Number.MAX_SAFE_INTEGER)) {
+    return undefined;
+  }
+
+  return Number(revision);
 }
 
 async function requireGraphReadScope(
-  request: FastifyRequest<{ Params: { graphId: string } }>,
+  request: FastifyRequest<{ Params: GetGraphData["path"] }>,
   reply: FastifyReply,
   database: PostgresJsDatabase | undefined,
 ): Promise<boolean> {
@@ -142,7 +184,7 @@ async function requireGraphReadScope(
     return false;
   }
 
-  const graph = await getActiveGraphBySlug(db, request.params.graphId);
+  const graph = await getActiveGraphBySlug(db, request.params.graphSlug);
   if (!graph) {
     reply.notFound();
     return false;
@@ -158,7 +200,7 @@ async function requireGraphReadScope(
 }
 
 async function requireSubgraphWriteScope(
-  request: FastifyRequest<{ Params: { graphId: string; subgraphId: string } }>,
+  request: FastifyRequest<{ Params: GetSubgraphData["path"] }>,
   reply: FastifyReply,
   database: PostgresJsDatabase | undefined,
 ): Promise<boolean> {
@@ -180,13 +222,13 @@ async function requireSubgraphWriteScope(
     return false;
   }
 
-  const graph = await getActiveGraphBySlug(db, request.params.graphId);
+  const graph = await getActiveGraphBySlug(db, request.params.graphSlug);
   if (!graph) {
     reply.notFound();
     return false;
   }
 
-  const subgraph = await getActiveSubgraphBySlug(db, graph.id, request.params.subgraphId);
+  const subgraph = await getActiveSubgraphBySlug(db, graph.id, request.params.subgraphSlug);
   if (!subgraph) {
     reply.notFound();
     return false;
@@ -235,7 +277,7 @@ const registryPluginImpl: FastifyPluginCallbackZod<RegistryPluginOptions> = (
   );
 
   server.get(
-    "/v1/graphs/:graphId",
+    "/v1/graphs/:graphSlug",
     {
       preHandler: requireAdmin,
       schema: {
@@ -245,13 +287,13 @@ const registryPluginImpl: FastifyPluginCallbackZod<RegistryPluginOptions> = (
         },
       },
     },
-    async (request, reply) => {
+    async (request: FastifyRequest<{ Params: GetGraphData["path"] }>, reply) => {
       const db = getDatabase(options.database, reply);
       if (!db) {
         return;
       }
 
-      const graph = await getActiveGraphBySlug(db, request.params.graphId);
+      const graph = await getActiveGraphBySlug(db, request.params.graphSlug);
       if (!graph) {
         reply.notFound();
         return;
@@ -262,14 +304,14 @@ const registryPluginImpl: FastifyPluginCallbackZod<RegistryPluginOptions> = (
   );
 
   server.delete(
-    "/v1/graphs/:graphId",
+    "/v1/graphs/:graphSlug",
     {
       preHandler: requireAdmin,
       schema: {
         params: graphParamsSchema,
       },
     },
-    async (request, reply) => {
+    async (request: FastifyRequest<{ Params: DeleteGraphData["path"] }>, reply) => {
       const db = getDatabase(options.database, reply);
       if (!db) {
         return;
@@ -283,7 +325,7 @@ const registryPluginImpl: FastifyPluginCallbackZod<RegistryPluginOptions> = (
             deletedAt: now,
             updatedAt: now,
           })
-          .where(and(eq(graphs.slug, request.params.graphId), isNull(graphs.deletedAt)))
+          .where(and(eq(graphs.slug, request.params.graphSlug), isNull(graphs.deletedAt)))
           .returning();
 
         const deletedGraph = rows[0];
@@ -312,20 +354,26 @@ const registryPluginImpl: FastifyPluginCallbackZod<RegistryPluginOptions> = (
   );
 
   server.put(
-    "/v1/graphs/:graphId",
+    "/v1/graphs/:graphSlug",
     {
       preHandler: requireAdmin,
       schema: {
         params: graphParamsSchema,
         body: upsertGraphBodySchema,
         response: {
-          200: graphSchema,
-          201: graphSchema,
+          200: upsertGraphResponseSchema,
+          201: upsertGraphResponseSchema,
         },
       },
     },
-    async (request, reply) => {
-      const expectedRevision = parseExpectedRevisionHeader(request.headers["x-revision"]);
+    async (
+      request: FastifyRequest<{ Body: UpsertGraphData["body"]; Params: UpsertGraphData["path"] }>,
+      reply,
+    ) => {
+      const expectedRevision = parseExpectedRevisionHeader(
+        (request.headers as Record<string, unknown>)["x-revision"] ??
+          (request.headers as Record<string, unknown>)["X-Revision"],
+      );
       if (expectedRevision === undefined) {
         reply.unprocessableEntity("Invalid X-Revision header.");
         return;
@@ -336,7 +384,7 @@ const registryPluginImpl: FastifyPluginCallbackZod<RegistryPluginOptions> = (
         return;
       }
 
-      const graphSlug = request.params.graphId;
+      const graphSlug = request.params.graphSlug;
       const federationVersion = request.body.federationVersion;
       const now = new Date();
 
@@ -434,23 +482,23 @@ const registryPluginImpl: FastifyPluginCallbackZod<RegistryPluginOptions> = (
   );
 
   server.get(
-    "/v1/graphs/:graphId/subgraphs",
+    "/v1/graphs/:graphSlug/subgraphs",
     {
       preHandler: requireAdmin,
       schema: {
-        params: graphParamsSchema,
+        params: zListSubgraphsData.shape.path,
         response: {
           200: subgraphListSchema,
         },
       },
     },
-    async (request, reply) => {
+    async (request: FastifyRequest<{ Params: ListSubgraphsData["path"] }>, reply) => {
       const db = getDatabase(options.database, reply);
       if (!db) {
         return;
       }
 
-      const graph = await getActiveGraphBySlug(db, request.params.graphId);
+      const graph = await getActiveGraphBySlug(db, request.params.graphSlug);
       if (!graph) {
         reply.notFound();
         return;
@@ -469,7 +517,7 @@ const registryPluginImpl: FastifyPluginCallbackZod<RegistryPluginOptions> = (
   );
 
   server.get(
-    "/v1/graphs/:graphId/subgraphs/:subgraphId",
+    "/v1/graphs/:graphSlug/subgraphs/:subgraphSlug",
     {
       preHandler: requireAdmin,
       schema: {
@@ -479,19 +527,19 @@ const registryPluginImpl: FastifyPluginCallbackZod<RegistryPluginOptions> = (
         },
       },
     },
-    async (request, reply) => {
+    async (request: FastifyRequest<{ Params: GetSubgraphData["path"] }>, reply) => {
       const db = getDatabase(options.database, reply);
       if (!db) {
         return;
       }
 
-      const graph = await getActiveGraphBySlug(db, request.params.graphId);
+      const graph = await getActiveGraphBySlug(db, request.params.graphSlug);
       if (!graph) {
         reply.notFound();
         return;
       }
 
-      const subgraph = await getActiveSubgraphBySlug(db, graph.id, request.params.subgraphId);
+      const subgraph = await getActiveSubgraphBySlug(db, graph.id, request.params.subgraphSlug);
       if (!subgraph) {
         reply.notFound();
         return;
@@ -502,20 +550,20 @@ const registryPluginImpl: FastifyPluginCallbackZod<RegistryPluginOptions> = (
   );
 
   server.delete(
-    "/v1/graphs/:graphId/subgraphs/:subgraphId",
+    "/v1/graphs/:graphSlug/subgraphs/:subgraphSlug",
     {
       preHandler: requireAdmin,
       schema: {
         params: subgraphParamsSchema,
       },
     },
-    async (request, reply) => {
+    async (request: FastifyRequest<{ Params: DeleteSubgraphData["path"] }>, reply) => {
       const db = getDatabase(options.database, reply);
       if (!db) {
         return;
       }
 
-      const graph = await getActiveGraphBySlug(db, request.params.graphId);
+      const graph = await getActiveGraphBySlug(db, request.params.graphSlug);
       if (!graph) {
         reply.notFound();
         return;
@@ -531,7 +579,7 @@ const registryPluginImpl: FastifyPluginCallbackZod<RegistryPluginOptions> = (
         .where(
           and(
             eq(subgraphs.graphId, graph.id),
-            eq(subgraphs.slug, request.params.subgraphId),
+            eq(subgraphs.slug, request.params.subgraphSlug),
             isNull(subgraphs.deletedAt),
           ),
         )
@@ -547,20 +595,29 @@ const registryPluginImpl: FastifyPluginCallbackZod<RegistryPluginOptions> = (
   );
 
   server.put(
-    "/v1/graphs/:graphId/subgraphs/:subgraphId",
+    "/v1/graphs/:graphSlug/subgraphs/:subgraphSlug",
     {
       preHandler: requireAdmin,
       schema: {
         params: subgraphParamsSchema,
         body: upsertSubgraphBodySchema,
         response: {
-          200: subgraphSchema,
-          201: subgraphSchema,
+          200: upsertSubgraphResponseSchema,
+          201: upsertSubgraphResponseSchema,
         },
       },
     },
-    async (request, reply) => {
-      const expectedRevision = parseExpectedRevisionHeader(request.headers["x-revision"]);
+    async (
+      request: FastifyRequest<{
+        Body: UpsertSubgraphData["body"];
+        Params: UpsertSubgraphData["path"];
+      }>,
+      reply,
+    ) => {
+      const expectedRevision = parseExpectedRevisionHeader(
+        (request.headers as Record<string, unknown>)["x-revision"] ??
+          (request.headers as Record<string, unknown>)["X-Revision"],
+      );
       if (expectedRevision === undefined) {
         reply.unprocessableEntity("Invalid X-Revision header.");
         return;
@@ -571,8 +628,8 @@ const registryPluginImpl: FastifyPluginCallbackZod<RegistryPluginOptions> = (
         return;
       }
 
-      const graphSlug = request.params.graphId;
-      const subgraphSlug = request.params.subgraphId;
+      const graphSlug = request.params.graphSlug;
+      const subgraphSlug = request.params.subgraphSlug;
       const routingUrl = request.body.routingUrl;
       const now = new Date();
 
@@ -696,7 +753,7 @@ const registryPluginImpl: FastifyPluginCallbackZod<RegistryPluginOptions> = (
   );
 
   server.get(
-    "/v1/graphs/:graphId/supergraph.graphqls",
+    "/v1/graphs/:graphSlug/supergraph.graphqls",
     {
       schema: {
         params: graphParamsSchema,
@@ -713,7 +770,7 @@ const registryPluginImpl: FastifyPluginCallbackZod<RegistryPluginOptions> = (
   );
 
   server.post(
-    "/v1/graphs/:graphId/subgraphs/:subgraphId/schema.graphqls",
+    "/v1/graphs/:graphSlug/subgraphs/:subgraphSlug/schema.graphqls",
     {
       schema: {
         params: subgraphParamsSchema,

@@ -1,0 +1,6 @@
+name: x-revision
+in: header
+required: true
+schema:
+  type: integer
+  minimum: 0

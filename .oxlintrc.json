@@ -7,7 +7,12 @@
     "pedantic": "error",
     "restriction": "error"
   },
-  "ignorePatterns": ["dist/**", "node_modules/**"],
+  "ignorePatterns": [
+    "dist/**",
+    "node_modules/**",
+    "src/lib/fastify/registry/generated/**",
+    "src/lib/openapi-ts/**"
+  ],
   "rules": {
     "eslint/max-lines-per-function": "off",
     "eslint/no-undefined": "off",

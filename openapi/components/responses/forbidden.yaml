@@ -1,0 +1,5 @@
+description: Token lacks required scope
+content:
+  application/problem+json:
+    schema:
+      $ref: ../schemas/error.yaml

@@ -1,0 +1,26 @@
+type: object
+additionalProperties: false
+required:
+  - id
+  - slug
+  - revisionId
+  - federationVersion
+  - createdAt
+  - updatedAt
+properties:
+  id:
+    type: string
+    format: uuid
+  slug:
+    type: string
+  revisionId:
+    type: integer
+    minimum: 1
+  federationVersion:
+    type: string
+  createdAt:
+    type: string
+    format: date-time
+  updatedAt:
+    type: string
+    format: date-time

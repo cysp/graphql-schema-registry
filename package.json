@@ -9,6 +9,8 @@
     "format:check": "oxfmt --check .",
     "lint": "oxlint --type-aware --type-check .",
     "lint:fix": "oxlint --type-aware --type-check --fix .",
+    "openapi:check": "sh ./scripts/ci-openapi-generated.sh",
+    "openapi:generate": "openapi-ts -f openapi-ts.config.ts",
     "start": "node src/index.ts",
     "test": "node --env-file-if-exists=.env --env-file-if-exists=.env.test --test --experimental-test-coverage --experimental-strip-types --enable-source-maps --test-reporter=spec --test-reporter-destination=stdout --test-reporter=lcov --test-reporter-destination=lcov.info"
   },
@@ -24,6 +26,7 @@
   },
   "devDependencies": {
     "@fastify/swagger": "9.7.0",
+    "@hey-api/openapi-ts": "0.93.1",
     "@tsconfig/node24": "24.0.4",
     "@types/node": "24.10.15",
     "drizzle-kit": "1.0.0-beta.15-9485290",

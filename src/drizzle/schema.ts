@@ -13,6 +13,7 @@ import {
   uniqueIndex,
   uuid,
 } from "drizzle-orm/pg-core";
+import { defineRelations } from "drizzle-orm/relations";
 
 export const graphs = pgTable(
   "graphs",
@@ -101,6 +102,59 @@ export const subgraphRevisions = pgTable(
     }),
   }),
 );
+
+export const registryRelations = defineRelations(
+  { graphs, graphRevisions, subgraphs, subgraphRevisions },
+  ({
+    graphs: graphColumns,
+    graphRevisions: graphRevisionColumns,
+    subgraphs: subgraphColumns,
+    subgraphRevisions: subgraphRevisionColumns,
+    many,
+    one,
+  }) => ({
+    graphs: {
+      revisions: many.graphRevisions({
+        from: graphColumns.id,
+        to: graphRevisionColumns.graphId,
+      }),
+      subgraphs: many.subgraphs({
+        from: graphColumns.id,
+        to: subgraphColumns.graphId,
+      }),
+    },
+    graphRevisions: {
+      graph: one.graphs({
+        from: graphRevisionColumns.graphId,
+        to: graphColumns.id,
+        optional: false,
+      }),
+    },
+    subgraphs: {
+      graph: one.graphs({
+        from: subgraphColumns.graphId,
+        to: graphColumns.id,
+        optional: false,
+      }),
+      revisions: many.subgraphRevisions({
+        from: subgraphColumns.id,
+        to: subgraphRevisionColumns.subgraphId,
+      }),
+    },
+    subgraphRevisions: {
+      subgraph: one.subgraphs({
+        from: subgraphRevisionColumns.subgraphId,
+        to: subgraphColumns.id,
+        optional: false,
+      }),
+    },
+  }),
+);
+
+export const graphsRelations = registryRelations.graphs.relations;
+export const graphRevisionsRelations = registryRelations.graphRevisions.relations;
+export const subgraphsRelations = registryRelations.subgraphs.relations;
+export const subgraphRevisionsRelations = registryRelations.subgraphRevisions.relations;
 
 export type GraphRow = typeof graphs.$inferSelect;
 export type SubgraphRow = typeof subgraphs.$inferSelect;

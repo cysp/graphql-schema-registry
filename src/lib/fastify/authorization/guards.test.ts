@@ -48,12 +48,12 @@ await test("authorization guards", async (t) => {
       ok: true,
     }));
 
-    server.get("/graphs/:graphId/read", { preHandler: requireGraphRead }, () => ({
+    server.get("/graphs/:graphSlug/read", { preHandler: requireGraphRead }, () => ({
       ok: true,
     }));
 
     server.get(
-      "/graphs/:graphId/subgraphs/:subgraphId/write",
+      "/graphs/:graphSlug/subgraphs/:subgraphSlug/write",
       { preHandler: requireSubgraphWrite },
       () => ({
         ok: true,

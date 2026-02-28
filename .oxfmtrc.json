@@ -1,5 +1,6 @@
 {
   "$schema": "./node_modules/oxfmt/configuration_schema.json",
+  "ignorePatterns": ["src/lib/fastify/registry/generated/**", "src/lib/openapi-ts/**"],
   "sortImports": {},
   "sortPackageJson": {
     "sortScripts": true
