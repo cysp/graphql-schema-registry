@@ -7,6 +7,11 @@ import { serializerCompiler, validatorCompiler } from "fastify-type-provider-zod
 import { formatUser } from "./domain/authorization/user.ts";
 import type { PostgresJsDatabase } from "./drizzle/types.ts";
 import { requireAdmin } from "./lib/fastify/authorization/guards.ts";
+import { createListGraphsHandler, createGetGraphHandler } from "./lib/fastify/graph-handlers.ts";
+import {
+  createDeleteGraphHandler,
+  createUpsertGraphHandler,
+} from "./lib/fastify/graph-write-handlers.ts";
 import { healthcheckPlugin } from "./lib/fastify/healthcheck/plugin.ts";
 import { fastifyRoutesPlugin } from "./lib/openapi-ts/fastify-routes.gen.ts";
 
@@ -81,63 +86,18 @@ export function createFastifyServer({
     routes: {
       listGraphs: {
         preHandler: requireAdmin,
-        async handler(_request, reply) {
-          if (!database) {
-            reply.serviceUnavailable("Database is not configured.");
-            return;
-          }
-
-          const rows = await database.query.graphs.findMany({
-            where: {
-              deletedAt: {
-                isNull: true,
-              },
-            },
-            orderBy: {
-              slug: "asc",
-            },
-            with: {
-              revisions: {
-                columns: {
-                  federationVersion: true,
-                  revisionId: true,
-                },
-                limit: 1,
-                orderBy: {
-                  revisionId: "desc",
-                },
-              },
-            },
-          });
-
-          const payload = {
-            items: rows.map((graph) => ({
-              id: graph.externalId,
-              slug: graph.slug,
-              revisionId: String(graph.revisions[0]?.revisionId ?? graph.revisionId),
-              federationVersion: graph.revisions[0]?.federationVersion ?? graph.federationVersion,
-              createdAt: graph.createdAt.toISOString(),
-              updatedAt: graph.updatedAt.toISOString(),
-            })),
-          };
-
-          reply.code(200).send(payload);
-        },
+        handler: createListGraphsHandler({ database }),
       },
       getGraph: {
-        handler(_request, reply) {
-          reply.notImplemented();
-        },
+        handler: createGetGraphHandler({ database }),
       },
       upsertGraph: {
-        handler(_request, reply) {
-          reply.notImplemented();
-        },
+        preHandler: requireAdmin,
+        handler: createUpsertGraphHandler({ database }),
       },
       deleteGraph: {
-        handler(_request, reply) {
-          reply.notImplemented();
-        },
+        preHandler: requireAdmin,
+        handler: createDeleteGraphHandler({ database }),
       },
       listSubgraphs: {
         handler(_request, reply) {

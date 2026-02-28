@@ -86,9 +86,7 @@ export const zGraphRoot = z.object({
 
 export const zGraph = zGraphRoot;
 
-export const zGraphListRoot = z.object({
-    items: z.array(zGraphRoot)
-});
+export const zGraphListRoot = z.array(zGraphRoot);
 
 export const zGraphList = zGraphListRoot;
 
@@ -104,9 +102,7 @@ export const zSubgraphRoot = z.object({
 
 export const zSubgraph = zSubgraphRoot;
 
-export const zSubgraphListRoot = z.object({
-    items: z.array(zSubgraphRoot)
-});
+export const zSubgraphListRoot = z.array(zSubgraphRoot);
 
 export const zSubgraphList = zSubgraphListRoot;
 

@@ -79,9 +79,7 @@ export type FieldErrorRoot = {
     rule?: string;
 };
 
-export type GraphListRoot = {
-    items: Array<GraphRoot>;
-};
+export type GraphListRoot = Array<GraphRoot>;
 
 export type GraphRoot = {
     id: string;
@@ -92,9 +90,7 @@ export type GraphRoot = {
     updatedAt: string;
 };
 
-export type SubgraphListRoot = {
-    items: Array<SubgraphRoot>;
-};
+export type SubgraphListRoot = Array<SubgraphRoot>;
 
 export type SubgraphRoot = {
     id: string;
