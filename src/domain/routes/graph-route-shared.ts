@@ -2,8 +2,6 @@ import type { FastifyReply } from "fastify";
 
 export const DATABASE_NOT_CONFIGURED_MESSAGE = "Database is not configured.";
 export const GRAPH_MISSING_CURRENT_REVISION_MESSAGE = "Graph is missing a current revision.";
-export const GRAPH_WRITE_CONFLICT_MESSAGE =
-  "Write conflict. Fetch the latest graph and retry with x-revision-id.";
 
 export function requireDatabase<TDatabase extends object>(
   database: TDatabase | undefined,

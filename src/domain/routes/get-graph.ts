@@ -1,5 +1,3 @@
-import type { PickDeep } from "type-fest";
-
 import type { PostgresJsDatabase } from "../../drizzle/types.ts";
 import { requireAdminUser } from "../../lib/fastify/authorization/guards.ts";
 import type { DependencyInjectedHandlerContext } from "../../lib/fastify/handler-with-dependencies.ts";
@@ -8,7 +6,7 @@ import { getActiveGraphBySlug } from "../database/get-active-graph-by-slug.ts";
 import { GRAPH_MISSING_CURRENT_REVISION_MESSAGE, requireDatabase } from "./graph-route-shared.ts";
 
 type RouteDependencies = Readonly<{
-  database: PickDeep<PostgresJsDatabase, "query.graphs.findFirst"> | undefined;
+  database: PostgresJsDatabase | undefined;
 }>;
 
 export async function getGraphHandler({

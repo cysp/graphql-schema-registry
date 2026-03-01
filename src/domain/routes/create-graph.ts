@@ -1,26 +1,30 @@
-import type { PickDeep } from "type-fest";
-
-import { graphRevisions, graphs } from "../../drizzle/schema.ts";
-import type { PostgresJsDatabase } from "../../drizzle/types.ts";
 import { requireAdminUser } from "../../lib/fastify/authorization/guards.ts";
+import type { PostgresJsDatabase } from "../../drizzle/types.ts";
 import type { DependencyInjectedHandlerContext } from "../../lib/fastify/handler-with-dependencies.ts";
 import type { RouteHandlers } from "../../lib/openapi-ts/fastify.gen.ts";
-import type { Graph } from "../../lib/openapi-ts/types.gen.ts";
-import { GRAPH_WRITE_CONFLICT_MESSAGE, requireDatabase } from "./graph-route-shared.ts";
+import {
+  createGraphWithInitialRevisionInTransaction,
+} from "../database/create-graph-with-initial-revision.ts";
+import { requireDatabase } from "./graph-route-shared.ts";
 
 type RouteDependencies = Readonly<{
-  database: PickDeep<PostgresJsDatabase, "transaction"> | undefined;
+  database: PostgresJsDatabase | undefined;
 }>;
 
-const graphRecordFields = {
-  createdAt: graphs.createdAt,
-  externalId: graphs.externalId,
-  id: graphs.id,
-  slug: graphs.slug,
-  updatedAt: graphs.updatedAt,
-} as const;
+type CreatedGraphRecord = NonNullable<
+  Awaited<ReturnType<typeof createGraphWithInitialRevisionInTransaction>>
+>;
 
-const INITIAL_GRAPH_REVISION_ID = 1;
+function mapGraphRecordToResponse(graphRecord: CreatedGraphRecord) {
+  return {
+    createdAt: graphRecord.createdAt.toISOString(),
+    federationVersion: graphRecord.federationVersion,
+    id: graphRecord.externalId,
+    revisionId: String(graphRecord.revisionId),
+    slug: graphRecord.slug,
+    updatedAt: graphRecord.updatedAt.toISOString(),
+  };
+}
 
 export async function createGraphHandler({
   request,
@@ -40,43 +44,18 @@ export async function createGraphHandler({
 
   const now = new Date();
 
-  const createdGraph = await database.transaction(async (transaction): Promise<Graph | undefined> => {
-    const [graphRecord] = await transaction
-      .insert(graphs)
-      .values({
-        createdAt: now,
-        currentRevisionId: INITIAL_GRAPH_REVISION_ID,
-        slug: request.body.graphSlug,
-        updatedAt: now,
-      })
-      .onConflictDoNothing()
-      .returning(graphRecordFields);
-
-    if (!graphRecord) {
-      return undefined;
-    }
-
-    await transaction.insert(graphRevisions).values({
-      createdAt: now,
+  const graph = await database.transaction(async (transaction) => {
+    return createGraphWithInitialRevisionInTransaction(transaction, {
       federationVersion: request.body.federationVersion,
-      graphId: graphRecord.id,
-      revisionId: INITIAL_GRAPH_REVISION_ID,
+      now,
+      slug: request.body.graphSlug,
     });
-
-    return {
-      createdAt: graphRecord.createdAt.toISOString(),
-      federationVersion: request.body.federationVersion,
-      id: graphRecord.externalId,
-      revisionId: String(INITIAL_GRAPH_REVISION_ID),
-      slug: graphRecord.slug,
-      updatedAt: graphRecord.updatedAt.toISOString(),
-    };
   });
 
-  if (!createdGraph) {
-    reply.conflict(GRAPH_WRITE_CONFLICT_MESSAGE);
+  if (!graph) {
+    reply.conflict();
     return;
   }
 
-  reply.code(201).send(createdGraph);
+  reply.code(201).send(mapGraphRecordToResponse(graph));
 }
