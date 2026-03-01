@@ -11,21 +11,6 @@ type RouteDependencies = Readonly<{
   database: PostgresJsDatabase | undefined;
 }>;
 
-type CreatedGraphRecord = NonNullable<
-  Awaited<ReturnType<typeof createGraphWithInitialRevisionInTransaction>>
->;
-
-function mapGraphRecordToResponse(graphRecord: CreatedGraphRecord) {
-  return {
-    createdAt: graphRecord.createdAt.toISOString(),
-    federationVersion: graphRecord.federationVersion,
-    id: graphRecord.externalId,
-    revisionId: String(graphRecord.revisionId),
-    slug: graphRecord.slug,
-    updatedAt: graphRecord.updatedAt.toISOString(),
-  };
-}
-
 export async function createGraphHandler({
   request,
   reply,
@@ -57,5 +42,12 @@ export async function createGraphHandler({
     return;
   }
 
-  reply.code(201).send(mapGraphRecordToResponse(graph));
+  reply.code(201).send({
+    createdAt: graph.createdAt.toISOString(),
+    federationVersion: graph.federationVersion,
+    id: graph.externalId,
+    revisionId: String(graph.revisionId),
+    slug: graph.slug,
+    updatedAt: graph.updatedAt.toISOString(),
+  });
 }

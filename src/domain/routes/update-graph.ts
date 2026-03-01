@@ -12,21 +12,6 @@ type RouteDependencies = Readonly<{
   database: PostgresJsDatabase | undefined;
 }>;
 
-type UpdatedGraphRecord = NonNullable<
-  Awaited<ReturnType<typeof updateGraphWithOptimisticLockInTransaction>>
->;
-
-function mapGraphRecordToResponse(graphRecord: UpdatedGraphRecord) {
-  return {
-    createdAt: graphRecord.createdAt.toISOString(),
-    federationVersion: graphRecord.federationVersion,
-    id: graphRecord.externalId,
-    revisionId: String(graphRecord.revisionId),
-    slug: graphRecord.slug,
-    updatedAt: graphRecord.updatedAt.toISOString(),
-  };
-}
-
 export async function updateGraphHandler({
   request,
   reply,
@@ -71,5 +56,12 @@ export async function updateGraphHandler({
     return;
   }
 
-  reply.code(200).send(mapGraphRecordToResponse(updatedGraph));
+  reply.code(200).send({
+    createdAt: updatedGraph.createdAt.toISOString(),
+    federationVersion: updatedGraph.federationVersion,
+    id: updatedGraph.externalId,
+    revisionId: String(updatedGraph.revisionId),
+    slug: updatedGraph.slug,
+    updatedAt: updatedGraph.updatedAt.toISOString(),
+  });
 }

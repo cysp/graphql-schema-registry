@@ -28,8 +28,10 @@ export async function deleteGraphHandler({
     return;
   }
 
-  const activeGraph = await getActiveGraphBySlug(database, request.params.graphSlug);
-  if (!activeGraph) {
+  const now = new Date();
+
+  const graph = await getActiveGraphBySlug(database, request.params.graphSlug);
+  if (!graph) {
     request.log.debug(
       { graphSlug: request.params.graphSlug },
       "delete requested for missing or already deleted graph",
@@ -38,17 +40,16 @@ export async function deleteGraphHandler({
     return;
   }
 
-  const now = new Date();
-  const deletion = await database.transaction(async (transaction) => {
+  const deleted = await database.transaction(async (transaction) => {
     return softDeleteGraphAndSubgraphsInTransaction(transaction, {
-      graphId: activeGraph.id,
+      graphId: graph.id,
       now,
     });
   });
 
-  if (!deletion) {
+  if (!deleted) {
     request.log.debug(
-      { graphId: activeGraph.id, graphSlug: request.params.graphSlug },
+      { graphId: graph.id, graphSlug: request.params.graphSlug },
       "delete raced with concurrent delete",
     );
   }

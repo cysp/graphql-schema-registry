@@ -22,19 +22,19 @@ export async function getGraphHandler({
     return;
   }
 
-  const graphRecord = await getActiveGraphBySlug(database, request.params.graphSlug);
+  const graph = await getActiveGraphBySlug(database, request.params.graphSlug);
 
-  if (!graphRecord) {
+  if (!graph) {
     reply.notFound();
     return;
   }
 
   reply.code(200).send({
-    createdAt: graphRecord.createdAt.toISOString(),
-    federationVersion: graphRecord.federationVersion,
-    id: graphRecord.externalId,
-    revisionId: String(graphRecord.revisionId),
-    slug: graphRecord.slug,
-    updatedAt: graphRecord.updatedAt.toISOString(),
+    createdAt: graph.createdAt.toISOString(),
+    federationVersion: graph.federationVersion,
+    id: graph.externalId,
+    revisionId: String(graph.revisionId),
+    slug: graph.slug,
+    updatedAt: graph.updatedAt.toISOString(),
   });
 }
