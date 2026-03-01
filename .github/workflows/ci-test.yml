@@ -34,3 +34,176 @@ jobs:
       - uses: codecov/codecov-action@671740ac38dd9b0130fbe1cec585b89eea48d3de # v5.5.2
         with:
           token: ${{ secrets.CODECOV_TOKEN }}
+
+  integration-test-neon:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    if: ${{ secrets.NEON_API_KEY != '' && vars.NEON_PROJECT_ID != '' }}
+
+    env:
+      NEON_API_KEY: ${{ secrets.NEON_API_KEY }}
+      NEON_PROJECT_ID: ${{ vars.NEON_PROJECT_ID }}
+      NEON_PARENT_BRANCH: ${{ vars.NEON_PARENT_BRANCH || 'main' }}
+      NEON_DATABASE_NAME: ${{ vars.NEON_DATABASE_NAME || 'neondb' }}
+      NEON_ROLE_NAME: ${{ vars.NEON_ROLE_NAME || 'neondb_owner' }}
+
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+
+      - uses: pnpm/action-setup@41ff72655975bd51cab0327fa583b6e92b6d3061 # v4.2.0
+        with:
+          run_install: false
+
+      - uses: actions/setup-node@6044e13b5dc448c55e2357c09f80417699197238 # v6.2.0
+        with:
+          node-version-file: .nvmrc
+          cache: pnpm
+
+      - run: pnpm install --frozen-lockfile
+
+      - name: Create Neon branch and endpoint
+        id: neon
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          neon_api="https://console.neon.tech/api/v2"
+          neon_auth_header="Authorization: Bearer ${NEON_API_KEY}"
+          neon_branch_name="ci-${GITHUB_RUN_ID}-${GITHUB_RUN_ATTEMPT}-${GITHUB_JOB}"
+          neon_expires_at="$(date -u -d '+2 hours' '+%Y-%m-%dT%H:%M:%SZ')"
+
+          list_branches_response="$(
+            curl -fsSL \
+              -H "${neon_auth_header}" \
+              "${neon_api}/projects/${NEON_PROJECT_ID}/branches"
+          )"
+
+          neon_parent_branch_id="$(
+            printf '%s' "${list_branches_response}" | node -e '
+              const fs = require("node:fs");
+              const payload = JSON.parse(fs.readFileSync(0, "utf8"));
+              const branchName = process.argv[1];
+              const branch = (payload.branches ?? []).find((value) => value?.name === branchName);
+              if (branch?.id === undefined) {
+                process.stderr.write(`Unable to find Neon parent branch "${branchName}".\n`);
+                process.exit(1);
+              }
+              process.stdout.write(String(branch.id));
+            ' "${NEON_PARENT_BRANCH}"
+          )"
+
+          create_branch_payload="$(
+            node -e '
+              const [name, parentId, expiresAt] = process.argv.slice(1);
+              process.stdout.write(JSON.stringify({
+                branch: {
+                  name,
+                  parent_id: parentId,
+                  expires_at: expiresAt,
+                },
+              }));
+            ' "${neon_branch_name}" "${neon_parent_branch_id}" "${neon_expires_at}"
+          )"
+
+          create_branch_response="$(
+            curl -fsSL \
+              -X POST \
+              -H "${neon_auth_header}" \
+              -H "Content-Type: application/json" \
+              -d "${create_branch_payload}" \
+              "${neon_api}/projects/${NEON_PROJECT_ID}/branches"
+          )"
+
+          neon_branch_id="$(
+            printf '%s' "${create_branch_response}" | node -e '
+              const fs = require("node:fs");
+              const payload = JSON.parse(fs.readFileSync(0, "utf8"));
+              const branchId = payload?.branch?.id;
+              if (branchId === undefined) {
+                process.stderr.write("Unable to parse Neon branch id.\n");
+                process.exit(1);
+              }
+              process.stdout.write(String(branchId));
+            '
+          )"
+          echo "branch_id=${neon_branch_id}" >>"${GITHUB_OUTPUT}"
+
+          create_endpoint_payload="$(
+            node -e '
+              const [branchId] = process.argv.slice(1);
+              process.stdout.write(JSON.stringify({
+                endpoint: {
+                  branch_id: branchId,
+                  type: "read_write",
+                },
+              }));
+            ' "${neon_branch_id}"
+          )"
+
+          curl -fsSL \
+            -X POST \
+            -H "${neon_auth_header}" \
+            -H "Content-Type: application/json" \
+            -d "${create_endpoint_payload}" \
+            "${neon_api}/projects/${NEON_PROJECT_ID}/endpoints" \
+            >/dev/null
+
+          neon_database_name="$(
+            node -e 'process.stdout.write(encodeURIComponent(process.argv[1]));' "${NEON_DATABASE_NAME}"
+          )"
+          neon_role_name="$(
+            node -e 'process.stdout.write(encodeURIComponent(process.argv[1]));' "${NEON_ROLE_NAME}"
+          )"
+
+          connection_uri_response="$(
+            curl -fsSL \
+              -H "${neon_auth_header}" \
+              "${neon_api}/projects/${NEON_PROJECT_ID}/connection_uri?branch_id=${neon_branch_id}&database_name=${neon_database_name}&role_name=${neon_role_name}"
+          )"
+
+          integration_test_database_url="$(
+            printf '%s' "${connection_uri_response}" | node -e '
+              const fs = require("node:fs");
+              const payload = JSON.parse(fs.readFileSync(0, "utf8"));
+              if (typeof payload?.uri !== "string" || payload.uri.length === 0) {
+                process.stderr.write("Unable to parse Neon connection uri.\n");
+                process.exit(1);
+              }
+              process.stdout.write(payload.uri);
+            '
+          )"
+
+          echo "::add-mask::${integration_test_database_url}"
+          echo "INTEGRATION_TEST_DATABASE_URL=${integration_test_database_url}" >>"${GITHUB_ENV}"
+
+      - name: Run integration tests
+        shell: bash
+        run: |
+          set -euo pipefail
+          mapfile -t integration_test_files < <(find src -type f -name '*.integration.test.ts' | sort)
+          if [[ "${#integration_test_files[@]}" -eq 0 ]]; then
+            echo "No integration test files found." >&2
+            exit 1
+          fi
+
+          node \
+            --env-file-if-exists=.env \
+            --env-file-if-exists=.env.test \
+            --test \
+            --experimental-strip-types \
+            --enable-source-maps \
+            "${integration_test_files[@]}"
+
+      - name: Delete Neon branch
+        if: ${{ always() && steps.neon.outputs.branch_id != '' }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          neon_api="https://console.neon.tech/api/v2"
+          if ! curl -fsSL \
+            -X DELETE \
+            -H "Authorization: Bearer ${NEON_API_KEY}" \
+            "${neon_api}/projects/${NEON_PROJECT_ID}/branches/${{ steps.neon.outputs.branch_id }}" \
+            >/dev/null; then
+            echo "::warning::Failed to delete Neon test branch '${{ steps.neon.outputs.branch_id }}'."
+          fi
