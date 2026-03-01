@@ -74,6 +74,16 @@ jobs:
           expires_at: ${{ steps.neon_compute_branch_expires_at.outputs.expires_at }}
           api_key: ${{ secrets.NEON_API_KEY }}
 
+      - uses: ./.github/actions/pgschema-apply
+        with:
+          db-host: ${{ steps.neon_create_branch.outputs.db_host }}
+          db-port: "5432"
+          db-name: ${{ env.NEON_DATABASE_NAME }}
+          db-user: ${{ env.NEON_ROLE_NAME }}
+          db-password: ${{ steps.neon_create_branch.outputs.password }}
+          schema-file: db/schema.sql
+          schema-name: public
+
       - shell: bash
         run: pnpm run test -- "src/**/*.integration.test.ts"
         env:
