@@ -76,7 +76,7 @@ function createInjectOptions(
   }
 
   if (routeCase.requiresRevisionHeader) {
-    headers["x-revision-id"] = "0";
+    headers["x-revision-id"] = "1";
   }
 
   if (Object.keys(headers).length > 0) {

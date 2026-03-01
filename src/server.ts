@@ -4,13 +4,14 @@ import { sql } from "drizzle-orm";
 import fastify, { type FastifyInstance } from "fastify";
 import { serializerCompiler, validatorCompiler } from "fastify-type-provider-zod";
 
+import { createGraphHandler } from "./domain/routes/create-graph.ts";
 import { deleteGraphHandler } from "./domain/routes/delete-graph.ts";
 import { deleteSubgraphHandler } from "./domain/routes/delete-subgraph.ts";
 import { getGraphHandler } from "./domain/routes/get-graph.ts";
 import { getSubgraphHandler } from "./domain/routes/get-subgraph.ts";
 import { listGraphsHandler } from "./domain/routes/list-graphs.ts";
 import { listSubgraphsHandler } from "./domain/routes/list-subgraphs.ts";
-import { upsertGraphHandler } from "./domain/routes/upsert-graph.ts";
+import { updateGraphHandler } from "./domain/routes/update-graph.ts";
 import { upsertSubgraphHandler } from "./domain/routes/upsert-subgraph.ts";
 import { formatUser } from "./domain/authorization/user.ts";
 import type { PostgresJsDatabase } from "./drizzle/types.ts";
@@ -89,8 +90,9 @@ export function createFastifyServer({
   server.register(fastifyRoutesPlugin, {
     routes: {
       listGraphs: fastifyHandlerWithDependencies(listGraphsHandler, { database }),
+      createGraph: fastifyHandlerWithDependencies(createGraphHandler, { database }),
       getGraph: fastifyHandlerWithDependencies(getGraphHandler, { database }),
-      upsertGraph: fastifyHandlerWithDependencies(upsertGraphHandler, { database }),
+      updateGraph: fastifyHandlerWithDependencies(updateGraphHandler, { database }),
       deleteGraph: fastifyHandlerWithDependencies(deleteGraphHandler, { database }),
       listSubgraphs: listSubgraphsHandler,
       getSubgraph: getSubgraphHandler,

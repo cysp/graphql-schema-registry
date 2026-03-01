@@ -7,6 +7,21 @@ import { createFastifyServer } from "./server.ts";
 
 type JwtClaims = Record<string, unknown>;
 type JwtHeader = Record<string, unknown>;
+type RouteMethod = "DELETE" | "GET" | "POST" | "PUT";
+
+type RouteCase = {
+  method: RouteMethod;
+  payload?: Record<string, unknown>;
+  requiresRevisionHeader?: boolean;
+  url: string;
+};
+
+type InjectOptions = {
+  headers?: Record<string, string>;
+  method: RouteMethod;
+  payload?: Record<string, unknown>;
+  url: string;
+};
 
 function createDefaultClaims(): JwtClaims {
   const nowSeconds = Math.floor(Date.now() / 1000);
@@ -43,6 +58,32 @@ function createSignedJwt({
   return `${signedPayload}.${signature}`;
 }
 
+function createInjectOptions(routeCase: RouteCase, authorizationToken?: string): InjectOptions {
+  const options: InjectOptions = {
+    method: routeCase.method,
+    url: routeCase.url,
+  };
+
+  if (routeCase.payload !== undefined) {
+    options.payload = routeCase.payload;
+  }
+
+  const headers: Record<string, string> = {};
+  if (authorizationToken !== undefined) {
+    headers["authorization"] = `Bearer ${authorizationToken}`;
+  }
+
+  if (routeCase.requiresRevisionHeader) {
+    headers["x-revision-id"] = "1";
+  }
+
+  if (Object.keys(headers).length > 0) {
+    options.headers = headers;
+  }
+
+  return options;
+}
+
 await test("graph routes authorization", async (t) => {
   let server: ReturnType<typeof createFastifyServer>;
 
@@ -59,6 +100,33 @@ await test("graph routes authorization", async (t) => {
     issuer: "https://auth.example.com",
     verificationPublicKey: publicKeyPem,
   };
+
+  const routeCases: readonly RouteCase[] = [
+    {
+      method: "GET",
+      url: "/v1/graphs/catalog",
+    },
+    {
+      method: "POST",
+      url: "/v1/graphs",
+      payload: {
+        federationVersion: "2.9",
+        graphSlug: "catalog",
+      },
+    },
+    {
+      method: "PUT",
+      payload: {
+        federationVersion: "2.9",
+      },
+      requiresRevisionHeader: true,
+      url: "/v1/graphs/catalog",
+    },
+    {
+      method: "DELETE",
+      url: "/v1/graphs/catalog",
+    },
+  ];
 
   t.beforeEach(async () => {
     server = createFastifyServer({
@@ -84,155 +152,44 @@ await test("graph routes authorization", async (t) => {
     await server.close();
   });
 
-  await t.test("returns service unavailable before auth checks when getting a graph", async () => {
-    const response = await server.inject({
-      method: "GET",
-      url: "/v1/graphs/catalog",
-    });
-
-    assert.strictEqual(response.statusCode, 503);
+  const graphReaderToken = createToken({
+    authorization_details: [
+      {
+        graph_id: "00000000-0000-4000-8000-000000000001",
+        scope: "graph:read",
+        type: authorizationDetailsType,
+      },
+    ],
+  });
+  const adminToken = createToken({
+    authorization_details: [
+      {
+        scope: "admin",
+        type: authorizationDetailsType,
+      },
+    ],
   });
 
-  await t.test(
-    "returns service unavailable before auth checks when upserting a graph",
-    async () => {
-      const response = await server.inject({
-        method: "PUT",
-        url: "/v1/graphs/catalog",
-        headers: {
-          "x-revision-id": "0",
-        },
-        payload: {
-          federationVersion: "2.9",
-        },
-      });
-
+  await t.test("returns service unavailable before auth checks on all graph routes", async () => {
+    for (const routeCase of routeCases) {
+      const response = await server.inject(createInjectOptions(routeCase));
       assert.strictEqual(response.statusCode, 503);
-    },
-  );
-
-  await t.test("returns service unavailable before auth checks when deleting a graph", async () => {
-    const response = await server.inject({
-      method: "DELETE",
-      url: "/v1/graphs/catalog",
-    });
-
-    assert.strictEqual(response.statusCode, 503);
+    }
   });
 
-  await t.test(
-    "returns service unavailable before admin checks when upserting a graph",
-    async () => {
-      const response = await server.inject({
-        method: "PUT",
-        url: "/v1/graphs/catalog",
-        headers: {
-          authorization: `Bearer ${createToken({
-            authorization_details: [
-              {
-                graph_id: "00000000-0000-4000-8000-000000000001",
-                scope: "graph:read",
-                type: authorizationDetailsType,
-              },
-            ],
-          })}`,
-          "x-revision-id": "0",
-        },
-        payload: {
-          federationVersion: "2.9",
-        },
-      });
-
+  await t.test("returns service unavailable before admin checks on all graph routes", async () => {
+    for (const routeCase of routeCases) {
+      const response = await server.inject(createInjectOptions(routeCase, graphReaderToken));
       assert.strictEqual(response.statusCode, 503);
-    },
-  );
+    }
+  });
 
-  await t.test(
-    "returns service unavailable before admin checks when deleting a graph",
-    async () => {
-      const response = await server.inject({
-        method: "DELETE",
-        url: "/v1/graphs/catalog",
-        headers: {
-          authorization: `Bearer ${createToken({
-            authorization_details: [
-              {
-                graph_id: "00000000-0000-4000-8000-000000000001",
-                scope: "graph:read",
-                type: authorizationDetailsType,
-              },
-            ],
-          })}`,
-        },
-      });
-
+  await t.test("allows admins to reach all graph handlers", async () => {
+    for (const routeCase of routeCases) {
+      const response = await server.inject(createInjectOptions(routeCase, adminToken));
+      // No database is configured in this test setup, so authorized access reaches
+      // each handler and returns service unavailable.
       assert.strictEqual(response.statusCode, 503);
-    },
-  );
-
-  await t.test("returns service unavailable before admin checks when getting a graph", async () => {
-    const response = await server.inject({
-      method: "GET",
-      url: "/v1/graphs/catalog",
-      headers: {
-        authorization: `Bearer ${createToken({
-          authorization_details: [
-            {
-              graph_id: "00000000-0000-4000-8000-000000000001",
-              scope: "graph:read",
-              type: authorizationDetailsType,
-            },
-          ],
-        })}`,
-      },
-    });
-
-    assert.strictEqual(response.statusCode, 503);
-  });
-
-  await t.test("allows admins to reach upsert graph handler", async () => {
-    const response = await server.inject({
-      method: "PUT",
-      url: "/v1/graphs/catalog",
-      headers: {
-        authorization: `Bearer ${createToken({
-          authorization_details: [
-            {
-              scope: "admin",
-              type: authorizationDetailsType,
-            },
-          ],
-        })}`,
-        "x-revision-id": "0",
-      },
-      payload: {
-        federationVersion: "2.9",
-      },
-    });
-
-    // No database is configured in this test setup, so authorized access reaches
-    // the handler and returns service unavailable.
-    assert.strictEqual(response.statusCode, 503);
-  });
-
-  await t.test("allows admins to reach delete graph handler", async () => {
-    const response = await server.inject({
-      method: "DELETE",
-      url: "/v1/graphs/catalog",
-      headers: {
-        authorization: `Bearer ${createToken({
-          authorization_details: [
-            {
-              scope: "admin",
-              type: authorizationDetailsType,
-            },
-          ],
-        })}`,
-      },
-    });
-
-    // No database is configured in this test setup, so authorized access reaches
-    // the handler and returns service unavailable.
-    assert.strictEqual(response.statusCode, 503);
+    }
   });
 });

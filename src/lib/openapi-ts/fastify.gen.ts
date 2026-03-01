@@ -2,11 +2,15 @@
 
 import type { RouteHandler } from 'fastify';
 
-import type { DeleteGraphData, DeleteGraphErrors, DeleteGraphResponses, DeleteSubgraphData, DeleteSubgraphErrors, DeleteSubgraphResponses, GetGraphData, GetGraphErrors, GetGraphResponses, GetSubgraphData, GetSubgraphErrors, GetSubgraphResponses, ListGraphsErrors, ListGraphsResponses, ListSubgraphsData, ListSubgraphsErrors, ListSubgraphsResponses, UpsertGraphData, UpsertGraphErrors, UpsertGraphResponses, UpsertSubgraphData, UpsertSubgraphErrors, UpsertSubgraphResponses } from './types.gen.js';
+import type { CreateGraphData, CreateGraphErrors, CreateGraphResponses, DeleteGraphData, DeleteGraphErrors, DeleteGraphResponses, DeleteSubgraphData, DeleteSubgraphErrors, DeleteSubgraphResponses, GetGraphData, GetGraphErrors, GetGraphResponses, GetSubgraphData, GetSubgraphErrors, GetSubgraphResponses, ListGraphsErrors, ListGraphsResponses, ListSubgraphsData, ListSubgraphsErrors, ListSubgraphsResponses, UpdateGraphData, UpdateGraphErrors, UpdateGraphResponses, UpsertSubgraphData, UpsertSubgraphErrors, UpsertSubgraphResponses } from './types.gen.js';
 
 export type RouteHandlers = {
     listGraphs: RouteHandler<{
         Reply: ListGraphsErrors & ListGraphsResponses;
+    }>;
+    createGraph: RouteHandler<{
+        Body: CreateGraphData['body'];
+        Reply: CreateGraphErrors & CreateGraphResponses;
     }>;
     deleteGraph: RouteHandler<{
         Params: DeleteGraphData['path'];
@@ -16,11 +20,11 @@ export type RouteHandlers = {
         Params: GetGraphData['path'];
         Reply: GetGraphErrors & GetGraphResponses;
     }>;
-    upsertGraph: RouteHandler<{
-        Body: UpsertGraphData['body'];
-        Headers: UpsertGraphData['headers'];
-        Params: UpsertGraphData['path'];
-        Reply: UpsertGraphErrors & UpsertGraphResponses;
+    updateGraph: RouteHandler<{
+        Body: UpdateGraphData['body'];
+        Headers: UpdateGraphData['headers'];
+        Params: UpdateGraphData['path'];
+        Reply: UpdateGraphErrors & UpdateGraphResponses;
     }>;
     listSubgraphs: RouteHandler<{
         Params: ListSubgraphsData['path'];

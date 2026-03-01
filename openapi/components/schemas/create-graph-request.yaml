@@ -1,0 +1,12 @@
+type: object
+additionalProperties: false
+required:
+  - graphSlug
+  - federationVersion
+properties:
+  graphSlug:
+    type: string
+    minLength: 1
+  federationVersion:
+    type: string
+    minLength: 1

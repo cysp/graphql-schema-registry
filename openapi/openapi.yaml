@@ -24,6 +24,29 @@ paths:
           $ref: "#/components/responses/Unauthorized"
         "403":
           $ref: "#/components/responses/Forbidden"
+    post:
+      operationId: createGraph
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateGraphRequest"
+      responses:
+        "201":
+          description: Created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Graph"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "409":
+          $ref: "#/components/responses/Conflict"
 
   /v1/graphs/{graphSlug}:
     get:
@@ -47,7 +70,7 @@ paths:
           $ref: "#/components/responses/NotFound"
 
     put:
-      operationId: upsertGraph
+      operationId: updateGraph
       security:
         - bearerAuth: []
       parameters:
@@ -58,16 +81,10 @@ paths:
         content:
           application/json:
             schema:
-              $ref: "#/components/schemas/UpsertGraphRequest"
+              $ref: "#/components/schemas/UpdateGraphRequest"
       responses:
         "200":
           description: Updated
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/Graph"
-        "201":
-          description: Created
           content:
             application/json:
               schema:
@@ -78,8 +95,6 @@ paths:
           $ref: "#/components/responses/Forbidden"
         "409":
           $ref: "#/components/responses/Conflict"
-        "422":
-          $ref: "#/components/responses/UnprocessableEntity"
 
     delete:
       operationId: deleteGraph
@@ -94,8 +109,6 @@ paths:
           $ref: "#/components/responses/Unauthorized"
         "403":
           $ref: "#/components/responses/Forbidden"
-        "404":
-          $ref: "#/components/responses/NotFound"
 
   /v1/graphs/{graphSlug}/subgraphs:
     get:
@@ -217,8 +230,10 @@ components:
       $ref: "./components/schemas/graph.yaml"
     GraphList:
       $ref: "./components/schemas/graph-list.yaml"
-    UpsertGraphRequest:
-      $ref: "./components/schemas/upsert-graph-request.yaml"
+    CreateGraphRequest:
+      $ref: "./components/schemas/create-graph-request.yaml"
+    UpdateGraphRequest:
+      $ref: "./components/schemas/update-graph-request.yaml"
     Subgraph:
       $ref: "./components/schemas/subgraph.yaml"
     SubgraphList:

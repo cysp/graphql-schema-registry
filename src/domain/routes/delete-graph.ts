@@ -29,21 +29,13 @@ export async function deleteGraphHandler({
   }
 
   const now = new Date();
-  const deletedGraphRecords = await database
+  await database
     .update(graphs)
     .set({
       deletedAt: now,
       updatedAt: now,
     })
-    .where(and(eq(graphs.slug, request.params.graphSlug), isNull(graphs.deletedAt)))
-    .returning({
-      id: graphs.id,
-    });
-
-  if (deletedGraphRecords.length === 0) {
-    reply.notFound("Graph not found.");
-    return;
-  }
+    .where(and(eq(graphs.slug, request.params.graphSlug), isNull(graphs.deletedAt)));
 
   reply.code(204).send();
 }

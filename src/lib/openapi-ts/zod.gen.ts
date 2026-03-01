@@ -33,6 +33,13 @@ export const zUnauthorizedRoot = z.unknown();
  */
 export const zUnprocessableEntityRoot = z.unknown();
 
+export const zCreateGraphRequestRoot = z.object({
+    graphSlug: z.string().min(1),
+    federationVersion: z.string().min(1)
+});
+
+export const zCreateGraphRequest = zCreateGraphRequestRoot;
+
 export const zDiagnosticRoot = z.object({
     level: z.enum([
         'info',
@@ -106,11 +113,11 @@ export const zSubgraphListRoot = z.array(zSubgraphRoot);
 
 export const zSubgraphList = zSubgraphListRoot;
 
-export const zUpsertGraphRequestRoot = z.object({
+export const zUpdateGraphRequestRoot = z.object({
     federationVersion: z.string().min(1)
 });
 
-export const zUpsertGraphRequest = zUpsertGraphRequestRoot;
+export const zUpdateGraphRequest = zUpdateGraphRequestRoot;
 
 export const zUpsertSubgraphRequestRoot = z.object({
     routingUrl: z.url()
@@ -124,7 +131,7 @@ export const zGraphSlug = z.string().min(1);
 
 export const zSubgraphSlug = z.string().min(1);
 
-export const zXRevisionId = z.string().regex(/^(0|[1-9][0-9]*)$/);
+export const zXRevisionId = z.string().regex(/^[1-9][0-9]*$/);
 
 export const zListGraphsData = z.object({
     body: z.never().optional(),
@@ -136,6 +143,17 @@ export const zListGraphsData = z.object({
  * OK
  */
 export const zListGraphsResponse = zGraphListRoot;
+
+export const zCreateGraphData = z.object({
+    body: zCreateGraphRequestRoot,
+    path: z.never().optional(),
+    query: z.never().optional()
+});
+
+/**
+ * Created
+ */
+export const zCreateGraphResponse = zGraphRoot;
 
 export const zDeleteGraphData = z.object({
     body: z.never().optional(),
@@ -163,21 +181,21 @@ export const zGetGraphData = z.object({
  */
 export const zGetGraphResponse = zGraphRoot;
 
-export const zUpsertGraphData = z.object({
-    body: zUpsertGraphRequestRoot,
+export const zUpdateGraphData = z.object({
+    body: zUpdateGraphRequestRoot,
     path: z.object({
         graphSlug: z.string().min(1)
     }),
     query: z.never().optional(),
     headers: z.object({
-        'x-revision-id': z.string().regex(/^(0|[1-9][0-9]*)$/)
+        'x-revision-id': z.string().regex(/^[1-9][0-9]*$/)
     })
 });
 
 /**
  * Updated
  */
-export const zUpsertGraphResponse = zGraphRoot;
+export const zUpdateGraphResponse = zGraphRoot;
 
 export const zListSubgraphsData = z.object({
     body: z.never().optional(),
@@ -228,7 +246,7 @@ export const zUpsertSubgraphData = z.object({
     }),
     query: z.never().optional(),
     headers: z.object({
-        'x-revision-id': z.string().regex(/^(0|[1-9][0-9]*)$/)
+        'x-revision-id': z.string().regex(/^[1-9][0-9]*$/)
     })
 });
 

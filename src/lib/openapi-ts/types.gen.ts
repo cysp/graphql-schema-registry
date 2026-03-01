@@ -14,7 +14,9 @@ export type Graph = GraphRoot;
 
 export type GraphList = GraphListRoot;
 
-export type UpsertGraphRequest = UpsertGraphRequestRoot;
+export type CreateGraphRequest = CreateGraphRequestRoot;
+
+export type UpdateGraphRequest = UpdateGraphRequestRoot;
 
 export type Subgraph = SubgraphRoot;
 
@@ -52,6 +54,11 @@ export type UnauthorizedRoot = unknown;
  * Unprocessable entity
  */
 export type UnprocessableEntityRoot = unknown;
+
+export type CreateGraphRequestRoot = {
+    graphSlug: string;
+    federationVersion: string;
+};
 
 export type DiagnosticRoot = {
     level: 'info' | 'warning' | 'error';
@@ -102,7 +109,7 @@ export type SubgraphRoot = {
     updatedAt: string;
 };
 
-export type UpsertGraphRequestRoot = {
+export type UpdateGraphRequestRoot = {
     federationVersion: string;
 };
 
@@ -147,6 +154,39 @@ export type ListGraphsResponses = {
 
 export type ListGraphsResponse = ListGraphsResponses[keyof ListGraphsResponses];
 
+export type CreateGraphData = {
+    body: CreateGraphRequestRoot;
+    path?: never;
+    query?: never;
+    url: '/v1/graphs';
+};
+
+export type CreateGraphErrors = {
+    /**
+     * Missing/invalid bearer token
+     */
+    401: ErrorRoot;
+    /**
+     * Token lacks required scope
+     */
+    403: ErrorRoot;
+    /**
+     * Conflict
+     */
+    409: ErrorRoot;
+};
+
+export type CreateGraphError = CreateGraphErrors[keyof CreateGraphErrors];
+
+export type CreateGraphResponses = {
+    /**
+     * Created
+     */
+    201: GraphRoot;
+};
+
+export type CreateGraphResponse = CreateGraphResponses[keyof CreateGraphResponses];
+
 export type DeleteGraphData = {
     body?: never;
     path: {
@@ -165,10 +205,6 @@ export type DeleteGraphErrors = {
      * Token lacks required scope
      */
     403: ErrorRoot;
-    /**
-     * Not found
-     */
-    404: ErrorRoot;
 };
 
 export type DeleteGraphError = DeleteGraphErrors[keyof DeleteGraphErrors];
@@ -217,8 +253,8 @@ export type GetGraphResponses = {
 
 export type GetGraphResponse = GetGraphResponses[keyof GetGraphResponses];
 
-export type UpsertGraphData = {
-    body: UpsertGraphRequestRoot;
+export type UpdateGraphData = {
+    body: UpdateGraphRequestRoot;
     headers: {
         'x-revision-id': string;
     };
@@ -229,7 +265,7 @@ export type UpsertGraphData = {
     url: '/v1/graphs/{graphSlug}';
 };
 
-export type UpsertGraphErrors = {
+export type UpdateGraphErrors = {
     /**
      * Missing/invalid bearer token
      */
@@ -242,26 +278,18 @@ export type UpsertGraphErrors = {
      * Conflict
      */
     409: ErrorRoot;
-    /**
-     * Unprocessable entity
-     */
-    422: ErrorRoot;
 };
 
-export type UpsertGraphError = UpsertGraphErrors[keyof UpsertGraphErrors];
+export type UpdateGraphError = UpdateGraphErrors[keyof UpdateGraphErrors];
 
-export type UpsertGraphResponses = {
+export type UpdateGraphResponses = {
     /**
      * Updated
      */
     200: GraphRoot;
-    /**
-     * Created
-     */
-    201: GraphRoot;
 };
 
-export type UpsertGraphResponse = UpsertGraphResponses[keyof UpsertGraphResponses];
+export type UpdateGraphResponse = UpdateGraphResponses[keyof UpdateGraphResponses];
 
 export type ListSubgraphsData = {
     body?: never;
