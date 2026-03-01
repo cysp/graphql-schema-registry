@@ -2,11 +2,11 @@
 // Do not edit manually.
 
 import fastifyPlugin from "fastify-plugin";
-import type { FastifyPluginAsync, RouteShorthandOptionsWithHandler } from "fastify";
+import type { FastifyPluginCallbackZod } from "fastify-type-provider-zod";
 import type { RouteHandlers } from "./fastify.gen.ts";
 import { zCreateGraphData, zCreateSubgraphData, zDeleteGraphData, zDeleteGraphResponse, zDeleteSubgraphData, zDeleteSubgraphResponse, zGetGraphData, zGetSubgraphData, zGraphListRoot, zGraphRoot, zListSubgraphsData, zRoot, zSubgraphListRoot, zSubgraphRoot, zUpdateGraphData, zUpdateSubgraphData } from "./zod.gen.ts";
 
-export const routeDefinitions = {
+export const routeDefinitionsByOperationId = {
   "listGraphs": {
     method: "GET",
     url: "/v1/graphs",
@@ -93,52 +93,37 @@ export const routeDefinitions = {
   },
 } as const;
 
-type RouteHandlerHooks = Pick<RouteShorthandOptionsWithHandler, "config" | "onRequest" | "preHandler" | "preValidation">;
+type OperationId = keyof RouteHandlers;
 
-type RouteHandlerRegistrationWithHandler<THandler extends RouteHandlers[keyof RouteHandlers]> =
-  RouteHandlerHooks & { handler: THandler };
-
-type RouteHandlerRegistration<THandler extends RouteHandlers[keyof RouteHandlers]> =
-  | THandler
-  | RouteHandlerRegistrationWithHandler<THandler>;
-
-export type RouteHandlerRegistrations = {
-  [K in keyof RouteHandlers]: RouteHandlerRegistration<RouteHandlers[K]>;
+export type RouteHandlersByOperationId = {
+  [TOperationId in OperationId]: RouteHandlers[TOperationId];
 };
 
-function normalizeRouteHandlerRegistration<THandler extends RouteHandlers[keyof RouteHandlers]>(
-  registration: RouteHandlerRegistration<THandler>,
-): RouteHandlerRegistrationWithHandler<THandler> {
-  if (typeof registration === "function") {
-    return { handler: registration };
-  }
+export type FastifyRouteHandlersPluginOptions = {
+  handlers: RouteHandlersByOperationId;
+};
 
-  return registration;
-}
-
-export type FastifyRoutesPluginOptions = { routes: RouteHandlerRegistrations };
-
-const fastifyRoutesPluginImpl: FastifyPluginAsync<FastifyRoutesPluginOptions> = async (
+const fastifyRoutesPluginImpl: FastifyPluginCallbackZod<FastifyRouteHandlersPluginOptions> = (
   server,
   options,
-): Promise<void> => {
-  const routeRegistrations = options.routes;
+  done,
+): void => {
+  const handlers = options.handlers;
 
-  server.route({ ...routeDefinitions["listGraphs"], ...normalizeRouteHandlerRegistration(routeRegistrations["listGraphs"]) });
-  server.route({ ...routeDefinitions["createGraph"], ...normalizeRouteHandlerRegistration(routeRegistrations["createGraph"]) });
-  server.route({ ...routeDefinitions["deleteGraph"], ...normalizeRouteHandlerRegistration(routeRegistrations["deleteGraph"]) });
-  server.route({ ...routeDefinitions["getGraph"], ...normalizeRouteHandlerRegistration(routeRegistrations["getGraph"]) });
-  server.route({ ...routeDefinitions["updateGraph"], ...normalizeRouteHandlerRegistration(routeRegistrations["updateGraph"]) });
-  server.route({ ...routeDefinitions["listSubgraphs"], ...normalizeRouteHandlerRegistration(routeRegistrations["listSubgraphs"]) });
-  server.route({ ...routeDefinitions["createSubgraph"], ...normalizeRouteHandlerRegistration(routeRegistrations["createSubgraph"]) });
-  server.route({ ...routeDefinitions["deleteSubgraph"], ...normalizeRouteHandlerRegistration(routeRegistrations["deleteSubgraph"]) });
-  server.route({ ...routeDefinitions["getSubgraph"], ...normalizeRouteHandlerRegistration(routeRegistrations["getSubgraph"]) });
-  server.route({ ...routeDefinitions["updateSubgraph"], ...normalizeRouteHandlerRegistration(routeRegistrations["updateSubgraph"]) });
+  server.route({ ...routeDefinitionsByOperationId["listGraphs"], handler: handlers["listGraphs"] });
+  server.route({ ...routeDefinitionsByOperationId["createGraph"], handler: handlers["createGraph"] });
+  server.route({ ...routeDefinitionsByOperationId["deleteGraph"], handler: handlers["deleteGraph"] });
+  server.route({ ...routeDefinitionsByOperationId["getGraph"], handler: handlers["getGraph"] });
+  server.route({ ...routeDefinitionsByOperationId["updateGraph"], handler: handlers["updateGraph"] });
+  server.route({ ...routeDefinitionsByOperationId["listSubgraphs"], handler: handlers["listSubgraphs"] });
+  server.route({ ...routeDefinitionsByOperationId["createSubgraph"], handler: handlers["createSubgraph"] });
+  server.route({ ...routeDefinitionsByOperationId["deleteSubgraph"], handler: handlers["deleteSubgraph"] });
+  server.route({ ...routeDefinitionsByOperationId["getSubgraph"], handler: handlers["getSubgraph"] });
+  server.route({ ...routeDefinitionsByOperationId["updateSubgraph"], handler: handlers["updateSubgraph"] });
+
+  done();
 };
 
-export const fastifyRoutesPlugin = fastifyPlugin<FastifyRoutesPluginOptions>(
-  fastifyRoutesPluginImpl,
-  {
+export const fastifyRoutesPlugin = fastifyPlugin(fastifyRoutesPluginImpl, {
   name: "fastify-routes",
-  },
-);
+});

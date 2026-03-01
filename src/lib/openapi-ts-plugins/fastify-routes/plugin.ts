@@ -80,7 +80,7 @@ function collectOperationInfo(operation: IR.OperationObject): OperationInfo {
 function generateImports(requiredZodSymbols: readonly string[]): string {
   const baseImports = [
     'import fastifyPlugin from "fastify-plugin";',
-    'import type { FastifyPluginAsync, RouteShorthandOptionsWithHandler } from "fastify";',
+    'import type { FastifyPluginCallbackZod } from "fastify-type-provider-zod";',
     'import type { RouteHandlers } from "./fastify.gen.ts";',
   ];
 
@@ -143,7 +143,7 @@ function generateRouteDefinition(operation: OperationInfo): string {
 
 function generateRouteDefinitions(operations: readonly OperationInfo[]): string {
   return [
-    "export const routeDefinitions = {",
+    "export const routeDefinitionsByOperationId = {",
     ...operations.map((operation) => generateRouteDefinition(operation)),
     "} as const;",
   ].join("\n");
@@ -152,25 +152,25 @@ function generateRouteDefinitions(operations: readonly OperationInfo[]): string 
 function generateFastifyPlugin(operations: readonly OperationInfo[]): string {
   const statements = operations.map(
     (operation) =>
-      `  server.route({ ...routeDefinitions["${operation.id}"], ...normalizeRouteHandlerRegistration(routeRegistrations["${operation.id}"]) });`,
+      `  server.route({ ...routeDefinitionsByOperationId["${operation.id}"], handler: handlers["${operation.id}"] });`,
   );
 
   return [
-    "const fastifyRoutesPluginImpl: FastifyPluginAsync<FastifyRoutesPluginOptions> = async (",
+    "const fastifyRoutesPluginImpl: FastifyPluginCallbackZod<FastifyRouteHandlersPluginOptions> = (",
     "  server,",
     "  options,",
-    "): Promise<void> => {",
-    "  const routeRegistrations = options.routes;",
+    "  done,",
+    "): void => {",
+    "  const handlers = options.handlers;",
     "",
     ...statements,
+    "",
+    "  done();",
     "};",
     "",
-    "export const fastifyRoutesPlugin = fastifyPlugin<FastifyRoutesPluginOptions>(",
-    "  fastifyRoutesPluginImpl,",
-    "  {",
+    "export const fastifyRoutesPlugin = fastifyPlugin(fastifyRoutesPluginImpl, {",
     '  name: "fastify-routes",',
-    "  },",
-    ");",
+    "});",
   ].join("\n");
 }
 

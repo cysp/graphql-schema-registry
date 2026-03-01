@@ -88,7 +88,7 @@ export function createFastifyServer({
   });
 
   server.register(fastifyRoutesPlugin, {
-    routes: {
+    handlers: {
       listGraphs: fastifyHandlerWithDependencies(listGraphsHandler, { database }),
       createGraph: fastifyHandlerWithDependencies(createGraphHandler, { database }),
       getGraph: fastifyHandlerWithDependencies(getGraphHandler, { database }),
