@@ -1,0 +1,12 @@
+type: object
+additionalProperties: false
+required:
+  - slug
+  - federationVersion
+properties:
+  slug:
+    type: string
+    minLength: 1
+  federationVersion:
+    type: string
+    minLength: 1

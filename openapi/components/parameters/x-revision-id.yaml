@@ -1,0 +1,6 @@
+name: x-revision-id
+in: header
+required: true
+schema:
+  type: string
+  pattern: "^[1-9][0-9]*$"

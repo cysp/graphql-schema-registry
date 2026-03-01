@@ -1,0 +1,16 @@
+type: object
+additionalProperties: false
+required:
+  - level
+  - message
+properties:
+  level:
+    type: string
+    enum:
+      - info
+      - warning
+      - error
+  message:
+    type: string
+  code:
+    type: string

@@ -34,3 +34,78 @@ jobs:
       - uses: codecov/codecov-action@671740ac38dd9b0130fbe1cec585b89eea48d3de # v5.5.2
         with:
           token: ${{ secrets.CODECOV_TOKEN }}
+
+  integration-test-neon:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    if: ${{ vars.NEON_PROJECT_ID != '' }}
+
+    env:
+      NEON_PROJECT_ID: ${{ vars.NEON_PROJECT_ID }}
+      NEON_PARENT_BRANCH: ${{ vars.NEON_PARENT_BRANCH || 'production' }}
+      NEON_DATABASE_NAME: ${{ vars.NEON_DATABASE_NAME || 'neondb' }}
+      NEON_ROLE_NAME: ${{ vars.NEON_ROLE_NAME || 'neondb_owner' }}
+
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+
+      - uses: pnpm/action-setup@41ff72655975bd51cab0327fa583b6e92b6d3061 # v4.2.0
+        with:
+          run_install: false
+
+      - uses: actions/setup-node@6044e13b5dc448c55e2357c09f80417699197238 # v6.2.0
+        with:
+          node-version-file: .nvmrc
+          cache: pnpm
+
+      - run: pnpm install --frozen-lockfile
+
+      - id: neon_compute_branch_expires_at
+        run: echo "expires_at=$(date -u -d '+15 minutes' +'%Y-%m-%dT%H:%M:%SZ')" >>"${GITHUB_OUTPUT}"
+
+      - id: neon_create_branch
+        uses: neondatabase/create-branch-action@v6
+        with:
+          project_id: ${{ env.NEON_PROJECT_ID }}
+          branch_name: github-actions-${{ github.run_id }}-${{ github.run_attempt }}-${{ github.job }}
+          parent_branch: ${{ env.NEON_PARENT_BRANCH }}
+          database: ${{ env.NEON_DATABASE_NAME }}
+          role: ${{ env.NEON_ROLE_NAME }}
+          expires_at: ${{ steps.neon_compute_branch_expires_at.outputs.expires_at }}
+          api_key: ${{ secrets.NEON_API_KEY }}
+
+      - name: Mask Neon connection secrets
+        shell: bash
+        run: |
+          echo "::add-mask::${{ steps.neon_create_branch.outputs.password }}"
+          echo "::add-mask::${{ steps.neon_create_branch.outputs.db_url }}"
+          echo "::add-mask::${{ steps.neon_create_branch.outputs.db_url_pooled }}"
+
+      - uses: ./.github/actions/pgschema-apply
+        env:
+          PGHOST: ${{ steps.neon_create_branch.outputs.db_host }}
+          PGPORT: "5432"
+          PGDATABASE: ${{ env.NEON_DATABASE_NAME }}
+          PGUSER: ${{ env.NEON_ROLE_NAME }}
+          PGPASSWORD: ${{ steps.neon_create_branch.outputs.password }}
+        with:
+          pgschema-version: v1.7.3
+          pgschema-module: github.com/pgplex/pgschema
+          file: db/neon.sql
+
+      - shell: bash
+        run: pnpm run test -- "src/**/*.integration.test.ts"
+        env:
+          INTEGRATION_TEST_DATABASE_URL: ${{ steps.neon_create_branch.outputs.db_url }}
+
+      - uses: codecov/codecov-action@671740ac38dd9b0130fbe1cec585b89eea48d3de # v5.5.2
+        with:
+          token: ${{ secrets.CODECOV_TOKEN }}
+          flags: integration-neon
+
+      - if: ${{ always() && steps.neon_create_branch.outputs.branch_id != '' }}
+        uses: neondatabase/delete-branch-action@v3
+        with:
+          project_id: ${{ env.NEON_PROJECT_ID }}
+          branch: ${{ steps.neon_create_branch.outputs.branch_id }}
+          api_key: ${{ secrets.NEON_API_KEY }}

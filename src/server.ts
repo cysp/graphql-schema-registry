@@ -5,12 +5,23 @@ import fastify, { type FastifyInstance } from "fastify";
 import { serializerCompiler, validatorCompiler } from "fastify-type-provider-zod";
 
 import { formatUser } from "./domain/authorization/user.ts";
+import { createGraphHandler } from "./domain/routes/create-graph.ts";
+import { createSubgraphHandler } from "./domain/routes/create-subgraph.ts";
+import { deleteGraphHandler } from "./domain/routes/delete-graph.ts";
+import { deleteSubgraphHandler } from "./domain/routes/delete-subgraph.ts";
+import { getGraphHandler } from "./domain/routes/get-graph.ts";
+import { getSubgraphHandler } from "./domain/routes/get-subgraph.ts";
+import { listGraphsHandler } from "./domain/routes/list-graphs.ts";
+import { listSubgraphsHandler } from "./domain/routes/list-subgraphs.ts";
+import { updateGraphHandler } from "./domain/routes/update-graph.ts";
+import { updateSubgraphHandler } from "./domain/routes/update-subgraph.ts";
 import type { PostgresJsDatabase } from "./drizzle/types.ts";
+import { fastifyHandlerWithDependencies } from "./lib/fastify/handler-with-dependencies.ts";
 import { healthcheckPlugin } from "./lib/fastify/healthcheck/plugin.ts";
-import { registryPlugin } from "./lib/fastify/registry/plugin.ts";
+import { fastifyRoutesPlugin } from "./lib/openapi-ts/fastify-routes.gen.ts";
 
 type CreateFastifyServerOptions = {
-  database?: Pick<PostgresJsDatabase, "execute"> | undefined;
+  database?: PostgresJsDatabase | undefined;
   jwtVerification?:
     | {
         audience: string;
@@ -58,7 +69,7 @@ export function createFastifyServer({
         await request.jwtVerify();
       } catch (error) {
         request.log.warn({ error }, "failed to validate bearer token claims");
-        reply.unauthorized("Invalid bearer token.");
+        reply.unauthorized();
       }
     });
   }
@@ -75,7 +86,21 @@ export function createFastifyServer({
       },
     },
   });
-  server.register(registryPlugin);
+
+  server.register(fastifyRoutesPlugin, {
+    handlers: {
+      listGraphs: fastifyHandlerWithDependencies(listGraphsHandler, { database }),
+      createGraph: fastifyHandlerWithDependencies(createGraphHandler, { database }),
+      getGraph: fastifyHandlerWithDependencies(getGraphHandler, { database }),
+      updateGraph: fastifyHandlerWithDependencies(updateGraphHandler, { database }),
+      deleteGraph: fastifyHandlerWithDependencies(deleteGraphHandler, { database }),
+      listSubgraphs: fastifyHandlerWithDependencies(listSubgraphsHandler, { database }),
+      createSubgraph: fastifyHandlerWithDependencies(createSubgraphHandler, { database }),
+      getSubgraph: fastifyHandlerWithDependencies(getSubgraphHandler, { database }),
+      updateSubgraph: fastifyHandlerWithDependencies(updateSubgraphHandler, { database }),
+      deleteSubgraph: fastifyHandlerWithDependencies(deleteSubgraphHandler, { database }),
+    },
+  });
 
   return server;
 }

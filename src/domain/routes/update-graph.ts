@@ -1,0 +1,70 @@
+import type { PostgresJsDatabase } from "../../drizzle/types.ts";
+import { requireAdminUser } from "../../lib/fastify/authorization/guards.ts";
+import type { DependencyInjectedHandlerContext } from "../../lib/fastify/handler-with-dependencies.ts";
+import { requireDependency } from "../../lib/fastify/require-dependency.ts";
+import type { RouteHandlers } from "../../lib/openapi-ts/fastify.gen.ts";
+import { getActiveGraphBySlug } from "../database/get-active-graph-by-slug.ts";
+import { updateGraphWithOptimisticLockInTransaction } from "../database/update-graph-with-optimistic-lock.ts";
+
+type RouteDependencies = Readonly<{
+  database: PostgresJsDatabase | undefined;
+}>;
+
+export async function updateGraphHandler({
+  request,
+  reply,
+  dependencies: { database },
+}: DependencyInjectedHandlerContext<
+  RouteHandlers["updateGraph"],
+  RouteDependencies
+>): Promise<void> {
+  const expectedRevisionId = Number(request.headers["x-revision-id"]);
+  if (!Number.isSafeInteger(expectedRevisionId) || expectedRevisionId < 1) {
+    reply.badRequest();
+    return;
+  }
+
+  if (!requireDependency(database, reply)) {
+    return;
+  }
+
+  if (!requireAdminUser(request, reply)) {
+    return;
+  }
+
+  const now = new Date();
+
+  const graph = await getActiveGraphBySlug(database, request.params.graphSlug);
+  if (!graph) {
+    reply.notFound();
+    return;
+  }
+
+  if (graph.revisionId !== expectedRevisionId) {
+    reply.conflict();
+    return;
+  }
+
+  const updatedGraph = await database.transaction(async (transaction) => {
+    return updateGraphWithOptimisticLockInTransaction(transaction, {
+      graphId: graph.id,
+      currentRevisionId: graph.revisionId,
+      federationVersion: request.body.federationVersion,
+      now,
+    });
+  });
+
+  if (!updatedGraph) {
+    reply.conflict();
+    return;
+  }
+
+  reply.code(200).send({
+    id: updatedGraph.externalId,
+    slug: updatedGraph.slug,
+    revisionId: String(updatedGraph.revisionId),
+    federationVersion: updatedGraph.federationVersion,
+    createdAt: updatedGraph.createdAt.toISOString(),
+    updatedAt: updatedGraph.updatedAt.toISOString(),
+  });
+}

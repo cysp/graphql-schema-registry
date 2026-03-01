@@ -1,0 +1,40 @@
+type: object
+additionalProperties: true
+required:
+  - type
+  - title
+  - status
+  - code
+properties:
+  type:
+    type: string
+  title:
+    type: string
+  status:
+    type: integer
+    format: int32
+  detail:
+    type: string
+  instance:
+    type: string
+  code:
+    type: string
+    enum:
+      - UNAUTHORIZED
+      - FORBIDDEN
+      - NOT_FOUND
+      - CONFLICT
+      - INVALID_REQUEST
+      - INTERNAL_ERROR
+  requestId:
+    type: string
+  diagnostics:
+    type: array
+    items:
+      $ref: ./diagnostic.yaml
+  errors:
+    type: array
+    items:
+      $ref: ./field-error.yaml
+  upstreamCode:
+    type: string

@@ -1,0 +1,8 @@
+type: object
+additionalProperties: false
+required:
+  - routingUrl
+properties:
+  routingUrl:
+    type: string
+    format: uri
