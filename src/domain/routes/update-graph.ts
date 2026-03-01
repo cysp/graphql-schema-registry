@@ -48,7 +48,7 @@ export async function updateGraphHandler({
 
   const graph = await getActiveGraphBySlug(database, request.params.graphSlug);
   if (!graph) {
-    reply.notFound("Graph not found.");
+    reply.notFound();
     return;
   }
 

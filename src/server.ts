@@ -68,7 +68,7 @@ export function createFastifyServer({
         await request.jwtVerify();
       } catch (error) {
         request.log.warn({ error }, "failed to validate bearer token claims");
-        reply.unauthorized("Invalid bearer token.");
+        reply.unauthorized();
       }
     });
   }

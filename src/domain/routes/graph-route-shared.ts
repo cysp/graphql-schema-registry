@@ -1,7 +1,5 @@
 import type { FastifyReply } from "fastify";
 
-export const DATABASE_NOT_CONFIGURED_MESSAGE = "Database is not configured.";
-
 export function requireDatabase<TDatabase extends object>(
   database: TDatabase | undefined,
   reply: FastifyReply,
@@ -10,6 +8,6 @@ export function requireDatabase<TDatabase extends object>(
     return true;
   }
 
-  reply.serviceUnavailable(DATABASE_NOT_CONFIGURED_MESSAGE);
+  reply.serviceUnavailable();
   return false;
 }

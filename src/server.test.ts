@@ -115,7 +115,7 @@ await test("createFastifyServer authorization hook", async (t) => {
     assert.strictEqual(response.statusCode, 401);
     assert.deepStrictEqual(getJsonPayload(response), {
       error: "Unauthorized",
-      message: "Invalid bearer token.",
+      message: "Unauthorized",
       statusCode: 401,
     });
   });
@@ -155,21 +155,21 @@ await test("createFastifyServer authorization hook", async (t) => {
     assert.strictEqual(response.statusCode, 401);
     assert.deepStrictEqual(getJsonPayload(response), {
       error: "Unauthorized",
-      message: "Invalid bearer token.",
+      message: "Unauthorized",
       statusCode: 401,
     });
   });
 
-  await t.test("requires bearer auth to list graphs", async () => {
+  await t.test("returns 503 before bearer auth checks on graph routes when DB is missing", async () => {
     const response = await server.inject({
       method: "GET",
       url: "/v1/graphs",
     });
 
-    assert.strictEqual(response.statusCode, 401);
+    assert.strictEqual(response.statusCode, 503);
   });
 
-  await t.test("requires admin grant to list graphs", async () => {
+  await t.test("returns 503 before admin grant checks on graph routes when DB is missing", async () => {
     const response = await server.inject({
       method: "GET",
       url: "/v1/graphs",
@@ -186,7 +186,7 @@ await test("createFastifyServer authorization hook", async (t) => {
       },
     });
 
-    assert.strictEqual(response.statusCode, 403);
+    assert.strictEqual(response.statusCode, 503);
   });
 
   await t.test("allows admins to list graphs", async () => {

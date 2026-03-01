@@ -10,14 +10,6 @@ type UpdateGraphWithOptimisticLockInput = Readonly<{
   now: Date;
 }>;
 
-const graphRecordFields = {
-  createdAt: graphs.createdAt,
-  externalId: graphs.externalId,
-  id: graphs.id,
-  slug: graphs.slug,
-  updatedAt: graphs.updatedAt,
-} as const;
-
 // oxlint-disable-next-line typescript-eslint/explicit-module-boundary-types
 export async function updateGraphWithOptimisticLockInTransaction(
   database: PostgresJsDatabase,
@@ -42,7 +34,13 @@ export async function updateGraphWithOptimisticLockInTransaction(
         eq(graphs.currentRevisionId, currentRevisionId),
       ),
     )
-    .returning(graphRecordFields);
+    .returning({
+      createdAt: graphs.createdAt,
+      externalId: graphs.externalId,
+      id: graphs.id,
+      slug: graphs.slug,
+      updatedAt: graphs.updatedAt,
+    });
 
   if (!updatedGraphRecord) {
     return;

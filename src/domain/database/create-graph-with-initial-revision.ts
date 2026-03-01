@@ -7,14 +7,6 @@ type CreateGraphWithInitialRevisionInput = Readonly<{
   slug: string;
 }>;
 
-const graphRecordFields = {
-  createdAt: graphs.createdAt,
-  externalId: graphs.externalId,
-  id: graphs.id,
-  slug: graphs.slug,
-  updatedAt: graphs.updatedAt,
-} as const;
-
 const INITIAL_GRAPH_REVISION_ID = 1;
 
 // oxlint-disable-next-line typescript-eslint/explicit-module-boundary-types
@@ -31,7 +23,13 @@ export async function createGraphWithInitialRevisionInTransaction(
       updatedAt: now,
     })
     .onConflictDoNothing()
-    .returning(graphRecordFields);
+    .returning({
+      createdAt: graphs.createdAt,
+      externalId: graphs.externalId,
+      id: graphs.id,
+      slug: graphs.slug,
+      updatedAt: graphs.updatedAt,
+    });
 
   if (!graphRecord) {
     return;
