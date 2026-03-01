@@ -2,22 +2,6 @@ name: pgschema-apply
 description: Run pgschema to apply schema changes.
 
 inputs:
-  host:
-    description: Postgres host.
-    required: true
-  port:
-    description: Postgres port.
-    required: false
-    default: "5432"
-  db:
-    description: Postgres database name.
-    required: true
-  user:
-    description: Postgres user.
-    required: true
-  password:
-    description: Postgres password.
-    required: true
   file:
     description: Path to the schema SQL file.
     required: true
@@ -37,30 +21,9 @@ inputs:
 runs:
   using: composite
   steps:
-    - name: Apply schema
-      shell: bash
-      env:
-        PGHOST: ${{ inputs.host }}
-        PGPORT: ${{ inputs.port }}
-        PGDATABASE: ${{ inputs.db }}
-        PGUSER: ${{ inputs.user }}
-        PGPASSWORD: ${{ inputs.password }}
-        SCHEMA_FILE: ${{ inputs.file }}
-        SCHEMA_NAME: ${{ inputs.schema }}
-        PGSCHEMA_VERSION: ${{ inputs.pgschema-version }}
-        PGSCHEMA_MODULE: ${{ inputs.pgschema-module }}
+    - shell: bash
       run: |
-        if [[ ! -f "${SCHEMA_FILE}" ]]; then
-          echo "Schema file not found: ${SCHEMA_FILE}" >&2
-          exit 1
-        fi
-
-        go run "${PGSCHEMA_MODULE}@${PGSCHEMA_VERSION}" apply \
-          --host "${PGHOST}" \
-          --port "${PGPORT}" \
-          --db "${PGDATABASE}" \
-          --user "${PGUSER}" \
-          --password "${PGPASSWORD}" \
-          --schema "${SCHEMA_NAME}" \
-          --file "${SCHEMA_FILE}" \
+        go run "${{ inputs.pgschema-module }}@${{ inputs.pgschema-version }}" apply \
+          --schema "${{ inputs.schema }}" \
+          --file "${{ inputs.file }}" \
           --auto-approve

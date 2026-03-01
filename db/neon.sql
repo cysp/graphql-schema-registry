@@ -10,6 +10,4 @@ ALTER DEFAULT PRIVILEGES FOR ROLE cloud_admin IN SCHEMA public GRANT DELETE, INS
 
 \i schema.sql
 
--- GRANT ALL ON SCHEMA public TO neon_superuser;
-
 GRANT ALL ON ALL TABLES IN SCHEMA public TO neon_superuser;

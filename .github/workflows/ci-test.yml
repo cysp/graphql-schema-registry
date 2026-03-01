@@ -74,15 +74,24 @@ jobs:
           expires_at: ${{ steps.neon_compute_branch_expires_at.outputs.expires_at }}
           api_key: ${{ secrets.NEON_API_KEY }}
 
+      - name: Mask Neon connection secrets
+        shell: bash
+        run: |
+          echo "::add-mask::${{ steps.neon_create_branch.outputs.password }}"
+          echo "::add-mask::${{ steps.neon_create_branch.outputs.db_url }}"
+          echo "::add-mask::${{ steps.neon_create_branch.outputs.db_url_pooled }}"
+
       - uses: ./.github/actions/pgschema-apply
+        env:
+          PGHOST: ${{ steps.neon_create_branch.outputs.db_host }}
+          PGPORT: "5432"
+          PGDATABASE: ${{ env.NEON_DATABASE_NAME }}
+          PGUSER: ${{ env.NEON_ROLE_NAME }}
+          PGPASSWORD: ${{ steps.neon_create_branch.outputs.password }}
         with:
-          host: ${{ steps.neon_create_branch.outputs.db_host }}
-          db: ${{ env.NEON_DATABASE_NAME }}
-          user: ${{ env.NEON_ROLE_NAME }}
-          password: ${{ steps.neon_create_branch.outputs.password }}
-          file: db/neon.sql
           pgschema-version: v1.7.3
           pgschema-module: github.com/pgplex/pgschema
+          file: db/neon.sql
 
       - shell: bash
         run: pnpm run test -- "src/**/*.integration.test.ts"
