@@ -93,10 +93,10 @@ export function createFastifyServer({
       getGraph: fastifyHandlerWithDependencies(getGraphHandler, { database }),
       updateGraph: fastifyHandlerWithDependencies(updateGraphHandler, { database }),
       deleteGraph: fastifyHandlerWithDependencies(deleteGraphHandler, { database }),
-      listSubgraphs: listSubgraphsHandler,
-      getSubgraph: getSubgraphHandler,
-      upsertSubgraph: upsertSubgraphHandler,
-      deleteSubgraph: deleteSubgraphHandler,
+      listSubgraphs: fastifyHandlerWithDependencies(listSubgraphsHandler, { database }),
+      getSubgraph: fastifyHandlerWithDependencies(getSubgraphHandler, { database }),
+      upsertSubgraph: fastifyHandlerWithDependencies(upsertSubgraphHandler, { database }),
+      deleteSubgraph: fastifyHandlerWithDependencies(deleteSubgraphHandler, { database }),
     },
   });
 

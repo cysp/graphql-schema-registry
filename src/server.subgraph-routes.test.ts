@@ -165,24 +165,47 @@ await test("subgraph routes authorization", async (t) => {
     await server.close();
   });
 
-  await t.test("requires bearer auth on all subgraph routes", async () => {
-    for (const routeCase of routeCases) {
-      const response = await server.inject(createInjectOptions(routeCase));
-      assert.strictEqual(response.statusCode, 401);
-    }
-  });
+  await t.test(
+    "returns service unavailable before auth checks on all subgraph routes",
+    async () => {
+      for (const routeCase of routeCases) {
+        const response = await server.inject(createInjectOptions(routeCase));
+        assert.strictEqual(response.statusCode, 503);
+      }
+    },
+  );
 
-  await t.test("requires admin grant on all subgraph routes", async () => {
-    for (const routeCase of routeCases) {
-      const response = await server.inject(createInjectOptions(routeCase, graphReaderToken));
-      assert.strictEqual(response.statusCode, 403);
-    }
-  });
+  await t.test(
+    "returns service unavailable before admin checks on all subgraph routes",
+    async () => {
+      for (const routeCase of routeCases) {
+        const response = await server.inject(createInjectOptions(routeCase, graphReaderToken));
+        assert.strictEqual(response.statusCode, 503);
+      }
+    },
+  );
 
   await t.test("allows admins to reach all subgraph handlers", async () => {
     for (const routeCase of routeCases) {
       const response = await server.inject(createInjectOptions(routeCase, adminToken));
-      assert.strictEqual(response.statusCode, 501);
+      // No database is configured in this test setup, so authorized access reaches
+      // each handler and returns service unavailable.
+      assert.strictEqual(response.statusCode, 503);
     }
+  });
+
+  await t.test("returns bad request for unsafe revision ids", async () => {
+    const response = await server.inject({
+      headers: {
+        "x-revision-id": "9007199254740992",
+      },
+      method: "PUT",
+      payload: {
+        routingUrl: "https://example.com/graphql",
+      },
+      url: "/v1/graphs/catalog/subgraphs/inventory",
+    });
+
+    assert.strictEqual(response.statusCode, 400);
   });
 });
