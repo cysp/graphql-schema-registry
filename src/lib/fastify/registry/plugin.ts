@@ -2,7 +2,6 @@ import type { FastifyReply, FastifyRequest } from "fastify";
 import fastifyPlugin from "fastify-plugin";
 import type { FastifyPluginCallbackZod } from "fastify-type-provider-zod";
 
-import { requireAdmin, requireGraphRead, requireSubgraphWrite } from "../authorization/guards.ts";
 import {
   createGraphBodySchema,
   createSubgraphBodySchema,
@@ -18,7 +17,6 @@ const registryPluginImpl: FastifyPluginCallbackZod = (server, _options, done): v
   server.post(
     "/v1/graphs",
     {
-      preHandler: requireAdmin,
       schema: {
         body: createGraphBodySchema,
       },
@@ -29,7 +27,6 @@ const registryPluginImpl: FastifyPluginCallbackZod = (server, _options, done): v
   server.get(
     "/v1/graphs/:graphId",
     {
-      preHandler: requireAdmin,
       schema: {
         params: graphParamsSchema,
       },
@@ -40,7 +37,6 @@ const registryPluginImpl: FastifyPluginCallbackZod = (server, _options, done): v
   server.delete(
     "/v1/graphs/:graphId",
     {
-      preHandler: requireAdmin,
       schema: {
         params: graphParamsSchema,
       },
@@ -51,7 +47,6 @@ const registryPluginImpl: FastifyPluginCallbackZod = (server, _options, done): v
   server.put(
     "/v1/graphs/:graphId",
     {
-      preHandler: requireAdmin,
       schema: {
         params: graphParamsSchema,
       },
@@ -62,7 +57,6 @@ const registryPluginImpl: FastifyPluginCallbackZod = (server, _options, done): v
   server.post(
     "/v1/graphs/:graphId/subgraphs",
     {
-      preHandler: requireAdmin,
       schema: {
         body: createSubgraphBodySchema,
         params: graphParamsSchema,
@@ -74,7 +68,6 @@ const registryPluginImpl: FastifyPluginCallbackZod = (server, _options, done): v
   server.get(
     "/v1/graphs/:graphId/subgraphs/:subgraphId",
     {
-      preHandler: requireAdmin,
       schema: {
         params: subgraphParamsSchema,
       },
@@ -85,7 +78,6 @@ const registryPluginImpl: FastifyPluginCallbackZod = (server, _options, done): v
   server.delete(
     "/v1/graphs/:graphId/subgraphs/:subgraphId",
     {
-      preHandler: requireAdmin,
       schema: {
         params: subgraphParamsSchema,
       },
@@ -96,7 +88,6 @@ const registryPluginImpl: FastifyPluginCallbackZod = (server, _options, done): v
   server.put(
     "/v1/graphs/:graphId/subgraphs/:subgraphId",
     {
-      preHandler: requireAdmin,
       schema: {
         params: subgraphParamsSchema,
       },
@@ -107,7 +98,6 @@ const registryPluginImpl: FastifyPluginCallbackZod = (server, _options, done): v
   server.get(
     "/v1/graphs/:graphId/supergraph.graphqls",
     {
-      preHandler: requireGraphRead,
       schema: {
         params: graphParamsSchema,
       },
@@ -118,7 +108,6 @@ const registryPluginImpl: FastifyPluginCallbackZod = (server, _options, done): v
   server.put(
     "/v1/graphs/:graphId/subgraphs/:subgraphId/schema.graphql",
     {
-      preHandler: requireSubgraphWrite,
       schema: {
         params: subgraphParamsSchema,
       },
