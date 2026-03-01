@@ -98,6 +98,11 @@ jobs:
         env:
           INTEGRATION_TEST_DATABASE_URL: ${{ steps.neon_create_branch.outputs.db_url }}
 
+      - uses: codecov/codecov-action@671740ac38dd9b0130fbe1cec585b89eea48d3de # v5.5.2
+        with:
+          token: ${{ secrets.CODECOV_TOKEN }}
+          flags: integration-neon
+
       - if: ${{ always() && steps.neon_create_branch.outputs.branch_id != '' }}
         uses: neondatabase/delete-branch-action@v3
         with:
