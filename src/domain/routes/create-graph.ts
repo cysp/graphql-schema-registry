@@ -6,7 +6,6 @@ import { requireAdminUser } from "../../lib/fastify/authorization/guards.ts";
 import type { DependencyInjectedHandlerContext } from "../../lib/fastify/handler-with-dependencies.ts";
 import type { RouteHandlers } from "../../lib/openapi-ts/fastify.gen.ts";
 import type { Graph } from "../../lib/openapi-ts/types.gen.ts";
-import { getActiveGraphBySlug } from "../database/get-active-graph-by-slug.ts";
 import { GRAPH_WRITE_CONFLICT_MESSAGE, requireDatabase } from "./graph-route-shared.ts";
 
 type RouteDependencies = Readonly<{
@@ -22,14 +21,6 @@ const graphRecordFields = {
 } as const;
 
 const INITIAL_GRAPH_REVISION_ID = 1;
-
-function isUniqueViolationError(error: unknown): boolean {
-  if (typeof error !== "object" || error === null) {
-    return false;
-  }
-
-  return Reflect.get(error, "code") === "23505";
-}
 
 export async function createGraphHandler({
   request,
@@ -49,56 +40,43 @@ export async function createGraphHandler({
 
   const now = new Date();
 
-  try {
-    const createdGraph = await database.transaction(async (transaction): Promise<Graph | undefined> => {
-      const existingGraph = await getActiveGraphBySlug(transaction, request.body.graphSlug);
-      if (existingGraph) {
-        return undefined;
-      }
-
-      const [graphRecord] = await transaction
-        .insert(graphs)
-        .values({
-          createdAt: now,
-          currentRevisionId: INITIAL_GRAPH_REVISION_ID,
-          slug: request.body.graphSlug,
-          updatedAt: now,
-        })
-        .returning(graphRecordFields);
-
-      if (!graphRecord) {
-        return undefined;
-      }
-
-      await transaction.insert(graphRevisions).values({
+  const createdGraph = await database.transaction(async (transaction): Promise<Graph | undefined> => {
+    const [graphRecord] = await transaction
+      .insert(graphs)
+      .values({
         createdAt: now,
-        federationVersion: request.body.federationVersion,
-        graphId: graphRecord.id,
-        revisionId: INITIAL_GRAPH_REVISION_ID,
-      });
+        currentRevisionId: INITIAL_GRAPH_REVISION_ID,
+        slug: request.body.graphSlug,
+        updatedAt: now,
+      })
+      .onConflictDoNothing()
+      .returning(graphRecordFields);
 
-      return {
-        createdAt: graphRecord.createdAt.toISOString(),
-        federationVersion: request.body.federationVersion,
-        id: graphRecord.externalId,
-        revisionId: String(INITIAL_GRAPH_REVISION_ID),
-        slug: graphRecord.slug,
-        updatedAt: graphRecord.updatedAt.toISOString(),
-      };
+    if (!graphRecord) {
+      return undefined;
+    }
+
+    await transaction.insert(graphRevisions).values({
+      createdAt: now,
+      federationVersion: request.body.federationVersion,
+      graphId: graphRecord.id,
+      revisionId: INITIAL_GRAPH_REVISION_ID,
     });
 
-    if (!createdGraph) {
-      reply.conflict(GRAPH_WRITE_CONFLICT_MESSAGE);
-      return;
-    }
+    return {
+      createdAt: graphRecord.createdAt.toISOString(),
+      federationVersion: request.body.federationVersion,
+      id: graphRecord.externalId,
+      revisionId: String(INITIAL_GRAPH_REVISION_ID),
+      slug: graphRecord.slug,
+      updatedAt: graphRecord.updatedAt.toISOString(),
+    };
+  });
 
-    reply.code(201).send(createdGraph);
-  } catch (error) {
-    if (isUniqueViolationError(error)) {
-      reply.conflict(GRAPH_WRITE_CONFLICT_MESSAGE);
-      return;
-    }
-
-    throw error;
+  if (!createdGraph) {
+    reply.conflict(GRAPH_WRITE_CONFLICT_MESSAGE);
+    return;
   }
+
+  reply.code(201).send(createdGraph);
 }

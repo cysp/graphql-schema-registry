@@ -26,6 +26,11 @@ const graphRecordFields = {
   updatedAt: graphs.updatedAt,
 } as const;
 
+type UpdateGraphResult =
+  | Readonly<{ type: "conflict" }>
+  | Readonly<{ type: "not_found" }>
+  | Readonly<{ graph: Graph; type: "updated" }>;
+
 export async function updateGraphHandler({
   request,
   reply,
@@ -45,10 +50,10 @@ export async function updateGraphHandler({
   const expectedRevisionId = Number.parseInt(request.headers["x-revision-id"], 10);
   const now = new Date();
 
-  const updatedGraph = await database.transaction(async (transaction): Promise<Graph | undefined> => {
+  const result = await database.transaction(async (transaction): Promise<UpdateGraphResult> => {
     const existingGraph = await getActiveGraphBySlug(transaction, request.params.graphSlug);
     if (!existingGraph) {
-      return undefined;
+      return { type: "not_found" };
     }
 
     const currentRevision = existingGraph.currentRevision;
@@ -58,7 +63,7 @@ export async function updateGraphHandler({
 
     const currentRevisionId = currentRevision.revisionId;
     if (currentRevisionId !== expectedRevisionId) {
-      return undefined;
+      return { type: "conflict" };
     }
 
     const nextRevisionId = currentRevisionId + 1;
@@ -78,7 +83,19 @@ export async function updateGraphHandler({
       .returning(graphRecordFields);
 
     if (!updatedGraphRecord) {
-      return undefined;
+      const [graphState] = await transaction
+        .select({
+          deletedAt: graphs.deletedAt,
+        })
+        .from(graphs)
+        .where(eq(graphs.id, existingGraph.id))
+        .limit(1);
+
+      if (!graphState || graphState.deletedAt !== null) {
+        return { type: "not_found" };
+      }
+
+      return { type: "conflict" };
     }
 
     await transaction.insert(graphRevisions).values({
@@ -89,19 +106,27 @@ export async function updateGraphHandler({
     });
 
     return {
-      createdAt: updatedGraphRecord.createdAt.toISOString(),
-      federationVersion: request.body.federationVersion,
-      id: updatedGraphRecord.externalId,
-      revisionId: String(nextRevisionId),
-      slug: updatedGraphRecord.slug,
-      updatedAt: updatedGraphRecord.updatedAt.toISOString(),
+      type: "updated",
+      graph: {
+        createdAt: updatedGraphRecord.createdAt.toISOString(),
+        federationVersion: request.body.federationVersion,
+        id: updatedGraphRecord.externalId,
+        revisionId: String(nextRevisionId),
+        slug: updatedGraphRecord.slug,
+        updatedAt: updatedGraphRecord.updatedAt.toISOString(),
+      },
     };
   });
 
-  if (!updatedGraph) {
+  if (result.type === "not_found") {
+    reply.notFound("Graph not found.");
+    return;
+  }
+
+  if (result.type === "conflict") {
     reply.conflict(GRAPH_WRITE_CONFLICT_MESSAGE);
     return;
   }
 
-  reply.code(200).send(updatedGraph);
+  reply.code(200).send(result.graph);
 }

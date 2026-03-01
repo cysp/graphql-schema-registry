@@ -275,6 +275,10 @@ export type UpdateGraphErrors = {
      */
     403: ErrorRoot;
     /**
+     * Not found
+     */
+    404: ErrorRoot;
+    /**
      * Conflict
      */
     409: ErrorRoot;
