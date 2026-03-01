@@ -93,47 +93,47 @@ export const routeDefinitions = {
   },
 } as const;
 
-type FastifyRouteOptions = Pick<RouteShorthandOptionsWithHandler, "config" | "onRequest" | "preHandler" | "preValidation">;
+type RouteHandlerHooks = Pick<RouteShorthandOptionsWithHandler, "config" | "onRequest" | "preHandler" | "preValidation">;
 
-type FastifyRouteHandlerOptions<THandler extends RouteHandlers[keyof RouteHandlers]> =
-  FastifyRouteOptions & { handler: THandler };
+type RouteHandlerRegistrationWithHandler<THandler extends RouteHandlers[keyof RouteHandlers]> =
+  RouteHandlerHooks & { handler: THandler };
 
-type FastifyRouteHandlerInput<THandler extends RouteHandlers[keyof RouteHandlers]> =
+type RouteHandlerRegistration<THandler extends RouteHandlers[keyof RouteHandlers]> =
   | THandler
-  | FastifyRouteHandlerOptions<THandler>;
+  | RouteHandlerRegistrationWithHandler<THandler>;
 
-export type FastifyRouteHandlers = {
-  [K in keyof RouteHandlers]: FastifyRouteHandlerInput<RouteHandlers[K]>;
+export type RouteHandlerRegistrations = {
+  [K in keyof RouteHandlers]: RouteHandlerRegistration<RouteHandlers[K]>;
 };
 
-function normalizeRouteHandler<THandler extends RouteHandlers[keyof RouteHandlers]>(
-  input: FastifyRouteHandlerInput<THandler>,
-): FastifyRouteHandlerOptions<THandler> {
-  if (typeof input === "function") {
-    return { handler: input };
+function normalizeRouteHandlerRegistration<THandler extends RouteHandlers[keyof RouteHandlers]>(
+  registration: RouteHandlerRegistration<THandler>,
+): RouteHandlerRegistrationWithHandler<THandler> {
+  if (typeof registration === "function") {
+    return { handler: registration };
   }
 
-  return input;
+  return registration;
 }
 
-export type FastifyRoutesPluginOptions = { routes: FastifyRouteHandlers };
+export type FastifyRoutesPluginOptions = { routes: RouteHandlerRegistrations };
 
 const fastifyRoutesPluginImpl: FastifyPluginAsync<FastifyRoutesPluginOptions> = async (
   server,
   options,
 ): Promise<void> => {
-  const routeHandlers = options.routes;
+  const routeRegistrations = options.routes;
 
-  server.route({ ...routeDefinitions["listGraphs"], ...normalizeRouteHandler(routeHandlers["listGraphs"]) });
-  server.route({ ...routeDefinitions["createGraph"], ...normalizeRouteHandler(routeHandlers["createGraph"]) });
-  server.route({ ...routeDefinitions["deleteGraph"], ...normalizeRouteHandler(routeHandlers["deleteGraph"]) });
-  server.route({ ...routeDefinitions["getGraph"], ...normalizeRouteHandler(routeHandlers["getGraph"]) });
-  server.route({ ...routeDefinitions["updateGraph"], ...normalizeRouteHandler(routeHandlers["updateGraph"]) });
-  server.route({ ...routeDefinitions["listSubgraphs"], ...normalizeRouteHandler(routeHandlers["listSubgraphs"]) });
-  server.route({ ...routeDefinitions["createSubgraph"], ...normalizeRouteHandler(routeHandlers["createSubgraph"]) });
-  server.route({ ...routeDefinitions["deleteSubgraph"], ...normalizeRouteHandler(routeHandlers["deleteSubgraph"]) });
-  server.route({ ...routeDefinitions["getSubgraph"], ...normalizeRouteHandler(routeHandlers["getSubgraph"]) });
-  server.route({ ...routeDefinitions["updateSubgraph"], ...normalizeRouteHandler(routeHandlers["updateSubgraph"]) });
+  server.route({ ...routeDefinitions["listGraphs"], ...normalizeRouteHandlerRegistration(routeRegistrations["listGraphs"]) });
+  server.route({ ...routeDefinitions["createGraph"], ...normalizeRouteHandlerRegistration(routeRegistrations["createGraph"]) });
+  server.route({ ...routeDefinitions["deleteGraph"], ...normalizeRouteHandlerRegistration(routeRegistrations["deleteGraph"]) });
+  server.route({ ...routeDefinitions["getGraph"], ...normalizeRouteHandlerRegistration(routeRegistrations["getGraph"]) });
+  server.route({ ...routeDefinitions["updateGraph"], ...normalizeRouteHandlerRegistration(routeRegistrations["updateGraph"]) });
+  server.route({ ...routeDefinitions["listSubgraphs"], ...normalizeRouteHandlerRegistration(routeRegistrations["listSubgraphs"]) });
+  server.route({ ...routeDefinitions["createSubgraph"], ...normalizeRouteHandlerRegistration(routeRegistrations["createSubgraph"]) });
+  server.route({ ...routeDefinitions["deleteSubgraph"], ...normalizeRouteHandlerRegistration(routeRegistrations["deleteSubgraph"]) });
+  server.route({ ...routeDefinitions["getSubgraph"], ...normalizeRouteHandlerRegistration(routeRegistrations["getSubgraph"]) });
+  server.route({ ...routeDefinitions["updateSubgraph"], ...normalizeRouteHandlerRegistration(routeRegistrations["updateSubgraph"]) });
 };
 
 export const fastifyRoutesPlugin = fastifyPlugin<FastifyRoutesPluginOptions>(

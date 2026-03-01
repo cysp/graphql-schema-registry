@@ -152,7 +152,7 @@ function generateRouteDefinitions(operations: readonly OperationInfo[]): string 
 function generateFastifyPlugin(operations: readonly OperationInfo[]): string {
   const statements = operations.map(
     (operation) =>
-      `  server.route({ ...routeDefinitions["${operation.id}"], ...normalizeRouteHandler(routeHandlers["${operation.id}"]) });`,
+      `  server.route({ ...routeDefinitions["${operation.id}"], ...normalizeRouteHandlerRegistration(routeRegistrations["${operation.id}"]) });`,
   );
 
   return [
@@ -160,7 +160,7 @@ function generateFastifyPlugin(operations: readonly OperationInfo[]): string {
     "  server,",
     "  options,",
     "): Promise<void> => {",
-    "  const routeHandlers = options.routes;",
+    "  const routeRegistrations = options.routes;",
     "",
     ...statements,
     "};",
