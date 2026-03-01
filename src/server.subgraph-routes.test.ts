@@ -6,7 +6,7 @@ import { createAuthJwtSigner } from "./domain/jwt-signer.ts";
 import { createFastifyServer } from "./server.ts";
 
 type RouteCase = {
-  method: "DELETE" | "GET" | "PUT";
+  method: "DELETE" | "GET" | "POST" | "PUT";
   payload?: Record<string, unknown>;
   requiresRevisionHeader?: boolean;
   url: string;
@@ -58,6 +58,14 @@ await test("subgraph routes authorization", async (t) => {
     {
       method: "GET",
       url: "/v1/graphs/catalog/subgraphs/inventory",
+    },
+    {
+      method: "POST",
+      payload: {
+        subgraphSlug: "inventory",
+        routingUrl: "https://example.com/graphql",
+      },
+      url: "/v1/graphs/catalog/subgraphs",
     },
     {
       method: "PUT",

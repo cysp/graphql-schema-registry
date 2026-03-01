@@ -22,7 +22,9 @@ export type Subgraph = SubgraphRoot;
 
 export type SubgraphList = SubgraphListRoot;
 
-export type UpsertSubgraphRequest = UpsertSubgraphRequestRoot;
+export type CreateSubgraphRequest = CreateSubgraphRequestRoot;
+
+export type UpdateSubgraphRequest = UpdateSubgraphRequestRoot;
 
 export type Root = unknown;
 
@@ -63,6 +65,11 @@ export type UnprocessableEntityRoot = unknown;
 export type CreateGraphRequestRoot = {
     graphSlug: string;
     federationVersion: string;
+};
+
+export type CreateSubgraphRequestRoot = {
+    subgraphSlug: string;
+    routingUrl: string;
 };
 
 export type DiagnosticRoot = {
@@ -118,7 +125,7 @@ export type UpdateGraphRequestRoot = {
     federationVersion: string;
 };
 
-export type UpsertSubgraphRequestRoot = {
+export type UpdateSubgraphRequestRoot = {
     routingUrl: string;
 };
 
@@ -339,6 +346,45 @@ export type ListSubgraphsResponses = {
 
 export type ListSubgraphsResponse = ListSubgraphsResponses[keyof ListSubgraphsResponses];
 
+export type CreateSubgraphData = {
+    body: CreateSubgraphRequestRoot;
+    path: {
+        graphSlug: string;
+    };
+    query?: never;
+    url: '/v1/graphs/{graphSlug}/subgraphs';
+};
+
+export type CreateSubgraphErrors = {
+    /**
+     * Missing/invalid bearer token
+     */
+    401: ErrorRoot;
+    /**
+     * Token lacks required scope
+     */
+    403: ErrorRoot;
+    /**
+     * Not found
+     */
+    404: ErrorRoot;
+    /**
+     * Conflict
+     */
+    409: ErrorRoot;
+};
+
+export type CreateSubgraphError = CreateSubgraphErrors[keyof CreateSubgraphErrors];
+
+export type CreateSubgraphResponses = {
+    /**
+     * Created
+     */
+    201: SubgraphRoot;
+};
+
+export type CreateSubgraphResponse = CreateSubgraphResponses[keyof CreateSubgraphResponses];
+
 export type DeleteSubgraphData = {
     body?: never;
     path: {
@@ -358,10 +404,6 @@ export type DeleteSubgraphErrors = {
      * Token lacks required scope
      */
     403: ErrorRoot;
-    /**
-     * Not found
-     */
-    404: ErrorRoot;
 };
 
 export type DeleteSubgraphError = DeleteSubgraphErrors[keyof DeleteSubgraphErrors];
@@ -411,8 +453,8 @@ export type GetSubgraphResponses = {
 
 export type GetSubgraphResponse = GetSubgraphResponses[keyof GetSubgraphResponses];
 
-export type UpsertSubgraphData = {
-    body: UpsertSubgraphRequestRoot;
+export type UpdateSubgraphData = {
+    body: UpdateSubgraphRequestRoot;
     headers: {
         'x-revision-id': string;
     };
@@ -424,7 +466,7 @@ export type UpsertSubgraphData = {
     url: '/v1/graphs/{graphSlug}/subgraphs/{subgraphSlug}';
 };
 
-export type UpsertSubgraphErrors = {
+export type UpdateSubgraphErrors = {
     /**
      * Bad request
      */
@@ -445,23 +487,15 @@ export type UpsertSubgraphErrors = {
      * Conflict
      */
     409: ErrorRoot;
-    /**
-     * Unprocessable entity
-     */
-    422: ErrorRoot;
 };
 
-export type UpsertSubgraphError = UpsertSubgraphErrors[keyof UpsertSubgraphErrors];
+export type UpdateSubgraphError = UpdateSubgraphErrors[keyof UpdateSubgraphErrors];
 
-export type UpsertSubgraphResponses = {
+export type UpdateSubgraphResponses = {
     /**
      * Updated
      */
     200: SubgraphRoot;
-    /**
-     * Created
-     */
-    201: SubgraphRoot;
 };
 
-export type UpsertSubgraphResponse = UpsertSubgraphResponses[keyof UpsertSubgraphResponses];
+export type UpdateSubgraphResponse = UpdateSubgraphResponses[keyof UpdateSubgraphResponses];

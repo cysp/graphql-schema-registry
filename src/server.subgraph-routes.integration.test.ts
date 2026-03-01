@@ -72,16 +72,30 @@ await test("subgraph routes integration with postgres", async (t) => {
       assert.deepStrictEqual(zSubgraphListRoot.parse(parseJson(emptyListResponse)), []);
 
       const createSubgraphResponse = await server.inject({
-        headers: adminRevisionHeaders(adminToken, "1"),
-        method: "PUT",
-        payload: { routingUrl: "https://inventory-v1.example.com/graphql" },
-        url: "/v1/graphs/catalog/subgraphs/inventory",
+        headers: adminHeaders(adminToken),
+        method: "POST",
+        payload: {
+          subgraphSlug: "inventory",
+          routingUrl: "https://inventory-v1.example.com/graphql",
+        },
+        url: "/v1/graphs/catalog/subgraphs",
       });
       assert.strictEqual(createSubgraphResponse.statusCode, 201);
       const createdSubgraph = zSubgraphRoot.parse(parseJson(createSubgraphResponse));
       assert.strictEqual(createdSubgraph.graphId, createdGraph.id);
       assert.strictEqual(createdSubgraph.revisionId, "1");
       assert.strictEqual(createdSubgraph.routingUrl, "https://inventory-v1.example.com/graphql");
+
+      const duplicateCreateResponse = await server.inject({
+        headers: adminHeaders(adminToken),
+        method: "POST",
+        payload: {
+          subgraphSlug: "inventory",
+          routingUrl: "https://inventory-duplicate.example.com/graphql",
+        },
+        url: "/v1/graphs/catalog/subgraphs",
+      });
+      assert.strictEqual(duplicateCreateResponse.statusCode, 409);
 
       const getSubgraphResponse = await server.inject({
         headers: adminHeaders(adminToken),
@@ -127,13 +141,13 @@ await test("subgraph routes integration with postgres", async (t) => {
       });
       assert.strictEqual(missingRevisionHeaderResponse.statusCode, 400);
 
-      const invalidCreateRevisionResponse = await server.inject({
-        headers: adminRevisionHeaders(adminToken, "2"),
+      const updateMissingSubgraphResponse = await server.inject({
+        headers: adminRevisionHeaders(adminToken, "1"),
         method: "PUT",
         payload: { routingUrl: "https://orders-v1.example.com/graphql" },
         url: "/v1/graphs/catalog/subgraphs/orders",
       });
-      assert.strictEqual(invalidCreateRevisionResponse.statusCode, 422);
+      assert.strictEqual(updateMissingSubgraphResponse.statusCode, 404);
 
       const deleteSubgraphResponse = await server.inject({
         headers: adminHeaders(adminToken),
@@ -162,14 +176,14 @@ await test("subgraph routes integration with postgres", async (t) => {
         method: "DELETE",
         url: "/v1/graphs/catalog/subgraphs/inventory",
       });
-      assert.strictEqual(missingDeleteResponse.statusCode, 404);
+      assert.strictEqual(missingDeleteResponse.statusCode, 204);
     } finally {
       await server.close();
       await integrationDatabase.close();
     }
   });
 
-  await t.test("returns 404 when graph is missing", async () => {
+  await t.test("returns 404 for read/create/update and 204 for delete when graph is missing", async () => {
     const integrationDatabase = await connectIntegrationDatabase(integrationDatabaseUrl);
     const server = createFastifyServer({
       database: integrationDatabase.database.database,
@@ -193,20 +207,31 @@ await test("subgraph routes integration with postgres", async (t) => {
       });
       assert.strictEqual(getResponse.statusCode, 404);
 
-      const upsertResponse = await server.inject({
+      const createResponse = await server.inject({
+        headers: adminHeaders(adminToken),
+        method: "POST",
+        payload: {
+          subgraphSlug: "inventory",
+          routingUrl: "https://inventory.example.com/graphql",
+        },
+        url: "/v1/graphs/missing/subgraphs",
+      });
+      assert.strictEqual(createResponse.statusCode, 404);
+
+      const updateResponse = await server.inject({
         headers: adminRevisionHeaders(adminToken, "1"),
         method: "PUT",
         payload: { routingUrl: "https://inventory.example.com/graphql" },
         url: "/v1/graphs/missing/subgraphs/inventory",
       });
-      assert.strictEqual(upsertResponse.statusCode, 404);
+      assert.strictEqual(updateResponse.statusCode, 404);
 
       const deleteResponse = await server.inject({
         headers: adminHeaders(adminToken),
         method: "DELETE",
         url: "/v1/graphs/missing/subgraphs/inventory",
       });
-      assert.strictEqual(deleteResponse.statusCode, 404);
+      assert.strictEqual(deleteResponse.statusCode, 204);
     } finally {
       await server.close();
       await integrationDatabase.close();

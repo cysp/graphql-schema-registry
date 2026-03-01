@@ -45,6 +45,13 @@ export const zCreateGraphRequestRoot = z.object({
 
 export const zCreateGraphRequest = zCreateGraphRequestRoot;
 
+export const zCreateSubgraphRequestRoot = z.object({
+    subgraphSlug: z.string(),
+    routingUrl: z.url()
+});
+
+export const zCreateSubgraphRequest = zCreateSubgraphRequestRoot;
+
 export const zDiagnosticRoot = z.object({
     level: z.enum([
         'info',
@@ -124,11 +131,11 @@ export const zUpdateGraphRequestRoot = z.object({
 
 export const zUpdateGraphRequest = zUpdateGraphRequestRoot;
 
-export const zUpsertSubgraphRequestRoot = z.object({
+export const zUpdateSubgraphRequestRoot = z.object({
     routingUrl: z.url()
 });
 
-export const zUpsertSubgraphRequest = zUpsertSubgraphRequestRoot;
+export const zUpdateSubgraphRequest = zUpdateSubgraphRequestRoot;
 
 export const zBearerAuthRoot = z.unknown();
 
@@ -215,6 +222,19 @@ export const zListSubgraphsData = z.object({
  */
 export const zListSubgraphsResponse = zSubgraphListRoot;
 
+export const zCreateSubgraphData = z.object({
+    body: zCreateSubgraphRequestRoot,
+    path: z.object({
+        graphSlug: z.string().min(1)
+    }),
+    query: z.never().optional()
+});
+
+/**
+ * Created
+ */
+export const zCreateSubgraphResponse = zSubgraphRoot;
+
 export const zDeleteSubgraphData = z.object({
     body: z.never().optional(),
     path: z.object({
@@ -243,8 +263,8 @@ export const zGetSubgraphData = z.object({
  */
 export const zGetSubgraphResponse = zSubgraphRoot;
 
-export const zUpsertSubgraphData = z.object({
-    body: zUpsertSubgraphRequestRoot,
+export const zUpdateSubgraphData = z.object({
+    body: zUpdateSubgraphRequestRoot,
     path: z.object({
         graphSlug: z.string().min(1),
         subgraphSlug: z.string().min(1)
@@ -258,4 +278,4 @@ export const zUpsertSubgraphData = z.object({
 /**
  * Updated
  */
-export const zUpsertSubgraphResponse = zSubgraphRoot;
+export const zUpdateSubgraphResponse = zSubgraphRoot;

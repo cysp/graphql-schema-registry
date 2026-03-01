@@ -6,6 +6,7 @@ import { serializerCompiler, validatorCompiler } from "fastify-type-provider-zod
 
 import { formatUser } from "./domain/authorization/user.ts";
 import { createGraphHandler } from "./domain/routes/create-graph.ts";
+import { createSubgraphHandler } from "./domain/routes/create-subgraph.ts";
 import { deleteGraphHandler } from "./domain/routes/delete-graph.ts";
 import { deleteSubgraphHandler } from "./domain/routes/delete-subgraph.ts";
 import { getGraphHandler } from "./domain/routes/get-graph.ts";
@@ -13,7 +14,7 @@ import { getSubgraphHandler } from "./domain/routes/get-subgraph.ts";
 import { listGraphsHandler } from "./domain/routes/list-graphs.ts";
 import { listSubgraphsHandler } from "./domain/routes/list-subgraphs.ts";
 import { updateGraphHandler } from "./domain/routes/update-graph.ts";
-import { upsertSubgraphHandler } from "./domain/routes/upsert-subgraph.ts";
+import { updateSubgraphHandler } from "./domain/routes/update-subgraph.ts";
 import type { PostgresJsDatabase } from "./drizzle/types.ts";
 import { fastifyHandlerWithDependencies } from "./lib/fastify/handler-with-dependencies.ts";
 import { healthcheckPlugin } from "./lib/fastify/healthcheck/plugin.ts";
@@ -94,8 +95,9 @@ export function createFastifyServer({
       updateGraph: fastifyHandlerWithDependencies(updateGraphHandler, { database }),
       deleteGraph: fastifyHandlerWithDependencies(deleteGraphHandler, { database }),
       listSubgraphs: fastifyHandlerWithDependencies(listSubgraphsHandler, { database }),
+      createSubgraph: fastifyHandlerWithDependencies(createSubgraphHandler, { database }),
       getSubgraph: fastifyHandlerWithDependencies(getSubgraphHandler, { database }),
-      upsertSubgraph: fastifyHandlerWithDependencies(upsertSubgraphHandler, { database }),
+      updateSubgraph: fastifyHandlerWithDependencies(updateSubgraphHandler, { database }),
       deleteSubgraph: fastifyHandlerWithDependencies(deleteSubgraphHandler, { database }),
     },
   });

@@ -1,0 +1,11 @@
+type: object
+additionalProperties: false
+required:
+  - subgraphSlug
+  - routingUrl
+properties:
+  subgraphSlug:
+    type: string
+  routingUrl:
+    type: string
+    format: uri

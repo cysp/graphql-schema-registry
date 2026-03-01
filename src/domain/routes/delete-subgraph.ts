@@ -29,7 +29,11 @@ export async function deleteSubgraphHandler({
 
   const graph = await getActiveGraphBySlug(database, request.params.graphSlug);
   if (!graph) {
-    reply.notFound();
+    request.log.debug(
+      { graphSlug: request.params.graphSlug, subgraphSlug: request.params.subgraphSlug },
+      "delete requested for missing graph or already deleted graph",
+    );
+    reply.code(204).send();
     return;
   }
 
@@ -39,7 +43,11 @@ export async function deleteSubgraphHandler({
     request.params.subgraphSlug,
   );
   if (!subgraph) {
-    reply.notFound();
+    request.log.debug(
+      { graphId: graph.id, graphSlug: request.params.graphSlug, subgraphSlug: request.params.subgraphSlug },
+      "delete requested for missing or already deleted subgraph",
+    );
+    reply.code(204).send();
     return;
   }
 
@@ -62,7 +70,7 @@ export async function deleteSubgraphHandler({
       },
       "delete raced with concurrent subgraph delete",
     );
-    reply.notFound();
+    reply.code(204).send();
     return;
   }
 

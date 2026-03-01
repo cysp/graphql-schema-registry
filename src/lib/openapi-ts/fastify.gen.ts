@@ -2,7 +2,7 @@
 
 import type { RouteHandler } from 'fastify';
 
-import type { CreateGraphData, CreateGraphErrors, CreateGraphResponses, DeleteGraphData, DeleteGraphErrors, DeleteGraphResponses, DeleteSubgraphData, DeleteSubgraphErrors, DeleteSubgraphResponses, GetGraphData, GetGraphErrors, GetGraphResponses, GetSubgraphData, GetSubgraphErrors, GetSubgraphResponses, ListGraphsErrors, ListGraphsResponses, ListSubgraphsData, ListSubgraphsErrors, ListSubgraphsResponses, UpdateGraphData, UpdateGraphErrors, UpdateGraphResponses, UpsertSubgraphData, UpsertSubgraphErrors, UpsertSubgraphResponses } from './types.gen.js';
+import type { CreateGraphData, CreateGraphErrors, CreateGraphResponses, CreateSubgraphData, CreateSubgraphErrors, CreateSubgraphResponses, DeleteGraphData, DeleteGraphErrors, DeleteGraphResponses, DeleteSubgraphData, DeleteSubgraphErrors, DeleteSubgraphResponses, GetGraphData, GetGraphErrors, GetGraphResponses, GetSubgraphData, GetSubgraphErrors, GetSubgraphResponses, ListGraphsErrors, ListGraphsResponses, ListSubgraphsData, ListSubgraphsErrors, ListSubgraphsResponses, UpdateGraphData, UpdateGraphErrors, UpdateGraphResponses, UpdateSubgraphData, UpdateSubgraphErrors, UpdateSubgraphResponses } from './types.gen.js';
 
 export type RouteHandlers = {
     listGraphs: RouteHandler<{
@@ -30,6 +30,11 @@ export type RouteHandlers = {
         Params: ListSubgraphsData['path'];
         Reply: ListSubgraphsErrors & ListSubgraphsResponses;
     }>;
+    createSubgraph: RouteHandler<{
+        Body: CreateSubgraphData['body'];
+        Params: CreateSubgraphData['path'];
+        Reply: CreateSubgraphErrors & CreateSubgraphResponses;
+    }>;
     deleteSubgraph: RouteHandler<{
         Params: DeleteSubgraphData['path'];
         Reply: DeleteSubgraphErrors & DeleteSubgraphResponses;
@@ -38,10 +43,10 @@ export type RouteHandlers = {
         Params: GetSubgraphData['path'];
         Reply: GetSubgraphErrors & GetSubgraphResponses;
     }>;
-    upsertSubgraph: RouteHandler<{
-        Body: UpsertSubgraphData['body'];
-        Headers: UpsertSubgraphData['headers'];
-        Params: UpsertSubgraphData['path'];
-        Reply: UpsertSubgraphErrors & UpsertSubgraphResponses;
+    updateSubgraph: RouteHandler<{
+        Body: UpdateSubgraphData['body'];
+        Headers: UpdateSubgraphData['headers'];
+        Params: UpdateSubgraphData['path'];
+        Reply: UpdateSubgraphErrors & UpdateSubgraphResponses;
     }>;
 };

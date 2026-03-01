@@ -134,6 +134,33 @@ paths:
           $ref: "#/components/responses/Forbidden"
         "404":
           $ref: "#/components/responses/NotFound"
+    post:
+      operationId: createSubgraph
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: "#/components/parameters/GraphSlug"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateSubgraphRequest"
+      responses:
+        "201":
+          description: Created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Subgraph"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "409":
+          $ref: "#/components/responses/Conflict"
 
   /v1/graphs/{graphSlug}/subgraphs/{subgraphSlug}:
     get:
@@ -158,7 +185,7 @@ paths:
           $ref: "#/components/responses/NotFound"
 
     put:
-      operationId: upsertSubgraph
+      operationId: updateSubgraph
       security:
         - bearerAuth: []
       parameters:
@@ -170,16 +197,10 @@ paths:
         content:
           application/json:
             schema:
-              $ref: "#/components/schemas/UpsertSubgraphRequest"
+              $ref: "#/components/schemas/UpdateSubgraphRequest"
       responses:
         "200":
           description: Updated
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/Subgraph"
-        "201":
-          description: Created
           content:
             application/json:
               schema:
@@ -194,8 +215,6 @@ paths:
           $ref: "#/components/responses/Conflict"
         "400":
           $ref: "#/components/responses/BadRequest"
-        "422":
-          $ref: "#/components/responses/UnprocessableEntity"
 
     delete:
       operationId: deleteSubgraph
@@ -211,8 +230,6 @@ paths:
           $ref: "#/components/responses/Unauthorized"
         "403":
           $ref: "#/components/responses/Forbidden"
-        "404":
-          $ref: "#/components/responses/NotFound"
 
 components:
   securitySchemes:
@@ -244,8 +261,10 @@ components:
       $ref: "./components/schemas/subgraph.yaml"
     SubgraphList:
       $ref: "./components/schemas/subgraph-list.yaml"
-    UpsertSubgraphRequest:
-      $ref: "./components/schemas/upsert-subgraph-request.yaml"
+    CreateSubgraphRequest:
+      $ref: "./components/schemas/create-subgraph-request.yaml"
+    UpdateSubgraphRequest:
+      $ref: "./components/schemas/update-subgraph-request.yaml"
   responses:
     BadRequest:
       $ref: "./components/responses/bad-request.yaml"

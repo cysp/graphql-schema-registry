@@ -4,7 +4,7 @@
 import fastifyPlugin from "fastify-plugin";
 import type { FastifyPluginAsync, RouteShorthandOptionsWithHandler } from "fastify";
 import type { RouteHandlers } from "./fastify.gen.ts";
-import { zCreateGraphData, zCreateGraphResponse, zDeleteGraphData, zDeleteGraphResponse, zDeleteSubgraphData, zDeleteSubgraphResponse, zGetGraphData, zGetGraphResponse, zGetSubgraphData, zGetSubgraphResponse, zListGraphsResponse, zListSubgraphsData, zListSubgraphsResponse, zUpdateGraphData, zUpdateGraphResponse, zUpsertSubgraphData, zUpsertSubgraphResponse } from "./zod.gen.ts";
+import { zCreateGraphData, zCreateGraphResponse, zCreateSubgraphData, zCreateSubgraphResponse, zDeleteGraphData, zDeleteGraphResponse, zDeleteSubgraphData, zDeleteSubgraphResponse, zGetGraphData, zGetGraphResponse, zGetSubgraphData, zGetSubgraphResponse, zListGraphsResponse, zListSubgraphsData, zListSubgraphsResponse, zUpdateGraphData, zUpdateGraphResponse, zUpdateSubgraphData, zUpdateSubgraphResponse } from "./zod.gen.ts";
 
 export const routePaths = {
   "listGraphs": "/v1/graphs",
@@ -13,9 +13,10 @@ export const routePaths = {
   "getGraph": "/v1/graphs/:graphSlug",
   "updateGraph": "/v1/graphs/:graphSlug",
   "listSubgraphs": "/v1/graphs/:graphSlug/subgraphs",
+  "createSubgraph": "/v1/graphs/:graphSlug/subgraphs",
   "deleteSubgraph": "/v1/graphs/:graphSlug/subgraphs/:subgraphSlug",
   "getSubgraph": "/v1/graphs/:graphSlug/subgraphs/:subgraphSlug",
-  "upsertSubgraph": "/v1/graphs/:graphSlug/subgraphs/:subgraphSlug",
+  "updateSubgraph": "/v1/graphs/:graphSlug/subgraphs/:subgraphSlug",
 } as const;
 
 export const routeSchemas = {
@@ -44,6 +45,11 @@ export const routeSchemas = {
     params: zListSubgraphsData.shape.path,
     response: { 200: zListSubgraphsResponse },
   },
+  "createSubgraph": {
+    params: zCreateSubgraphData.shape.path,
+    body: zCreateSubgraphData.shape.body,
+    response: { 201: zCreateSubgraphResponse },
+  },
   "deleteSubgraph": {
     params: zDeleteSubgraphData.shape.path,
     response: { 204: zDeleteSubgraphResponse },
@@ -52,11 +58,11 @@ export const routeSchemas = {
     params: zGetSubgraphData.shape.path,
     response: { 200: zGetSubgraphResponse },
   },
-  "upsertSubgraph": {
-    params: zUpsertSubgraphData.shape.path,
-    headers: zUpsertSubgraphData.shape.headers,
-    body: zUpsertSubgraphData.shape.body,
-    response: { 200: zUpsertSubgraphResponse, 201: zUpsertSubgraphResponse },
+  "updateSubgraph": {
+    params: zUpdateSubgraphData.shape.path,
+    headers: zUpdateSubgraphData.shape.headers,
+    body: zUpdateSubgraphData.shape.body,
+    response: { 200: zUpdateSubgraphResponse },
   },
 } as const;
 
@@ -97,9 +103,10 @@ const fastifyRoutesPluginImpl: FastifyPluginAsync<FastifyRoutesPluginOptions> = 
   server.get(routePaths["getGraph"], { ...normalizeRouteEntry(routes["getGraph"]), schema: routeSchemas["getGraph"] });
   server.put(routePaths["updateGraph"], { ...normalizeRouteEntry(routes["updateGraph"]), schema: routeSchemas["updateGraph"] });
   server.get(routePaths["listSubgraphs"], { ...normalizeRouteEntry(routes["listSubgraphs"]), schema: routeSchemas["listSubgraphs"] });
+  server.post(routePaths["createSubgraph"], { ...normalizeRouteEntry(routes["createSubgraph"]), schema: routeSchemas["createSubgraph"] });
   server.delete(routePaths["deleteSubgraph"], { ...normalizeRouteEntry(routes["deleteSubgraph"]), schema: routeSchemas["deleteSubgraph"] });
   server.get(routePaths["getSubgraph"], { ...normalizeRouteEntry(routes["getSubgraph"]), schema: routeSchemas["getSubgraph"] });
-  server.put(routePaths["upsertSubgraph"], { ...normalizeRouteEntry(routes["upsertSubgraph"]), schema: routeSchemas["upsertSubgraph"] });
+  server.put(routePaths["updateSubgraph"], { ...normalizeRouteEntry(routes["updateSubgraph"]), schema: routeSchemas["updateSubgraph"] });
 };
 
 export const fastifyRoutesPlugin = fastifyPlugin<FastifyRoutesPluginOptions>(

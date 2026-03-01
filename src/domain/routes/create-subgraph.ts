@@ -5,27 +5,19 @@ import { requireDependency } from "../../lib/fastify/require-dependency.ts";
 import type { RouteHandlers } from "../../lib/openapi-ts/fastify.gen.ts";
 import { createSubgraphWithInitialRevisionInTransaction } from "../database/create-subgraph-with-initial-revision.ts";
 import { getActiveGraphBySlug } from "../database/get-active-graph-by-slug.ts";
-import { getActiveSubgraphByGraphIdAndSlug } from "../database/get-active-subgraph-by-graph-id-and-slug.ts";
-import { updateSubgraphWithOptimisticLockInTransaction } from "../database/update-subgraph-with-optimistic-lock.ts";
 
 type RouteDependencies = Readonly<{
   database: PostgresJsDatabase | undefined;
 }>;
 
-export async function upsertSubgraphHandler({
+export async function createSubgraphHandler({
   request,
   reply,
   dependencies: { database },
 }: DependencyInjectedHandlerContext<
-  RouteHandlers["upsertSubgraph"],
+  RouteHandlers["createSubgraph"],
   RouteDependencies
 >): Promise<void> {
-  const expectedRevisionId = Number(request.headers["x-revision-id"]);
-  if (!Number.isSafeInteger(expectedRevisionId) || expectedRevisionId < 1) {
-    reply.badRequest();
-    return;
-  }
-
   if (!requireDependency(database, reply)) {
     return;
   }
@@ -42,53 +34,10 @@ export async function upsertSubgraphHandler({
     return;
   }
 
-  const existingSubgraph = await getActiveSubgraphByGraphIdAndSlug(
-    database,
-    graph.id,
-    request.params.subgraphSlug,
-  );
-
-  if (existingSubgraph) {
-    if (existingSubgraph.revisionId !== expectedRevisionId) {
-      reply.conflict();
-      return;
-    }
-
-    const updatedSubgraph = await database.transaction(async (transaction) => {
-      return updateSubgraphWithOptimisticLockInTransaction(transaction, {
-        subgraphId: existingSubgraph.id,
-        currentRevisionId: existingSubgraph.revisionId,
-        routingUrl: request.body.routingUrl,
-        now,
-      });
-    });
-
-    if (!updatedSubgraph) {
-      reply.conflict();
-      return;
-    }
-
-    reply.code(200).send({
-      id: updatedSubgraph.externalId,
-      graphId: graph.externalId,
-      slug: updatedSubgraph.slug,
-      revisionId: String(updatedSubgraph.revisionId),
-      routingUrl: updatedSubgraph.routingUrl,
-      createdAt: updatedSubgraph.createdAt.toISOString(),
-      updatedAt: updatedSubgraph.updatedAt.toISOString(),
-    });
-    return;
-  }
-
-  if (expectedRevisionId !== 1) {
-    reply.unprocessableEntity();
-    return;
-  }
-
   const createdSubgraph = await database.transaction(async (transaction) => {
     return createSubgraphWithInitialRevisionInTransaction(transaction, {
       graphId: graph.id,
-      slug: request.params.subgraphSlug,
+      slug: request.body.subgraphSlug,
       routingUrl: request.body.routingUrl,
       now,
     });
