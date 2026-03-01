@@ -62,7 +62,7 @@ await test("subgraph routes authorization", async (t) => {
     {
       method: "POST",
       payload: {
-        subgraphSlug: "inventory",
+        slug: "inventory",
         routingUrl: "https://example.com/graphql",
       },
       url: "/v1/graphs/catalog/subgraphs",

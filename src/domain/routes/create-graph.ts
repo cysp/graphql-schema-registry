@@ -31,7 +31,7 @@ export async function createGraphHandler({
     return createGraphWithInitialRevisionInTransaction(transaction, {
       federationVersion: request.body.federationVersion,
       now,
-      slug: request.body.graphSlug,
+      slug: request.body.slug,
     });
   });
 

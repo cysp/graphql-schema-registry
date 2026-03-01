@@ -63,12 +63,12 @@ export type UnauthorizedRoot = unknown;
 export type UnprocessableEntityRoot = unknown;
 
 export type CreateGraphRequestRoot = {
-    graphSlug: string;
+    slug: string;
     federationVersion: string;
 };
 
 export type CreateSubgraphRequestRoot = {
-    subgraphSlug: string;
+    slug: string;
     routingUrl: string;
 };
 

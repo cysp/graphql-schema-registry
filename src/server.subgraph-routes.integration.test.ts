@@ -57,7 +57,7 @@ await test("subgraph routes integration with postgres", async (t) => {
       const createGraphResponse = await server.inject({
         headers: adminHeaders(adminToken),
         method: "POST",
-        payload: { federationVersion: "2.9", graphSlug: "catalog" },
+        payload: { federationVersion: "2.9", slug: "catalog" },
         url: "/v1/graphs",
       });
       assert.strictEqual(createGraphResponse.statusCode, 201);
@@ -75,7 +75,7 @@ await test("subgraph routes integration with postgres", async (t) => {
         headers: adminHeaders(adminToken),
         method: "POST",
         payload: {
-          subgraphSlug: "inventory",
+          slug: "inventory",
           routingUrl: "https://inventory-v1.example.com/graphql",
         },
         url: "/v1/graphs/catalog/subgraphs",
@@ -90,7 +90,7 @@ await test("subgraph routes integration with postgres", async (t) => {
         headers: adminHeaders(adminToken),
         method: "POST",
         payload: {
-          subgraphSlug: "inventory",
+          slug: "inventory",
           routingUrl: "https://inventory-duplicate.example.com/graphql",
         },
         url: "/v1/graphs/catalog/subgraphs",
@@ -211,7 +211,7 @@ await test("subgraph routes integration with postgres", async (t) => {
         headers: adminHeaders(adminToken),
         method: "POST",
         payload: {
-          subgraphSlug: "inventory",
+          slug: "inventory",
           routingUrl: "https://inventory.example.com/graphql",
         },
         url: "/v1/graphs/missing/subgraphs",

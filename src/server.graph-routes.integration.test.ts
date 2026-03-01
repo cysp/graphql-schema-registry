@@ -67,7 +67,7 @@ await test("graph routes integration with postgres", async (t) => {
         method: "POST",
         payload: {
           federationVersion: "2.9",
-          graphSlug: "catalog",
+          slug: "catalog",
         },
         url: "/v1/graphs",
       });
@@ -81,7 +81,7 @@ await test("graph routes integration with postgres", async (t) => {
         method: "POST",
         payload: {
           federationVersion: "2.9",
-          graphSlug: "catalog",
+          slug: "catalog",
         },
         url: "/v1/graphs",
       });

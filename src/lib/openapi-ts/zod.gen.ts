@@ -39,14 +39,14 @@ export const zUnauthorizedRoot = z.unknown();
 export const zUnprocessableEntityRoot = z.unknown();
 
 export const zCreateGraphRequestRoot = z.object({
-    graphSlug: z.string().min(1),
+    slug: z.string().min(1),
     federationVersion: z.string().min(1)
 });
 
 export const zCreateGraphRequest = zCreateGraphRequestRoot;
 
 export const zCreateSubgraphRequestRoot = z.object({
-    subgraphSlug: z.string(),
+    slug: z.string(),
     routingUrl: z.url()
 });
 

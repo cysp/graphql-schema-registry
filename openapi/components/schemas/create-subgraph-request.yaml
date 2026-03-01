@@ -1,10 +1,10 @@
 type: object
 additionalProperties: false
 required:
-  - subgraphSlug
+  - slug
   - routingUrl
 properties:
-  subgraphSlug:
+  slug:
     type: string
   routingUrl:
     type: string

@@ -37,7 +37,7 @@ export async function createSubgraphHandler({
   const createdSubgraph = await database.transaction(async (transaction) => {
     return createSubgraphWithInitialRevisionInTransaction(transaction, {
       graphId: graph.id,
-      slug: request.body.subgraphSlug,
+      slug: request.body.slug,
       routingUrl: request.body.routingUrl,
       now,
     });

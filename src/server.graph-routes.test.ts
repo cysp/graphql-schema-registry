@@ -61,7 +61,7 @@ await test("graph routes authorization", async (t) => {
       url: "/v1/graphs",
       payload: {
         federationVersion: "2.9",
-        graphSlug: "catalog",
+        slug: "catalog",
       },
     },
     {
