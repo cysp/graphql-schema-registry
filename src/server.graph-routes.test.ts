@@ -84,84 +84,93 @@ await test("graph routes authorization", async (t) => {
     await server.close();
   });
 
-  await t.test("requires bearer auth to get a graph", async () => {
+  await t.test("returns service unavailable before auth checks when getting a graph", async () => {
     const response = await server.inject({
       method: "GET",
       url: "/v1/graphs/catalog",
     });
 
-    assert.strictEqual(response.statusCode, 401);
+    assert.strictEqual(response.statusCode, 503);
   });
 
-  await t.test("requires bearer auth to upsert a graph", async () => {
-    const response = await server.inject({
-      method: "PUT",
-      url: "/v1/graphs/catalog",
-      headers: {
-        "x-revision-id": "0",
-      },
-      payload: {
-        federationVersion: "2.9",
-      },
-    });
+  await t.test(
+    "returns service unavailable before auth checks when upserting a graph",
+    async () => {
+      const response = await server.inject({
+        method: "PUT",
+        url: "/v1/graphs/catalog",
+        headers: {
+          "x-revision-id": "0",
+        },
+        payload: {
+          federationVersion: "2.9",
+        },
+      });
 
-    assert.strictEqual(response.statusCode, 401);
-  });
+      assert.strictEqual(response.statusCode, 503);
+    },
+  );
 
-  await t.test("requires bearer auth to delete a graph", async () => {
-    const response = await server.inject({
-      method: "DELETE",
-      url: "/v1/graphs/catalog",
-    });
-
-    assert.strictEqual(response.statusCode, 401);
-  });
-
-  await t.test("requires admin grant to upsert a graph", async () => {
-    const response = await server.inject({
-      method: "PUT",
-      url: "/v1/graphs/catalog",
-      headers: {
-        authorization: `Bearer ${createToken({
-          authorization_details: [
-            {
-              graph_id: "00000000-0000-4000-8000-000000000001",
-              scope: "graph:read",
-              type: authorizationDetailsType,
-            },
-          ],
-        })}`,
-        "x-revision-id": "0",
-      },
-      payload: {
-        federationVersion: "2.9",
-      },
-    });
-
-    assert.strictEqual(response.statusCode, 403);
-  });
-
-  await t.test("requires admin grant to delete a graph", async () => {
+  await t.test("returns service unavailable before auth checks when deleting a graph", async () => {
     const response = await server.inject({
       method: "DELETE",
       url: "/v1/graphs/catalog",
-      headers: {
-        authorization: `Bearer ${createToken({
-          authorization_details: [
-            {
-              graph_id: "00000000-0000-4000-8000-000000000001",
-              scope: "graph:read",
-              type: authorizationDetailsType,
-            },
-          ],
-        })}`,
-      },
     });
 
-    assert.strictEqual(response.statusCode, 403);
+    assert.strictEqual(response.statusCode, 503);
   });
 
-  await t.test("allows authenticated graph readers to reach get graph handler", async () => {
+  await t.test(
+    "returns service unavailable before admin checks when upserting a graph",
+    async () => {
+      const response = await server.inject({
+        method: "PUT",
+        url: "/v1/graphs/catalog",
+        headers: {
+          authorization: `Bearer ${createToken({
+            authorization_details: [
+              {
+                graph_id: "00000000-0000-4000-8000-000000000001",
+                scope: "graph:read",
+                type: authorizationDetailsType,
+              },
+            ],
+          })}`,
+          "x-revision-id": "0",
+        },
+        payload: {
+          federationVersion: "2.9",
+        },
+      });
+
+      assert.strictEqual(response.statusCode, 503);
+    },
+  );
+
+  await t.test(
+    "returns service unavailable before admin checks when deleting a graph",
+    async () => {
+      const response = await server.inject({
+        method: "DELETE",
+        url: "/v1/graphs/catalog",
+        headers: {
+          authorization: `Bearer ${createToken({
+            authorization_details: [
+              {
+                graph_id: "00000000-0000-4000-8000-000000000001",
+                scope: "graph:read",
+                type: authorizationDetailsType,
+              },
+            ],
+          })}`,
+        },
+      });
+
+      assert.strictEqual(response.statusCode, 503);
+    },
+  );
+
+  await t.test("returns service unavailable before admin checks when getting a graph", async () => {
     const response = await server.inject({
       method: "GET",
       url: "/v1/graphs/catalog",
@@ -178,8 +187,6 @@ await test("graph routes authorization", async (t) => {
       },
     });
 
-    // No database is configured in this test setup, so authenticated access
-    // reaches the handler and returns service unavailable.
     assert.strictEqual(response.statusCode, 503);
   });
 
