@@ -1,12 +1,9 @@
 import assert from "node:assert/strict";
-import { generateKeyPairSync, sign } from "node:crypto";
 import test from "node:test";
 
 import { authorizationDetailsType } from "./domain/authorization/details.ts";
+import { createAuthJwtSigner } from "./domain/jwt-signer.ts";
 import { createFastifyServer } from "./server.ts";
-
-type JwtClaims = Record<string, unknown>;
-type JwtHeader = Record<string, unknown>;
 
 type RouteCase = {
   method: "DELETE" | "GET" | "PUT";
@@ -21,41 +18,6 @@ type InjectOptions = {
   payload?: Record<string, unknown>;
   url: string;
 };
-
-function createDefaultClaims(): JwtClaims {
-  const nowSeconds = Math.floor(Date.now() / 1000);
-  return {
-    aud: "graphql-schema-registry",
-    authorization_details: [],
-    exp: nowSeconds + 300,
-    iat: nowSeconds - 10,
-    iss: "https://auth.example.com",
-    nbf: nowSeconds - 10,
-  };
-}
-
-function encodeBase64urlJson(value: unknown): string {
-  return Buffer.from(JSON.stringify(value), "utf8").toString("base64url");
-}
-
-function createSignedJwt({
-  claims,
-  header,
-  privateKey,
-}: {
-  claims: JwtClaims;
-  header: JwtHeader;
-  privateKey: string | Buffer;
-}): string {
-  const encodedHeader = encodeBase64urlJson(header);
-  const encodedClaims = encodeBase64urlJson(claims);
-  const signedPayload = `${encodedHeader}.${encodedClaims}`;
-  const signature = sign("RSA-SHA256", Buffer.from(signedPayload, "utf8"), privateKey).toString(
-    "base64url",
-  );
-
-  return `${signedPayload}.${signature}`;
-}
 
 function createInjectOptions(routeCase: RouteCase, authorizationToken?: string): InjectOptions {
   const options: InjectOptions = {
@@ -86,19 +48,7 @@ function createInjectOptions(routeCase: RouteCase, authorizationToken?: string):
 await test("subgraph routes authorization", async (t) => {
   let server: ReturnType<typeof createFastifyServer>;
 
-  const { privateKey, publicKey } = generateKeyPairSync("rsa", { modulusLength: 2048 });
-  const privateKeyPem = privateKey.export({ format: "pem", type: "pkcs8" });
-  const exportedPublicKey = publicKey.export({ format: "pem", type: "spki" });
-  const publicKeyPem =
-    typeof exportedPublicKey === "string"
-      ? Buffer.from(exportedPublicKey, "utf8")
-      : exportedPublicKey;
-
-  const jwtVerification = {
-    audience: "graphql-schema-registry",
-    issuer: "https://auth.example.com",
-    verificationPublicKey: publicKeyPem,
-  };
+  const jwtSigner = createAuthJwtSigner();
 
   const routeCases: readonly RouteCase[] = [
     {
@@ -125,25 +75,12 @@ await test("subgraph routes authorization", async (t) => {
 
   t.beforeEach(async () => {
     server = createFastifyServer({
-      jwtVerification,
+      jwtVerification: jwtSigner.jwtVerification,
     });
     await server.ready();
   });
 
-  function createToken(claimsOverrides: JwtClaims = {}): string {
-    const claims = Object.assign(createDefaultClaims(), claimsOverrides);
-
-    return createSignedJwt({
-      claims,
-      header: {
-        alg: "RS256",
-        typ: "JWT",
-      },
-      privateKey: privateKeyPem,
-    });
-  }
-
-  const graphReaderToken = createToken({
+  const graphReaderToken = jwtSigner.createToken({
     authorization_details: [
       {
         graph_id: "00000000-0000-4000-8000-000000000001",
@@ -152,7 +89,7 @@ await test("subgraph routes authorization", async (t) => {
       },
     ],
   });
-  const adminToken = createToken({
+  const adminToken = jwtSigner.createToken({
     authorization_details: [
       {
         scope: "admin",
@@ -199,6 +136,33 @@ await test("subgraph routes authorization", async (t) => {
       headers: {
         "x-revision-id": "9007199254740992",
       },
+      method: "PUT",
+      payload: {
+        routingUrl: "https://example.com/graphql",
+      },
+      url: "/v1/graphs/catalog/subgraphs/inventory",
+    });
+
+    assert.strictEqual(response.statusCode, 400);
+  });
+
+  await t.test("returns bad request for non-numeric revision ids", async () => {
+    const response = await server.inject({
+      headers: {
+        "x-revision-id": "not-a-number",
+      },
+      method: "PUT",
+      payload: {
+        routingUrl: "https://example.com/graphql",
+      },
+      url: "/v1/graphs/catalog/subgraphs/inventory",
+    });
+
+    assert.strictEqual(response.statusCode, 400);
+  });
+
+  await t.test("returns bad request when revision id is missing", async () => {
+    const response = await server.inject({
       method: "PUT",
       payload: {
         routingUrl: "https://example.com/graphql",

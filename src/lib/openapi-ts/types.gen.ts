@@ -31,6 +31,11 @@ export type SubgraphSlugRoot = unknown;
 export type XRevisionIdRoot = unknown;
 
 /**
+ * Bad request
+ */
+export type BadRequestRoot = unknown;
+
+/**
  * Conflict
  */
 export type ConflictRoot = unknown;
@@ -267,6 +272,10 @@ export type UpdateGraphData = {
 
 export type UpdateGraphErrors = {
     /**
+     * Bad request
+     */
+    400: ErrorRoot;
+    /**
      * Missing/invalid bearer token
      */
     401: ErrorRoot;
@@ -416,6 +425,10 @@ export type UpsertSubgraphData = {
 };
 
 export type UpsertSubgraphErrors = {
+    /**
+     * Bad request
+     */
+    400: ErrorRoot;
     /**
      * Missing/invalid bearer token
      */

@@ -97,6 +97,8 @@ paths:
           $ref: "#/components/responses/NotFound"
         "409":
           $ref: "#/components/responses/Conflict"
+        "400":
+          $ref: "#/components/responses/BadRequest"
 
     delete:
       operationId: deleteGraph
@@ -190,6 +192,8 @@ paths:
           $ref: "#/components/responses/NotFound"
         "409":
           $ref: "#/components/responses/Conflict"
+        "400":
+          $ref: "#/components/responses/BadRequest"
         "422":
           $ref: "#/components/responses/UnprocessableEntity"
 
@@ -243,6 +247,8 @@ components:
     UpsertSubgraphRequest:
       $ref: "./components/schemas/upsert-subgraph-request.yaml"
   responses:
+    BadRequest:
+      $ref: "./components/responses/bad-request.yaml"
     Unauthorized:
       $ref: "./components/responses/unauthorized.yaml"
     Forbidden:

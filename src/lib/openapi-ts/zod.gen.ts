@@ -9,6 +9,11 @@ export const zSubgraphSlugRoot = z.unknown();
 export const zXRevisionIdRoot = z.unknown();
 
 /**
+ * Bad request
+ */
+export const zBadRequestRoot = z.unknown();
+
+/**
  * Conflict
  */
 export const zConflictRoot = z.unknown();

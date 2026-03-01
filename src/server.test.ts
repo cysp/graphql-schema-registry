@@ -1,47 +1,9 @@
 import assert from "node:assert/strict";
-import { generateKeyPairSync, sign } from "node:crypto";
 import test from "node:test";
 
 import { authorizationDetailsType } from "./domain/authorization/details.ts";
+import { createAuthJwtSigner } from "./domain/jwt-signer.ts";
 import { createFastifyServer } from "./server.ts";
-
-type JwtClaims = Record<string, unknown>;
-type JwtHeader = Record<string, unknown>;
-
-function createDefaultClaims(): JwtClaims {
-  const nowSeconds = Math.floor(Date.now() / 1000);
-  return {
-    aud: "graphql-schema-registry",
-    authorization_details: [],
-    exp: nowSeconds + 300,
-    iat: nowSeconds - 10,
-    iss: "https://auth.example.com",
-    nbf: nowSeconds - 10,
-  };
-}
-
-function encodeBase64urlJson(value: unknown): string {
-  return Buffer.from(JSON.stringify(value), "utf8").toString("base64url");
-}
-
-function createSignedJwt({
-  claims,
-  header,
-  privateKey,
-}: {
-  claims: JwtClaims;
-  header: JwtHeader;
-  privateKey: string | Buffer;
-}): string {
-  const encodedHeader = encodeBase64urlJson(header);
-  const encodedClaims = encodeBase64urlJson(claims);
-  const signedPayload = `${encodedHeader}.${encodedClaims}`;
-  const signature = sign("RSA-SHA256", Buffer.from(signedPayload, "utf8"), privateKey).toString(
-    "base64url",
-  );
-
-  return `${signedPayload}.${signature}`;
-}
 
 function getJsonPayload(response: { body: string }): unknown {
   return JSON.parse(response.body) as unknown;
@@ -50,39 +12,14 @@ function getJsonPayload(response: { body: string }): unknown {
 await test("createFastifyServer authorization hook", async (t) => {
   let server: ReturnType<typeof createFastifyServer>;
 
-  const { privateKey, publicKey } = generateKeyPairSync("rsa", { modulusLength: 2048 });
-  const privateKeyPem = privateKey.export({ format: "pem", type: "pkcs8" });
-  const exportedPublicKey = publicKey.export({ format: "pem", type: "spki" });
-  const publicKeyPem =
-    typeof exportedPublicKey === "string"
-      ? Buffer.from(exportedPublicKey, "utf8")
-      : exportedPublicKey;
-
-  const jwtVerification = {
-    audience: "graphql-schema-registry",
-    issuer: "https://auth.example.com",
-    verificationPublicKey: publicKeyPem,
-  };
+  const jwtSigner = createAuthJwtSigner();
 
   t.beforeEach(async () => {
     server = createFastifyServer({
-      jwtVerification,
+      jwtVerification: jwtSigner.jwtVerification,
     });
     await server.ready();
   });
-
-  function createToken(claimsOverrides: JwtClaims = {}): string {
-    const claims = Object.assign(createDefaultClaims(), claimsOverrides);
-
-    return createSignedJwt({
-      claims,
-      header: {
-        alg: "RS256",
-        typ: "JWT",
-      },
-      privateKey: privateKeyPem,
-    });
-  }
 
   t.afterEach(async () => {
     await server.close();
@@ -125,7 +62,7 @@ await test("createFastifyServer authorization hook", async (t) => {
       method: "GET",
       url: "/health",
       headers: {
-        authorization: `Bearer ${createToken()}`,
+        authorization: `Bearer ${jwtSigner.createToken()}`,
       },
     });
 
@@ -143,7 +80,7 @@ await test("createFastifyServer authorization hook", async (t) => {
       method: "GET",
       url: "/health",
       headers: {
-        authorization: `Bearer ${createToken({
+        authorization: `Bearer ${jwtSigner.createToken({
           authorization_details: {
             scope: "admin",
             type: "graphql-schema-registry",
@@ -179,7 +116,7 @@ await test("createFastifyServer authorization hook", async (t) => {
         method: "GET",
         url: "/v1/graphs",
         headers: {
-          authorization: `Bearer ${createToken({
+          authorization: `Bearer ${jwtSigner.createToken({
             authorization_details: [
               {
                 graph_id: "00000000-0000-4000-8000-000000000001",
@@ -200,7 +137,7 @@ await test("createFastifyServer authorization hook", async (t) => {
       method: "GET",
       url: "/v1/graphs",
       headers: {
-        authorization: `Bearer ${createToken({
+        authorization: `Bearer ${jwtSigner.createToken({
           authorization_details: [
             {
               scope: "admin",
