@@ -1,66 +1,61 @@
 name: pgschema-apply
-description: Install pgschema via Go and apply a schema file to Postgres.
+description: Run pgschema to apply schema changes.
 
 inputs:
-  db-host:
+  host:
     description: Postgres host.
     required: true
-  db-port:
+  port:
     description: Postgres port.
     required: false
     default: "5432"
-  db-name:
+  db:
     description: Postgres database name.
     required: true
-  db-user:
+  user:
     description: Postgres user.
     required: true
-  db-password:
+  password:
     description: Postgres password.
     required: true
-  schema-file:
+  file:
     description: Path to the schema SQL file.
-    required: false
-    default: db/schema.sql
-  schema-name:
+    required: true
+  schema:
     description: Target Postgres schema name.
     required: false
     default: public
   pgschema-version:
-    description: pgschema module version passed to go install.
+    description: pgschema module version passed to go run.
     required: false
     default: latest
+  pgschema-module:
+    description: Go module path for pgschema.
+    required: false
+    default: github.com/pgplex/pgschema
 
 runs:
   using: composite
   steps:
-    - name: Install pgschema
-      shell: bash
-      env:
-        PGSCHEMA_VERSION: ${{ inputs.pgschema-version }}
-      run: |
-        if ! go install "github.com/pgplex/pgschema@${PGSCHEMA_VERSION}"; then
-          go install "github.com/pgschema/pgschema@${PGSCHEMA_VERSION}"
-        fi
-
     - name: Apply schema
       shell: bash
       env:
-        PGHOST: ${{ inputs.db-host }}
-        PGPORT: ${{ inputs.db-port }}
-        PGDATABASE: ${{ inputs.db-name }}
-        PGUSER: ${{ inputs.db-user }}
-        PGPASSWORD: ${{ inputs.db-password }}
-        SCHEMA_FILE: ${{ inputs.schema-file }}
-        SCHEMA_NAME: ${{ inputs.schema-name }}
+        PGHOST: ${{ inputs.host }}
+        PGPORT: ${{ inputs.port }}
+        PGDATABASE: ${{ inputs.db }}
+        PGUSER: ${{ inputs.user }}
+        PGPASSWORD: ${{ inputs.password }}
+        SCHEMA_FILE: ${{ inputs.file }}
+        SCHEMA_NAME: ${{ inputs.schema }}
+        PGSCHEMA_VERSION: ${{ inputs.pgschema-version }}
+        PGSCHEMA_MODULE: ${{ inputs.pgschema-module }}
       run: |
         if [[ ! -f "${SCHEMA_FILE}" ]]; then
           echo "Schema file not found: ${SCHEMA_FILE}" >&2
           exit 1
         fi
 
-        PGSCHEMA_BIN="$(go env GOPATH)/bin/pgschema"
-        "${PGSCHEMA_BIN}" apply \
+        go run "${PGSCHEMA_MODULE}@${PGSCHEMA_VERSION}" apply \
           --host "${PGHOST}" \
           --port "${PGPORT}" \
           --db "${PGDATABASE}" \

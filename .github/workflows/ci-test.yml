@@ -76,11 +76,11 @@ jobs:
 
       - uses: ./.github/actions/pgschema-apply
         with:
-          db-host: ${{ steps.neon_create_branch.outputs.db_host }}
-          db-name: ${{ env.NEON_DATABASE_NAME }}
-          db-user: ${{ env.NEON_ROLE_NAME }}
-          db-password: ${{ steps.neon_create_branch.outputs.password }}
-          schema-file: db/schema.sql
+          host: ${{ steps.neon_create_branch.outputs.db_host }}
+          db: ${{ env.NEON_DATABASE_NAME }}
+          user: ${{ env.NEON_ROLE_NAME }}
+          password: ${{ steps.neon_create_branch.outputs.password }}
+          file: db/schema.sql
 
       - shell: bash
         run: pnpm run test -- "src/**/*.integration.test.ts"
