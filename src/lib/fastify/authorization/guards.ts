@@ -65,9 +65,7 @@ function createGuard<RouteGeneric extends RouteGenericInterface>(
   };
 }
 
-export const requireAdmin = createGuard<RouteGenericInterface>(
-  (grant) => grant.scope === "admin",
-);
+export const requireAdmin = createGuard<RouteGenericInterface>((grant) => grant.scope === "admin");
 
 export const requireGraphRead = createGuard<{
   Params: GraphRouteParams;

@@ -1,9 +1,9 @@
 import type { PostgresJsDatabase } from "../../drizzle/types.ts";
 import { requireAdminUser } from "../../lib/fastify/authorization/guards.ts";
 import type { DependencyInjectedHandlerContext } from "../../lib/fastify/handler-with-dependencies.ts";
+import { requireDependency } from "../../lib/fastify/require-dependency.ts";
 import type { RouteHandlers } from "../../lib/openapi-ts/fastify.gen.ts";
 import { listActiveGraphs } from "../database/list-active-graphs.ts";
-import { requireDatabase } from "./graph-route-shared.ts";
 
 type RouteDependencies = Readonly<{
   database: PostgresJsDatabase | undefined;
@@ -17,7 +17,7 @@ export async function listGraphsHandler({
   RouteHandlers["listGraphs"],
   RouteDependencies
 >): Promise<void> {
-  if (!requireDatabase(database, reply)) {
+  if (!requireDependency(database, reply)) {
     return;
   }
 
@@ -27,12 +27,14 @@ export async function listGraphsHandler({
 
   const graphs = await listActiveGraphs(database);
 
-  reply.code(200).send(graphs.map((graph) => ({
-    id: graph.externalId,
-    slug: graph.slug,
-    revisionId: String(graph.revisionId),
-    federationVersion: graph.federationVersion,
-    createdAt: graph.createdAt.toISOString(),
+  reply.code(200).send(
+    graphs.map((graph) => ({
+      id: graph.externalId,
+      slug: graph.slug,
+      revisionId: String(graph.revisionId),
+      federationVersion: graph.federationVersion,
+      createdAt: graph.createdAt.toISOString(),
       updatedAt: graph.updatedAt.toISOString(),
-    })));
+    })),
+  );
 }

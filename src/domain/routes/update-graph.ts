@@ -1,12 +1,10 @@
-import { requireAdminUser } from "../../lib/fastify/authorization/guards.ts";
 import type { PostgresJsDatabase } from "../../drizzle/types.ts";
+import { requireAdminUser } from "../../lib/fastify/authorization/guards.ts";
 import type { DependencyInjectedHandlerContext } from "../../lib/fastify/handler-with-dependencies.ts";
+import { requireDependency } from "../../lib/fastify/require-dependency.ts";
 import type { RouteHandlers } from "../../lib/openapi-ts/fastify.gen.ts";
 import { getActiveGraphBySlug } from "../database/get-active-graph-by-slug.ts";
-import {
-  updateGraphWithOptimisticLockInTransaction,
-} from "../database/update-graph-with-optimistic-lock.ts";
-import { requireDatabase } from "./graph-route-shared.ts";
+import { updateGraphWithOptimisticLockInTransaction } from "../database/update-graph-with-optimistic-lock.ts";
 
 type RouteDependencies = Readonly<{
   database: PostgresJsDatabase | undefined;
@@ -26,7 +24,7 @@ export async function updateGraphHandler({
     return;
   }
 
-  if (!requireDatabase(database, reply)) {
+  if (!requireDependency(database, reply)) {
     return;
   }
 

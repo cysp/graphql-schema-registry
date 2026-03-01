@@ -57,10 +57,7 @@ function createSignedJwt({
   return `${signedPayload}.${signature}`;
 }
 
-function createInjectOptions(
-  routeCase: RouteCase,
-  authorizationToken?: string,
-): InjectOptions {
+function createInjectOptions(routeCase: RouteCase, authorizationToken?: string): InjectOptions {
   const options: InjectOptions = {
     method: routeCase.method,
     url: routeCase.url,

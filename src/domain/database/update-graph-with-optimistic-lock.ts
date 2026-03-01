@@ -13,12 +13,7 @@ type UpdateGraphWithOptimisticLockInput = Readonly<{
 // oxlint-disable-next-line typescript-eslint/explicit-module-boundary-types
 export async function updateGraphWithOptimisticLockInTransaction(
   database: PostgresJsDatabase,
-  {
-    graphId,
-    currentRevisionId,
-    federationVersion,
-    now,
-  }: UpdateGraphWithOptimisticLockInput,
+  { graphId, currentRevisionId, federationVersion, now }: UpdateGraphWithOptimisticLockInput,
 ) {
   const nextRevisionId = currentRevisionId + 1;
   const [updatedGraphRecord] = await database

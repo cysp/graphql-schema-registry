@@ -4,6 +4,7 @@ import { sql } from "drizzle-orm";
 import fastify, { type FastifyInstance } from "fastify";
 import { serializerCompiler, validatorCompiler } from "fastify-type-provider-zod";
 
+import { formatUser } from "./domain/authorization/user.ts";
 import { createGraphHandler } from "./domain/routes/create-graph.ts";
 import { deleteGraphHandler } from "./domain/routes/delete-graph.ts";
 import { deleteSubgraphHandler } from "./domain/routes/delete-subgraph.ts";
@@ -13,10 +14,9 @@ import { listGraphsHandler } from "./domain/routes/list-graphs.ts";
 import { listSubgraphsHandler } from "./domain/routes/list-subgraphs.ts";
 import { updateGraphHandler } from "./domain/routes/update-graph.ts";
 import { upsertSubgraphHandler } from "./domain/routes/upsert-subgraph.ts";
-import { formatUser } from "./domain/authorization/user.ts";
 import type { PostgresJsDatabase } from "./drizzle/types.ts";
-import { healthcheckPlugin } from "./lib/fastify/healthcheck/plugin.ts";
 import { fastifyHandlerWithDependencies } from "./lib/fastify/handler-with-dependencies.ts";
+import { healthcheckPlugin } from "./lib/fastify/healthcheck/plugin.ts";
 import { fastifyRoutesPlugin } from "./lib/openapi-ts/fastify-routes.gen.ts";
 
 type CreateFastifyServerOptions = {
@@ -85,7 +85,6 @@ export function createFastifyServer({
       },
     },
   });
-
 
   server.register(fastifyRoutesPlugin, {
     routes: {

@@ -160,34 +160,40 @@ await test("createFastifyServer authorization hook", async (t) => {
     });
   });
 
-  await t.test("returns 503 before bearer auth checks on graph routes when DB is missing", async () => {
-    const response = await server.inject({
-      method: "GET",
-      url: "/v1/graphs",
-    });
+  await t.test(
+    "returns 503 before bearer auth checks on graph routes when DB is missing",
+    async () => {
+      const response = await server.inject({
+        method: "GET",
+        url: "/v1/graphs",
+      });
 
-    assert.strictEqual(response.statusCode, 503);
-  });
+      assert.strictEqual(response.statusCode, 503);
+    },
+  );
 
-  await t.test("returns 503 before admin grant checks on graph routes when DB is missing", async () => {
-    const response = await server.inject({
-      method: "GET",
-      url: "/v1/graphs",
-      headers: {
-        authorization: `Bearer ${createToken({
-          authorization_details: [
-            {
-              graph_id: "00000000-0000-4000-8000-000000000001",
-              scope: "graph:read",
-              type: authorizationDetailsType,
-            },
-          ],
-        })}`,
-      },
-    });
+  await t.test(
+    "returns 503 before admin grant checks on graph routes when DB is missing",
+    async () => {
+      const response = await server.inject({
+        method: "GET",
+        url: "/v1/graphs",
+        headers: {
+          authorization: `Bearer ${createToken({
+            authorization_details: [
+              {
+                graph_id: "00000000-0000-4000-8000-000000000001",
+                scope: "graph:read",
+                type: authorizationDetailsType,
+              },
+            ],
+          })}`,
+        },
+      });
 
-    assert.strictEqual(response.statusCode, 503);
-  });
+      assert.strictEqual(response.statusCode, 503);
+    },
+  );
 
   await t.test("allows admins to list graphs", async () => {
     const response = await server.inject({

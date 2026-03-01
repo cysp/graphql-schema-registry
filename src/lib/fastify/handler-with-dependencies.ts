@@ -12,9 +12,7 @@ export type DependencyInjectedHandlerContext<
 type DependencyInjectedHandler<
   THandler extends RequestReplyHandler,
   TRouteDependencies extends object,
-> = (
-  args: DependencyInjectedHandlerContext<THandler, TRouteDependencies>,
-) => ReturnType<THandler>;
+> = (args: DependencyInjectedHandlerContext<THandler, TRouteDependencies>) => ReturnType<THandler>;
 
 export function fastifyHandlerWithDependencies<
   THandler extends RequestReplyHandler,
