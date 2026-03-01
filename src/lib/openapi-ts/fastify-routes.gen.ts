@@ -4,7 +4,7 @@
 import fastifyPlugin from "fastify-plugin";
 import type { FastifyPluginAsync, RouteShorthandOptionsWithHandler } from "fastify";
 import type { RouteHandlers } from "./fastify.gen.ts";
-import { zCreateGraphData, zCreateGraphResponse, zCreateSubgraphData, zCreateSubgraphResponse, zDeleteGraphData, zDeleteGraphResponse, zDeleteSubgraphData, zDeleteSubgraphResponse, zGetGraphData, zGetGraphResponse, zGetSubgraphData, zGetSubgraphResponse, zListGraphsResponse, zListSubgraphsData, zListSubgraphsResponse, zUpdateGraphData, zUpdateGraphResponse, zUpdateSubgraphData, zUpdateSubgraphResponse } from "./zod.gen.ts";
+import { zBadRequestRoot, zConflictRoot, zCreateGraphData, zCreateGraphResponse, zCreateSubgraphData, zCreateSubgraphResponse, zDeleteGraphData, zDeleteGraphResponse, zDeleteSubgraphData, zDeleteSubgraphResponse, zForbiddenRoot, zGetGraphData, zGetGraphResponse, zGetSubgraphData, zGetSubgraphResponse, zListGraphsResponse, zListSubgraphsData, zListSubgraphsResponse, zNotFoundRoot, zUnauthorizedRoot, zUpdateGraphData, zUpdateGraphResponse, zUpdateSubgraphData, zUpdateSubgraphResponse } from "./zod.gen.ts";
 
 export const routePaths = {
   "listGraphs": "/v1/graphs",
@@ -21,48 +21,48 @@ export const routePaths = {
 
 export const routeSchemas = {
   "listGraphs": {
-    response: { 200: zListGraphsResponse },
+    response: { "200": zListGraphsResponse, "401": zUnauthorizedRoot, "403": zForbiddenRoot },
   },
   "createGraph": {
     body: zCreateGraphData.shape.body,
-    response: { 201: zCreateGraphResponse },
+    response: { "201": zCreateGraphResponse, "401": zUnauthorizedRoot, "403": zForbiddenRoot, "409": zConflictRoot },
   },
   "deleteGraph": {
     params: zDeleteGraphData.shape.path,
-    response: { 204: zDeleteGraphResponse },
+    response: { "204": zDeleteGraphResponse, "401": zUnauthorizedRoot, "403": zForbiddenRoot },
   },
   "getGraph": {
     params: zGetGraphData.shape.path,
-    response: { 200: zGetGraphResponse },
+    response: { "200": zGetGraphResponse, "401": zUnauthorizedRoot, "403": zForbiddenRoot, "404": zNotFoundRoot },
   },
   "updateGraph": {
     params: zUpdateGraphData.shape.path,
     headers: zUpdateGraphData.shape.headers,
     body: zUpdateGraphData.shape.body,
-    response: { 200: zUpdateGraphResponse },
+    response: { "200": zUpdateGraphResponse, "400": zBadRequestRoot, "401": zUnauthorizedRoot, "403": zForbiddenRoot, "404": zNotFoundRoot, "409": zConflictRoot },
   },
   "listSubgraphs": {
     params: zListSubgraphsData.shape.path,
-    response: { 200: zListSubgraphsResponse },
+    response: { "200": zListSubgraphsResponse, "401": zUnauthorizedRoot, "403": zForbiddenRoot, "404": zNotFoundRoot },
   },
   "createSubgraph": {
     params: zCreateSubgraphData.shape.path,
     body: zCreateSubgraphData.shape.body,
-    response: { 201: zCreateSubgraphResponse },
+    response: { "201": zCreateSubgraphResponse, "401": zUnauthorizedRoot, "403": zForbiddenRoot, "404": zNotFoundRoot, "409": zConflictRoot },
   },
   "deleteSubgraph": {
     params: zDeleteSubgraphData.shape.path,
-    response: { 204: zDeleteSubgraphResponse },
+    response: { "204": zDeleteSubgraphResponse, "401": zUnauthorizedRoot, "403": zForbiddenRoot },
   },
   "getSubgraph": {
     params: zGetSubgraphData.shape.path,
-    response: { 200: zGetSubgraphResponse },
+    response: { "200": zGetSubgraphResponse, "401": zUnauthorizedRoot, "403": zForbiddenRoot, "404": zNotFoundRoot },
   },
   "updateSubgraph": {
     params: zUpdateSubgraphData.shape.path,
     headers: zUpdateSubgraphData.shape.headers,
     body: zUpdateSubgraphData.shape.body,
-    response: { 200: zUpdateSubgraphResponse },
+    response: { "200": zUpdateSubgraphResponse, "400": zBadRequestRoot, "401": zUnauthorizedRoot, "403": zForbiddenRoot, "404": zNotFoundRoot, "409": zConflictRoot },
   },
 } as const;
 

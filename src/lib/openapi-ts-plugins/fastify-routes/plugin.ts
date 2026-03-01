@@ -3,6 +3,8 @@ import { join } from "node:path";
 
 import type { IR } from "@hey-api/openapi-ts";
 
+import { fastifyPluginTypesTemplate } from "./templates.js";
+
 type OperationInfo = {
   hasBody: boolean;
   hasHeaders: boolean;
@@ -11,7 +13,7 @@ type OperationInfo = {
   id: string;
   method: string;
   path: string;
-  successStatuses: string[];
+  responseStatuses: string[];
 };
 
 type PluginInstance = {
@@ -53,14 +55,62 @@ function toFastifyPath(path: string): string {
   return path.replaceAll(/\{([^}]+)\}/g, ":$1");
 }
 
-function getSuccessStatuses(operation: IR.OperationObject): string[] {
+function getResponseStatuses(operation: IR.OperationObject): string[] {
   if (!operation.responses) {
     return [];
   }
 
-  return Object.keys(operation.responses)
-    .filter((status) => /^[0-9]{3}$/.test(status) && status.startsWith("2"))
-    .toSorted((a, b) => Number(a) - Number(b));
+  const statuses = Object.keys(operation.responses).filter((status) => {
+    return operation.responses?.[status] !== undefined;
+  });
+
+  return statuses.toSorted((a, b) => {
+    const aIsNumeric = /^[0-9]{3}$/.test(a);
+    const bIsNumeric = /^[0-9]{3}$/.test(b);
+
+    if (aIsNumeric && bIsNumeric) {
+      return Number(a) - Number(b);
+    }
+
+    if (aIsNumeric) {
+      return -1;
+    }
+
+    if (bIsNumeric) {
+      return 1;
+    }
+
+    if (a === "default") {
+      return 1;
+    }
+
+    if (b === "default") {
+      return -1;
+    }
+
+    return a.localeCompare(b);
+  });
+}
+
+function isSuccessStatus(status: string): boolean {
+  return status.startsWith("2");
+}
+
+const errorResponseSymbolsByStatus = Object.freeze<Record<string, string>>({
+  "400": "zBadRequestRoot",
+  "401": "zUnauthorizedRoot",
+  "403": "zForbiddenRoot",
+  "404": "zNotFoundRoot",
+  "409": "zConflictRoot",
+  "422": "zUnprocessableEntityRoot",
+});
+
+function getResponseSchemaSymbol(operationName: string, status: string): string {
+  if (isSuccessStatus(status)) {
+    return `z${operationName}Response`;
+  }
+
+  return errorResponseSymbolsByStatus[status] ?? "zErrorRoot";
 }
 
 function collectOperationInfo(operation: IR.OperationObject): OperationInfo {
@@ -78,7 +128,7 @@ function collectOperationInfo(operation: IR.OperationObject): OperationInfo {
     id: operation.id,
     method: operation.method.toLowerCase(),
     path: toFastifyPath(operation.path),
-    successStatuses: getSuccessStatuses(operation),
+    responseStatuses: getResponseStatuses(operation),
   };
 }
 
@@ -88,14 +138,13 @@ function generateImports(operations: readonly OperationInfo[]): string {
   for (const operation of operations) {
     const name = toPascalCase(operation.id);
     const dataSymbol = `z${name}Data`;
-    const responseSymbol = `z${name}Response`;
 
     if (operation.hasBody || operation.hasHeaders || operation.hasPath || operation.hasQuery) {
       zodSymbols.add(dataSymbol);
     }
 
-    if (operation.successStatuses.length > 0) {
-      zodSymbols.add(responseSymbol);
+    for (const status of operation.responseStatuses) {
+      zodSymbols.add(getResponseSchemaSymbol(name, status));
     }
   }
 
@@ -142,10 +191,9 @@ function generateOperationSchema(operation: OperationInfo): string {
     lines.push(`    body: ${dataSymbol}.shape.body,`);
   }
 
-  if (operation.successStatuses.length > 0) {
-    const responseSymbol = `z${operationName}Response`;
-    const responses = operation.successStatuses
-      .map((status) => `${status}: ${responseSymbol}`)
+  if (operation.responseStatuses.length > 0) {
+    const responses = operation.responseStatuses
+      .map((status) => `"${status}": ${getResponseSchemaSymbol(operationName, status)}`)
       .join(", ");
     lines.push(`    response: { ${responses} },`);
   } else {
@@ -160,35 +208,6 @@ function generateRouteSchemas(operations: readonly OperationInfo[]): string {
     "export const routeSchemas = {",
     ...operations.map((operation) => generateOperationSchema(operation)),
     "} as const;",
-  ].join("\n");
-}
-
-function generatePluginTypes(): string {
-  return [
-    'type FastifyRouteOptionSubset = Pick<RouteShorthandOptionsWithHandler, "config" | "onRequest" | "preHandler" | "preValidation">;',
-    "",
-    "type FastifyRouteEntry<THandler extends RouteHandlers[keyof RouteHandlers]> =",
-    "  | THandler",
-    "  | (FastifyRouteOptionSubset & { handler: THandler });",
-    "",
-    "export type FastifyRouteEntries = {",
-    "  [K in keyof RouteHandlers]: FastifyRouteEntry<RouteHandlers[K]>;",
-    "};",
-    "",
-    "type FastifyRouteOptionsWithHandler<THandler extends RouteHandlers[keyof RouteHandlers]> =",
-    "  FastifyRouteOptionSubset & { handler: THandler };",
-    "",
-    "function normalizeRouteEntry<THandler extends RouteHandlers[keyof RouteHandlers]>(",
-    "  entry: FastifyRouteEntry<THandler>,",
-    "): FastifyRouteOptionsWithHandler<THandler> {",
-    '  if (typeof entry === "function") {',
-    "    return { handler: entry };",
-    "  }",
-    "",
-    "  return entry;",
-    "}",
-    "",
-    "export type FastifyRoutesPluginOptions = { routes: FastifyRouteEntries };",
   ].join("\n");
 }
 
@@ -228,7 +247,7 @@ function generateFile(operations: readonly OperationInfo[]): string {
     "",
     generateRouteSchemas(operations),
     "",
-    generatePluginTypes(),
+    fastifyPluginTypesTemplate,
     "",
     generateFastifyPlugin(operations),
     "",
