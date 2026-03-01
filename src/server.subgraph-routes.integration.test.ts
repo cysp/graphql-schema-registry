@@ -183,58 +183,61 @@ await test("subgraph routes integration with postgres", async (t) => {
     }
   });
 
-  await t.test("returns 404 for read/create/update and 204 for delete when graph is missing", async () => {
-    const integrationDatabase = await connectIntegrationDatabase(integrationDatabaseUrl);
-    const server = createFastifyServer({
-      database: integrationDatabase.database.database,
-      jwtVerification: jwtSigner.jwtVerification,
-    });
-
-    try {
-      await server.ready();
-
-      const listResponse = await server.inject({
-        headers: adminHeaders(adminToken),
-        method: "GET",
-        url: "/v1/graphs/missing/subgraphs",
+  await t.test(
+    "returns 404 for read/create/update and 204 for delete when graph is missing",
+    async () => {
+      const integrationDatabase = await connectIntegrationDatabase(integrationDatabaseUrl);
+      const server = createFastifyServer({
+        database: integrationDatabase.database.database,
+        jwtVerification: jwtSigner.jwtVerification,
       });
-      assert.strictEqual(listResponse.statusCode, 404);
 
-      const getResponse = await server.inject({
-        headers: adminHeaders(adminToken),
-        method: "GET",
-        url: "/v1/graphs/missing/subgraphs/inventory",
-      });
-      assert.strictEqual(getResponse.statusCode, 404);
+      try {
+        await server.ready();
 
-      const createResponse = await server.inject({
-        headers: adminHeaders(adminToken),
-        method: "POST",
-        payload: {
-          slug: "inventory",
-          routingUrl: "https://inventory.example.com/graphql",
-        },
-        url: "/v1/graphs/missing/subgraphs",
-      });
-      assert.strictEqual(createResponse.statusCode, 404);
+        const listResponse = await server.inject({
+          headers: adminHeaders(adminToken),
+          method: "GET",
+          url: "/v1/graphs/missing/subgraphs",
+        });
+        assert.strictEqual(listResponse.statusCode, 404);
 
-      const updateResponse = await server.inject({
-        headers: adminRevisionHeaders(adminToken, "1"),
-        method: "PUT",
-        payload: { routingUrl: "https://inventory.example.com/graphql" },
-        url: "/v1/graphs/missing/subgraphs/inventory",
-      });
-      assert.strictEqual(updateResponse.statusCode, 404);
+        const getResponse = await server.inject({
+          headers: adminHeaders(adminToken),
+          method: "GET",
+          url: "/v1/graphs/missing/subgraphs/inventory",
+        });
+        assert.strictEqual(getResponse.statusCode, 404);
 
-      const deleteResponse = await server.inject({
-        headers: adminHeaders(adminToken),
-        method: "DELETE",
-        url: "/v1/graphs/missing/subgraphs/inventory",
-      });
-      assert.strictEqual(deleteResponse.statusCode, 204);
-    } finally {
-      await server.close();
-      await integrationDatabase.close();
-    }
-  });
+        const createResponse = await server.inject({
+          headers: adminHeaders(adminToken),
+          method: "POST",
+          payload: {
+            slug: "inventory",
+            routingUrl: "https://inventory.example.com/graphql",
+          },
+          url: "/v1/graphs/missing/subgraphs",
+        });
+        assert.strictEqual(createResponse.statusCode, 404);
+
+        const updateResponse = await server.inject({
+          headers: adminRevisionHeaders(adminToken, "1"),
+          method: "PUT",
+          payload: { routingUrl: "https://inventory.example.com/graphql" },
+          url: "/v1/graphs/missing/subgraphs/inventory",
+        });
+        assert.strictEqual(updateResponse.statusCode, 404);
+
+        const deleteResponse = await server.inject({
+          headers: adminHeaders(adminToken),
+          method: "DELETE",
+          url: "/v1/graphs/missing/subgraphs/inventory",
+        });
+        assert.strictEqual(deleteResponse.statusCode, 204);
+      } finally {
+        await server.close();
+        await integrationDatabase.close();
+      }
+    },
+  );
 });

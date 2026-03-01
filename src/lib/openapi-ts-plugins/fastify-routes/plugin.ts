@@ -88,10 +88,9 @@ function generateImports(requiredZodSymbols: readonly string[]): string {
     return baseImports.join("\n");
   }
 
-  return [
-    ...baseImports,
-    `import { ${requiredZodSymbols.join(", ")} } from "./zod.gen.ts";`,
-  ].join("\n");
+  return [...baseImports, `import { ${requiredZodSymbols.join(", ")} } from "./zod.gen.ts";`].join(
+    "\n",
+  );
 }
 
 function generateSchemaProperties(operation: OperationInfo, indent: string): string[] {

@@ -44,7 +44,11 @@ export async function deleteSubgraphHandler({
   );
   if (!subgraph) {
     request.log.debug(
-      { graphId: graph.id, graphSlug: request.params.graphSlug, subgraphSlug: request.params.subgraphSlug },
+      {
+        graphId: graph.id,
+        graphSlug: request.params.graphSlug,
+        subgraphSlug: request.params.subgraphSlug,
+      },
       "delete requested for missing or already deleted subgraph",
     );
     reply.code(204).send();
