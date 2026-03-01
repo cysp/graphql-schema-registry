@@ -15,8 +15,8 @@ export async function softDeleteGraphAndSubgraphsInTransaction(
   const [deletedGraphRecord] = await database
     .update(graphs)
     .set({
-      deletedAt: now,
       updatedAt: now,
+      deletedAt: now,
     })
     .where(and(eq(graphs.id, graphId), isNull(graphs.deletedAt)))
     .returning({
@@ -30,8 +30,8 @@ export async function softDeleteGraphAndSubgraphsInTransaction(
   await database
     .update(subgraphs)
     .set({
-      deletedAt: now,
       updatedAt: now,
+      deletedAt: now,
     })
     .where(and(eq(subgraphs.graphId, deletedGraphRecord.id), isNull(subgraphs.deletedAt)));
 

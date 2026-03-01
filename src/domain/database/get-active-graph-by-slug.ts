@@ -10,12 +10,12 @@ export async function getActiveGraphBySlug(
 ) {
   const [graphRecord] = await database
     .select({
-      createdAt: graphs.createdAt,
-      externalId: graphs.externalId,
-      federationVersion: graphRevisions.federationVersion,
       id: graphs.id,
-      revisionId: graphRevisions.revisionId,
+      externalId: graphs.externalId,
       slug: graphs.slug,
+      revisionId: graphRevisions.revisionId,
+      federationVersion: graphRevisions.federationVersion,
+      createdAt: graphs.createdAt,
       updatedAt: graphs.updatedAt,
     })
     .from(graphs)

@@ -7,12 +7,12 @@ import type { PostgresJsDatabase } from "../../drizzle/types.ts";
 export function listActiveGraphs(database: PostgresJsDatabase) {
   return database
     .select({
-      createdAt: graphs.createdAt,
-      externalId: graphs.externalId,
-      federationVersion: graphRevisions.federationVersion,
       id: graphs.id,
-      revisionId: graphRevisions.revisionId,
+      externalId: graphs.externalId,
       slug: graphs.slug,
+      revisionId: graphRevisions.revisionId,
+      federationVersion: graphRevisions.federationVersion,
+      createdAt: graphs.createdAt,
       updatedAt: graphs.updatedAt,
     })
     .from(graphs)

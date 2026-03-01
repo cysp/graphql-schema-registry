@@ -20,6 +20,12 @@ export async function updateGraphHandler({
   RouteHandlers["updateGraph"],
   RouteDependencies
 >): Promise<void> {
+  const expectedRevisionId = Number(request.headers["x-revision-id"]);
+  if (!Number.isSafeInteger(expectedRevisionId) || expectedRevisionId < 1) {
+    reply.badRequest();
+    return;
+  }
+
   if (!requireDatabase(database, reply)) {
     return;
   }
@@ -29,7 +35,6 @@ export async function updateGraphHandler({
   }
 
   const now = new Date();
-  const expectedRevisionId = Number.parseInt(request.headers["x-revision-id"], 10);
 
   const graph = await getActiveGraphBySlug(database, request.params.graphSlug);
   if (!graph) {
@@ -57,11 +62,11 @@ export async function updateGraphHandler({
   }
 
   reply.code(200).send({
-    createdAt: updatedGraph.createdAt.toISOString(),
-    federationVersion: updatedGraph.federationVersion,
     id: updatedGraph.externalId,
-    revisionId: String(updatedGraph.revisionId),
     slug: updatedGraph.slug,
+    revisionId: String(updatedGraph.revisionId),
+    federationVersion: updatedGraph.federationVersion,
+    createdAt: updatedGraph.createdAt.toISOString(),
     updatedAt: updatedGraph.updatedAt.toISOString(),
   });
 }

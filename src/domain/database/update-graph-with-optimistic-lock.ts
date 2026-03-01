@@ -4,9 +4,9 @@ import { graphRevisions, graphs } from "../../drizzle/schema.ts";
 import type { PostgresJsDatabase } from "../../drizzle/types.ts";
 
 type UpdateGraphWithOptimisticLockInput = Readonly<{
+  graphId: number;
   currentRevisionId: number;
   federationVersion: string;
-  graphId: number;
   now: Date;
 }>;
 
@@ -14,9 +14,9 @@ type UpdateGraphWithOptimisticLockInput = Readonly<{
 export async function updateGraphWithOptimisticLockInTransaction(
   database: PostgresJsDatabase,
   {
+    graphId,
     currentRevisionId,
     federationVersion,
-    graphId,
     now,
   }: UpdateGraphWithOptimisticLockInput,
 ) {
@@ -35,10 +35,10 @@ export async function updateGraphWithOptimisticLockInTransaction(
       ),
     )
     .returning({
-      createdAt: graphs.createdAt,
-      externalId: graphs.externalId,
       id: graphs.id,
+      externalId: graphs.externalId,
       slug: graphs.slug,
+      createdAt: graphs.createdAt,
       updatedAt: graphs.updatedAt,
     });
 
@@ -47,19 +47,19 @@ export async function updateGraphWithOptimisticLockInTransaction(
   }
 
   await database.insert(graphRevisions).values({
-    createdAt: now,
-    federationVersion,
     graphId: updatedGraphRecord.id,
     revisionId: nextRevisionId,
+    federationVersion,
+    createdAt: now,
   });
 
   return {
-    createdAt: updatedGraphRecord.createdAt,
-    externalId: updatedGraphRecord.externalId,
-    federationVersion,
     id: updatedGraphRecord.id,
-    revisionId: nextRevisionId,
+    externalId: updatedGraphRecord.externalId,
     slug: updatedGraphRecord.slug,
+    revisionId: nextRevisionId,
+    federationVersion,
+    createdAt: updatedGraphRecord.createdAt,
     updatedAt: updatedGraphRecord.updatedAt,
   };
 }

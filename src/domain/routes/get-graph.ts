@@ -30,11 +30,11 @@ export async function getGraphHandler({
   }
 
   reply.code(200).send({
-    createdAt: graph.createdAt.toISOString(),
-    federationVersion: graph.federationVersion,
     id: graph.externalId,
-    revisionId: String(graph.revisionId),
     slug: graph.slug,
+    revisionId: String(graph.revisionId),
+    federationVersion: graph.federationVersion,
+    createdAt: graph.createdAt.toISOString(),
     updatedAt: graph.updatedAt.toISOString(),
   });
 }

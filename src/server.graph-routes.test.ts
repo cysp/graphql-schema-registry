@@ -192,4 +192,19 @@ await test("graph routes authorization", async (t) => {
       assert.strictEqual(response.statusCode, 503);
     }
   });
+
+  await t.test("returns bad request for unsafe revision ids", async () => {
+    const response = await server.inject({
+      headers: {
+        "x-revision-id": "9007199254740992",
+      },
+      method: "PUT",
+      payload: {
+        federationVersion: "2.9",
+      },
+      url: "/v1/graphs/catalog",
+    });
+
+    assert.strictEqual(response.statusCode, 400);
+  });
 });

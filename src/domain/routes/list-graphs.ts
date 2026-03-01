@@ -28,11 +28,11 @@ export async function listGraphsHandler({
   const graphs = await listActiveGraphs(database);
 
   reply.code(200).send(graphs.map((graph) => ({
-      createdAt: graph.createdAt.toISOString(),
-      federationVersion: graph.federationVersion,
-      id: graph.externalId,
-      revisionId: String(graph.revisionId),
-      slug: graph.slug,
+    id: graph.externalId,
+    slug: graph.slug,
+    revisionId: String(graph.revisionId),
+    federationVersion: graph.federationVersion,
+    createdAt: graph.createdAt.toISOString(),
       updatedAt: graph.updatedAt.toISOString(),
     })));
 }

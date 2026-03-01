@@ -2,9 +2,9 @@ import { graphRevisions, graphs } from "../../drizzle/schema.ts";
 import type { PostgresJsDatabase } from "../../drizzle/types.ts";
 
 type CreateGraphWithInitialRevisionInput = Readonly<{
+  slug: string;
   federationVersion: string;
   now: Date;
-  slug: string;
 }>;
 
 const INITIAL_GRAPH_REVISION_ID = 1;
@@ -14,41 +14,41 @@ export async function createGraphWithInitialRevisionInTransaction(
   database: PostgresJsDatabase,
   { federationVersion, now, slug }: CreateGraphWithInitialRevisionInput,
 ) {
-  const [graphRecord] = await database
+  const [graph] = await database
     .insert(graphs)
     .values({
-      createdAt: now,
-      currentRevisionId: INITIAL_GRAPH_REVISION_ID,
       slug,
+      currentRevisionId: INITIAL_GRAPH_REVISION_ID,
+      createdAt: now,
       updatedAt: now,
     })
     .onConflictDoNothing()
     .returning({
-      createdAt: graphs.createdAt,
-      externalId: graphs.externalId,
       id: graphs.id,
+      externalId: graphs.externalId,
       slug: graphs.slug,
+      createdAt: graphs.createdAt,
       updatedAt: graphs.updatedAt,
     });
 
-  if (!graphRecord) {
+  if (!graph) {
     return;
   }
 
   await database.insert(graphRevisions).values({
-    createdAt: now,
-    federationVersion,
-    graphId: graphRecord.id,
+    graphId: graph.id,
     revisionId: INITIAL_GRAPH_REVISION_ID,
+    federationVersion,
+    createdAt: now,
   });
 
   return {
-    createdAt: graphRecord.createdAt,
-    externalId: graphRecord.externalId,
-    federationVersion,
-    id: graphRecord.id,
+    id: graph.id,
+    externalId: graph.externalId,
+    slug: graph.slug,
     revisionId: INITIAL_GRAPH_REVISION_ID,
-    slug: graphRecord.slug,
-    updatedAt: graphRecord.updatedAt,
+    federationVersion,
+    createdAt: graph.createdAt,
+    updatedAt: graph.updatedAt,
   };
 }

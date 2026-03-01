@@ -43,11 +43,11 @@ export async function createGraphHandler({
   }
 
   reply.code(201).send({
-    createdAt: graph.createdAt.toISOString(),
-    federationVersion: graph.federationVersion,
     id: graph.externalId,
-    revisionId: String(graph.revisionId),
     slug: graph.slug,
+    revisionId: String(graph.revisionId),
+    federationVersion: graph.federationVersion,
+    createdAt: graph.createdAt.toISOString(),
     updatedAt: graph.updatedAt.toISOString(),
   });
 }
