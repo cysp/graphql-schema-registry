@@ -1,5 +1,5 @@
 name: pgschema-apply
-description: Install pgschema and apply a schema file to a Postgres database URL.
+description: Install pgschema via Go and apply a schema file to Postgres.
 
 inputs:
   db-host:
@@ -34,11 +34,6 @@ inputs:
 runs:
   using: composite
   steps:
-    - name: Verify Go toolchain is available
-      shell: bash
-      run: |
-        go version
-
     - name: Install pgschema
       shell: bash
       env:
@@ -47,8 +42,6 @@ runs:
         if ! go install "github.com/pgplex/pgschema@${PGSCHEMA_VERSION}"; then
           go install "github.com/pgschema/pgschema@${PGSCHEMA_VERSION}"
         fi
-        PGSCHEMA_BIN="$(go env GOPATH)/bin/pgschema"
-        "${PGSCHEMA_BIN}" --help >/dev/null
 
     - name: Apply schema
       shell: bash
