@@ -4,7 +4,7 @@ import type { DependencyInjectedHandlerContext } from "../../lib/fastify/handler
 import type { RouteHandlers } from "../../lib/openapi-ts/fastify.gen.ts";
 import type { Graph } from "../../lib/openapi-ts/types.gen.ts";
 import { listActiveGraphs } from "../database/list-active-graphs.ts";
-import { GRAPH_MISSING_CURRENT_REVISION_MESSAGE, requireDatabase } from "./graph-route-shared.ts";
+import { requireDatabase } from "./graph-route-shared.ts";
 
 type RouteDependencies = Readonly<{
   database: PostgresJsDatabase | undefined;
@@ -30,17 +30,11 @@ export async function listGraphsHandler({
 
   const responseGraphs: Graph[] = [];
   for (const graphRecord of graphRecords) {
-    const revisionRecord = graphRecord.currentRevision;
-    if (!revisionRecord) {
-      reply.internalServerError(GRAPH_MISSING_CURRENT_REVISION_MESSAGE);
-      return;
-    }
-
     responseGraphs.push({
       createdAt: graphRecord.createdAt.toISOString(),
-      federationVersion: revisionRecord.federationVersion,
+      federationVersion: graphRecord.federationVersion,
       id: graphRecord.externalId,
-      revisionId: String(revisionRecord.revisionId),
+      revisionId: String(graphRecord.revisionId),
       slug: graphRecord.slug,
       updatedAt: graphRecord.updatedAt.toISOString(),
     });

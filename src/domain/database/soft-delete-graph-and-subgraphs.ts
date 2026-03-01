@@ -4,27 +4,27 @@ import { graphs, subgraphs } from "../../drizzle/schema.ts";
 import type { PostgresJsDatabase } from "../../drizzle/types.ts";
 
 type SoftDeleteGraphAndSubgraphsInput = Readonly<{
+  graphId: number;
   now: Date;
-  slug: string;
 }>;
 
 export async function softDeleteGraphAndSubgraphsInTransaction(
   database: PostgresJsDatabase,
-  { now, slug }: SoftDeleteGraphAndSubgraphsInput,
-): Promise<void> {
+  { graphId, now }: SoftDeleteGraphAndSubgraphsInput,
+): Promise<boolean> {
   const [deletedGraphRecord] = await database
     .update(graphs)
     .set({
       deletedAt: now,
       updatedAt: now,
     })
-    .where(and(eq(graphs.slug, slug), isNull(graphs.deletedAt)))
+    .where(and(eq(graphs.id, graphId), isNull(graphs.deletedAt)))
     .returning({
       id: graphs.id,
     });
 
   if (!deletedGraphRecord) {
-    return;
+    return false;
   }
 
   await database
@@ -34,4 +34,6 @@ export async function softDeleteGraphAndSubgraphsInTransaction(
       updatedAt: now,
     })
     .where(and(eq(subgraphs.graphId, deletedGraphRecord.id), isNull(subgraphs.deletedAt)));
+
+  return true;
 }

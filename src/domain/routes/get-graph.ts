@@ -3,7 +3,7 @@ import { requireAdminUser } from "../../lib/fastify/authorization/guards.ts";
 import type { DependencyInjectedHandlerContext } from "../../lib/fastify/handler-with-dependencies.ts";
 import type { RouteHandlers } from "../../lib/openapi-ts/fastify.gen.ts";
 import { getActiveGraphBySlug } from "../database/get-active-graph-by-slug.ts";
-import { GRAPH_MISSING_CURRENT_REVISION_MESSAGE, requireDatabase } from "./graph-route-shared.ts";
+import { requireDatabase } from "./graph-route-shared.ts";
 
 type RouteDependencies = Readonly<{
   database: PostgresJsDatabase | undefined;
@@ -29,17 +29,11 @@ export async function getGraphHandler({
     return;
   }
 
-  const revisionRecord = graphRecord.currentRevision;
-  if (!revisionRecord) {
-    reply.internalServerError(GRAPH_MISSING_CURRENT_REVISION_MESSAGE);
-    return;
-  }
-
   reply.code(200).send({
     createdAt: graphRecord.createdAt.toISOString(),
-    federationVersion: revisionRecord.federationVersion,
+    federationVersion: graphRecord.federationVersion,
     id: graphRecord.externalId,
-    revisionId: String(revisionRecord.revisionId),
+    revisionId: String(graphRecord.revisionId),
     slug: graphRecord.slug,
     updatedAt: graphRecord.updatedAt.toISOString(),
   });

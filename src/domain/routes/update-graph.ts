@@ -6,10 +6,7 @@ import { getActiveGraphBySlug } from "../database/get-active-graph-by-slug.ts";
 import {
   updateGraphWithOptimisticLockInTransaction,
 } from "../database/update-graph-with-optimistic-lock.ts";
-import {
-  GRAPH_MISSING_CURRENT_REVISION_MESSAGE,
-  requireDatabase,
-} from "./graph-route-shared.ts";
+import { requireDatabase } from "./graph-route-shared.ts";
 
 type RouteDependencies = Readonly<{
   database: PostgresJsDatabase | undefined;
@@ -55,12 +52,7 @@ export async function updateGraphHandler({
     return;
   }
 
-  const currentRevision = graph.currentRevision;
-  if (!currentRevision) {
-    throw new Error(GRAPH_MISSING_CURRENT_REVISION_MESSAGE);
-  }
-
-  if (currentRevision.revisionId !== expectedRevisionId) {
+  if (graph.revisionId !== expectedRevisionId) {
     reply.conflict();
     return;
   }
@@ -68,7 +60,7 @@ export async function updateGraphHandler({
   const updatedGraph = await database.transaction(async (transaction) => {
     return updateGraphWithOptimisticLockInTransaction(transaction, {
       graphId: graph.id,
-      currentRevisionId: currentRevision.revisionId,
+      currentRevisionId: graph.revisionId,
       federationVersion: request.body.federationVersion,
       now,
     });
