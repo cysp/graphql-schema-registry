@@ -1,5 +1,1 @@
 description: Missing/invalid bearer token
-content:
-  application/problem+json:
-    schema:
-      $ref: ../schemas/error.yaml

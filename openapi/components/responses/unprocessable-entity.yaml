@@ -1,5 +1,1 @@
 description: Unprocessable entity
-content:
-  application/problem+json:
-    schema:
-      $ref: ../schemas/error.yaml

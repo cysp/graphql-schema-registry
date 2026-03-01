@@ -2,7 +2,8 @@ import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 
 import type { IR } from "@hey-api/openapi-ts";
-
+import { collectResponseInfos } from "./responses.js";
+import type { ResponseInfo } from "./responses.js";
 import { fastifyPluginTypesTemplate } from "./templates.js";
 
 type OperationInfo = {
@@ -13,7 +14,7 @@ type OperationInfo = {
   id: string;
   method: string;
   path: string;
-  responseStatuses: string[];
+  responses: ResponseInfo[];
 };
 
 type PluginInstance = {
@@ -23,6 +24,7 @@ type PluginInstance = {
         path: string;
       };
     };
+    spec: unknown;
   };
   forEach: (
     ...args: [
@@ -55,65 +57,60 @@ function toFastifyPath(path: string): string {
   return path.replaceAll(/\{([^}]+)\}/g, ":$1");
 }
 
-function getResponseStatuses(operation: IR.OperationObject): string[] {
-  if (!operation.responses) {
-    return [];
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return Boolean(value) && typeof value === "object";
+}
+
+function getResponseSchemaRefFromSpecResponse(specResponse: unknown): string | undefined {
+  if (!isRecord(specResponse)) {
+    return undefined;
+  }
+  if (typeof specResponse["$ref"] === "string") {
+    return specResponse["$ref"];
+  }
+  if (!isRecord(specResponse["content"])) {
+    return undefined;
+  }
+  for (const mediaType of Object.values(specResponse["content"])) {
+    if (!isRecord(mediaType) || !isRecord(mediaType["schema"])) {
+      continue;
+    }
+    if (typeof mediaType["schema"]["$ref"] === "string") {
+      return mediaType["schema"]["$ref"];
+    }
+  }
+  return undefined;
+}
+
+function getResponseSchemaRefsByStatus(
+  spec: unknown,
+  operation: IR.OperationObject,
+): Record<string, string | undefined> {
+  if (!isRecord(spec) || !isRecord(spec["paths"])) {
+    return {};
+  }
+  const pathItem = spec["paths"][operation.path];
+  if (!isRecord(pathItem)) {
+    return {};
   }
 
-  const statuses = Object.keys(operation.responses).filter((status) => {
-    return operation.responses?.[status] !== undefined;
-  });
-
-  return statuses.toSorted((a, b) => {
-    const aIsNumeric = /^[0-9]{3}$/.test(a);
-    const bIsNumeric = /^[0-9]{3}$/.test(b);
-
-    if (aIsNumeric && bIsNumeric) {
-      return Number(a) - Number(b);
-    }
-
-    if (aIsNumeric) {
-      return -1;
-    }
-
-    if (bIsNumeric) {
-      return 1;
-    }
-
-    if (a === "default") {
-      return 1;
-    }
-
-    if (b === "default") {
-      return -1;
-    }
-
-    return a.localeCompare(b);
-  });
-}
-
-function isSuccessStatus(status: string): boolean {
-  return status.startsWith("2");
-}
-
-const errorResponseSymbolsByStatus = Object.freeze<Record<string, string>>({
-  "400": "zBadRequestRoot",
-  "401": "zUnauthorizedRoot",
-  "403": "zForbiddenRoot",
-  "404": "zNotFoundRoot",
-  "409": "zConflictRoot",
-  "422": "zUnprocessableEntityRoot",
-});
-
-function getResponseSchemaSymbol(operationName: string, status: string): string {
-  if (isSuccessStatus(status)) {
-    return `z${operationName}Response`;
+  const operationInSpec = pathItem[operation.method];
+  if (!isRecord(operationInSpec) || !isRecord(operationInSpec["responses"])) {
+    return {};
   }
 
-  return errorResponseSymbolsByStatus[status] ?? "zErrorRoot";
+  const responseSchemaRefsByStatus: Record<string, string | undefined> = {};
+  for (const [status, response] of Object.entries(operationInSpec["responses"])) {
+    responseSchemaRefsByStatus[status] = getResponseSchemaRefFromSpecResponse(response);
+  }
+
+  return responseSchemaRefsByStatus;
 }
 
-function collectOperationInfo(operation: IR.OperationObject): OperationInfo {
+function collectOperationInfo(
+  operation: IR.OperationObject,
+  responseSchemaRefsByStatus: Readonly<Record<string, string | undefined>>,
+): OperationInfo {
   return {
     hasBody: Boolean(operation.body),
     hasHeaders: Boolean(
@@ -128,7 +125,7 @@ function collectOperationInfo(operation: IR.OperationObject): OperationInfo {
     id: operation.id,
     method: operation.method.toLowerCase(),
     path: toFastifyPath(operation.path),
-    responseStatuses: getResponseStatuses(operation),
+    responses: collectResponseInfos(operation, responseSchemaRefsByStatus),
   };
 }
 
@@ -143,8 +140,8 @@ function generateImports(operations: readonly OperationInfo[]): string {
       zodSymbols.add(dataSymbol);
     }
 
-    for (const status of operation.responseStatuses) {
-      zodSymbols.add(getResponseSchemaSymbol(name, status));
+    for (const response of operation.responses) {
+      zodSymbols.add(response.schemaSymbol);
     }
   }
 
@@ -191,9 +188,9 @@ function generateOperationSchema(operation: OperationInfo): string {
     lines.push(`    body: ${dataSymbol}.shape.body,`);
   }
 
-  if (operation.responseStatuses.length > 0) {
-    const responses = operation.responseStatuses
-      .map((status) => `"${status}": ${getResponseSchemaSymbol(operationName, status)}`)
+  if (operation.responses.length > 0) {
+    const responses = operation.responses
+      .map((response) => `"${response.status}": ${response.schemaSymbol}`)
       .join(", ");
     lines.push(`    response: { ${responses} },`);
   } else {
@@ -282,7 +279,11 @@ export const fastifyRoutesPlugin: OpenApiTsPlugin = {
     plugin.forEach(
       "operation",
       ({ operation }) => {
-        operations.push(collectOperationInfo(operation));
+        const responseSchemaRefsByStatus = getResponseSchemaRefsByStatus(
+          plugin.context.spec,
+          operation,
+        );
+        operations.push(collectOperationInfo(operation, responseSchemaRefsByStatus));
       },
       { order: "declarations" },
     );

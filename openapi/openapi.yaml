@@ -243,12 +243,6 @@ components:
     XRevisionId:
       $ref: "./components/parameters/x-revision-id.yaml"
   schemas:
-    Error:
-      $ref: "./components/schemas/error.yaml"
-    FieldError:
-      $ref: "./components/schemas/field-error.yaml"
-    Diagnostic:
-      $ref: "./components/schemas/diagnostic.yaml"
     Graph:
       $ref: "./components/schemas/graph.yaml"
     GraphList:

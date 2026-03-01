@@ -4,12 +4,6 @@ export type ClientOptions = {
     baseUrl: 'http://localhost:3000' | (string & {});
 };
 
-export type Error = ErrorRoot;
-
-export type FieldError = FieldErrorRoot;
-
-export type Diagnostic = DiagnosticRoot;
-
 export type Graph = GraphRoot;
 
 export type GraphList = GraphListRoot;
@@ -72,32 +66,6 @@ export type CreateSubgraphRequestRoot = {
     routingUrl: string;
 };
 
-export type DiagnosticRoot = {
-    level: 'info' | 'warning' | 'error';
-    message: string;
-    code?: string;
-};
-
-export type ErrorRoot = {
-    type: string;
-    title: string;
-    status: number;
-    detail?: string;
-    instance?: string;
-    code: 'UNAUTHORIZED' | 'FORBIDDEN' | 'NOT_FOUND' | 'CONFLICT' | 'INVALID_REQUEST' | 'INTERNAL_ERROR';
-    requestId?: string;
-    diagnostics?: Array<DiagnosticRoot>;
-    errors?: Array<FieldErrorRoot>;
-    upstreamCode?: string;
-    [key: string]: unknown;
-};
-
-export type FieldErrorRoot = {
-    path: string;
-    message: string;
-    rule?: string;
-};
-
 export type GraphListRoot = Array<GraphRoot>;
 
 export type GraphRoot = {
@@ -148,14 +116,12 @@ export type ListGraphsErrors = {
     /**
      * Missing/invalid bearer token
      */
-    401: ErrorRoot;
+    401: unknown;
     /**
      * Token lacks required scope
      */
-    403: ErrorRoot;
+    403: unknown;
 };
-
-export type ListGraphsError = ListGraphsErrors[keyof ListGraphsErrors];
 
 export type ListGraphsResponses = {
     /**
@@ -177,18 +143,16 @@ export type CreateGraphErrors = {
     /**
      * Missing/invalid bearer token
      */
-    401: ErrorRoot;
+    401: unknown;
     /**
      * Token lacks required scope
      */
-    403: ErrorRoot;
+    403: unknown;
     /**
      * Conflict
      */
-    409: ErrorRoot;
+    409: unknown;
 };
-
-export type CreateGraphError = CreateGraphErrors[keyof CreateGraphErrors];
 
 export type CreateGraphResponses = {
     /**
@@ -212,14 +176,12 @@ export type DeleteGraphErrors = {
     /**
      * Missing/invalid bearer token
      */
-    401: ErrorRoot;
+    401: unknown;
     /**
      * Token lacks required scope
      */
-    403: ErrorRoot;
+    403: unknown;
 };
-
-export type DeleteGraphError = DeleteGraphErrors[keyof DeleteGraphErrors];
 
 export type DeleteGraphResponses = {
     /**
@@ -243,18 +205,16 @@ export type GetGraphErrors = {
     /**
      * Missing/invalid bearer token
      */
-    401: ErrorRoot;
+    401: unknown;
     /**
      * Token lacks required scope
      */
-    403: ErrorRoot;
+    403: unknown;
     /**
      * Not found
      */
-    404: ErrorRoot;
+    404: unknown;
 };
-
-export type GetGraphError = GetGraphErrors[keyof GetGraphErrors];
 
 export type GetGraphResponses = {
     /**
@@ -281,26 +241,24 @@ export type UpdateGraphErrors = {
     /**
      * Bad request
      */
-    400: ErrorRoot;
+    400: unknown;
     /**
      * Missing/invalid bearer token
      */
-    401: ErrorRoot;
+    401: unknown;
     /**
      * Token lacks required scope
      */
-    403: ErrorRoot;
+    403: unknown;
     /**
      * Not found
      */
-    404: ErrorRoot;
+    404: unknown;
     /**
      * Conflict
      */
-    409: ErrorRoot;
+    409: unknown;
 };
-
-export type UpdateGraphError = UpdateGraphErrors[keyof UpdateGraphErrors];
 
 export type UpdateGraphResponses = {
     /**
@@ -324,18 +282,16 @@ export type ListSubgraphsErrors = {
     /**
      * Missing/invalid bearer token
      */
-    401: ErrorRoot;
+    401: unknown;
     /**
      * Token lacks required scope
      */
-    403: ErrorRoot;
+    403: unknown;
     /**
      * Not found
      */
-    404: ErrorRoot;
+    404: unknown;
 };
-
-export type ListSubgraphsError = ListSubgraphsErrors[keyof ListSubgraphsErrors];
 
 export type ListSubgraphsResponses = {
     /**
@@ -359,22 +315,20 @@ export type CreateSubgraphErrors = {
     /**
      * Missing/invalid bearer token
      */
-    401: ErrorRoot;
+    401: unknown;
     /**
      * Token lacks required scope
      */
-    403: ErrorRoot;
+    403: unknown;
     /**
      * Not found
      */
-    404: ErrorRoot;
+    404: unknown;
     /**
      * Conflict
      */
-    409: ErrorRoot;
+    409: unknown;
 };
-
-export type CreateSubgraphError = CreateSubgraphErrors[keyof CreateSubgraphErrors];
 
 export type CreateSubgraphResponses = {
     /**
@@ -399,14 +353,12 @@ export type DeleteSubgraphErrors = {
     /**
      * Missing/invalid bearer token
      */
-    401: ErrorRoot;
+    401: unknown;
     /**
      * Token lacks required scope
      */
-    403: ErrorRoot;
+    403: unknown;
 };
-
-export type DeleteSubgraphError = DeleteSubgraphErrors[keyof DeleteSubgraphErrors];
 
 export type DeleteSubgraphResponses = {
     /**
@@ -431,18 +383,16 @@ export type GetSubgraphErrors = {
     /**
      * Missing/invalid bearer token
      */
-    401: ErrorRoot;
+    401: unknown;
     /**
      * Token lacks required scope
      */
-    403: ErrorRoot;
+    403: unknown;
     /**
      * Not found
      */
-    404: ErrorRoot;
+    404: unknown;
 };
-
-export type GetSubgraphError = GetSubgraphErrors[keyof GetSubgraphErrors];
 
 export type GetSubgraphResponses = {
     /**
@@ -470,26 +420,24 @@ export type UpdateSubgraphErrors = {
     /**
      * Bad request
      */
-    400: ErrorRoot;
+    400: unknown;
     /**
      * Missing/invalid bearer token
      */
-    401: ErrorRoot;
+    401: unknown;
     /**
      * Token lacks required scope
      */
-    403: ErrorRoot;
+    403: unknown;
     /**
      * Not found
      */
-    404: ErrorRoot;
+    404: unknown;
     /**
      * Conflict
      */
-    409: ErrorRoot;
+    409: unknown;
 };
-
-export type UpdateSubgraphError = UpdateSubgraphErrors[keyof UpdateSubgraphErrors];
 
 export type UpdateSubgraphResponses = {
     /**

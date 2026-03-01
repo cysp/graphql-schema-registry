@@ -52,48 +52,6 @@ export const zCreateSubgraphRequestRoot = z.object({
 
 export const zCreateSubgraphRequest = zCreateSubgraphRequestRoot;
 
-export const zDiagnosticRoot = z.object({
-    level: z.enum([
-        'info',
-        'warning',
-        'error'
-    ]),
-    message: z.string(),
-    code: z.string().optional()
-});
-
-export const zDiagnostic = zDiagnosticRoot;
-
-export const zFieldErrorRoot = z.object({
-    path: z.string(),
-    message: z.string(),
-    rule: z.string().optional()
-});
-
-export const zFieldError = zFieldErrorRoot;
-
-export const zErrorRoot = z.object({
-    type: z.string(),
-    title: z.string(),
-    status: z.int().min(-2147483648, { error: 'Invalid value: Expected int32 to be >= -2147483648' }).max(2147483647, { error: 'Invalid value: Expected int32 to be <= 2147483647' }),
-    detail: z.string().optional(),
-    instance: z.string().optional(),
-    code: z.enum([
-        'UNAUTHORIZED',
-        'FORBIDDEN',
-        'NOT_FOUND',
-        'CONFLICT',
-        'INVALID_REQUEST',
-        'INTERNAL_ERROR'
-    ]),
-    requestId: z.string().optional(),
-    diagnostics: z.array(zDiagnosticRoot).optional(),
-    errors: z.array(zFieldErrorRoot).optional(),
-    upstreamCode: z.string().optional()
-});
-
-export const zError = zErrorRoot;
-
 export const zGraphRoot = z.object({
     id: z.uuid(),
     slug: z.string(),
