@@ -1,7 +1,7 @@
 import { mkdirSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 
-import type { IR } from "@hey-api/openapi-ts";
+import type { DefinePlugin, IR } from "@hey-api/openapi-ts";
 
 import { collectResponseInfos } from "./responses.js";
 import type { ResponseInfo } from "./responses.js";
@@ -17,32 +17,6 @@ type OperationInfo = {
   method: string;
   path: string;
   responses: ResponseInfo[];
-};
-
-type PluginInstance = {
-  context: {
-    config: {
-      output: {
-        path: string;
-      };
-    };
-  };
-  forEach: (
-    ...args: [
-      "operation",
-      callback: (event: { operation: IR.OperationObject; type: "operation" }) => void,
-      options?: { order?: "declarations" | "natural" | undefined },
-    ]
-  ) => void;
-};
-
-type OpenApiTsPlugin = {
-  config: {
-    includeInEntry: boolean;
-  };
-  dependencies: readonly string[];
-  handler: (args: { plugin: PluginInstance }) => void;
-  name: string;
 };
 
 function toPascalCase(value: string): string {
@@ -128,9 +102,10 @@ function generateSchemaProperties(operation: OperationInfo, indent: string): str
 
 function generateRouteDefinition(operation: OperationInfo): string {
   const schemaProperties = generateSchemaProperties(operation, "      ");
+  const operationIdLiteral = JSON.stringify(operation.id);
 
   return [
-    `  "${operation.id}": {`,
+    `  ${operationIdLiteral}: {`,
     `    method: "${operation.method}",`,
     `    url: ${JSON.stringify(operation.path)},`,
     "    schema: {",
@@ -149,10 +124,10 @@ function generateRouteDefinitions(operations: readonly OperationInfo[]): string 
 }
 
 function generateFastifyPlugin(operations: readonly OperationInfo[]): string {
-  const statements = operations.map(
-    (operation) =>
-      `  server.route({ ...routeDefinitionsByOperationId["${operation.id}"], handler: handlers["${operation.id}"] });`,
-  );
+  const statements = operations.map((operation) => {
+    const operationIdLiteral = JSON.stringify(operation.id);
+    return `  server.route({ ...routeDefinitionsByOperationId[${operationIdLiteral}], handler: handlers[${operationIdLiteral}] });`;
+  });
 
   return [
     "const fastifyRoutesPluginImpl: FastifyPluginCallbackZod<FastifyRouteHandlersPluginOptions> = (",
@@ -192,12 +167,13 @@ function generateFile(
   ].join("\n");
 }
 
-export const fastifyRoutesPlugin: OpenApiTsPlugin = {
+export const fastifyRoutesPlugin: DefinePlugin["Config"] = {
+  name: "fastify-routes",
   config: {
     includeInEntry: false,
   },
   dependencies: ["@hey-api/typescript", "fastify", "zod"],
-  handler: ({ plugin }) => {
+  handler({ plugin }) {
     const operations: OperationInfo[] = [];
 
     // oxlint-disable-next-line unicorn/no-array-for-each -- OpenAPI-TS plugin API exposes this callback as "forEach".
@@ -216,5 +192,4 @@ export const fastifyRoutesPlugin: OpenApiTsPlugin = {
     const outputPath = join(plugin.context.config.output.path, "fastify-routes.gen.ts");
     writeFileSync(outputPath, generateFile(operations, requiredZodSymbols), "utf8");
   },
-  name: "fastify-routes",
 };
