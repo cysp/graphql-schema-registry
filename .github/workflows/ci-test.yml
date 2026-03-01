@@ -38,7 +38,7 @@ jobs:
   integration-test-neon:
     runs-on: ubuntu-latest
     timeout-minutes: 15
-    if: ${{ secrets.NEON_API_KEY != '' && vars.NEON_PROJECT_ID != '' }}
+    if: ${{ vars.NEON_PROJECT_ID != '' }}
 
     env:
       NEON_API_KEY: ${{ secrets.NEON_API_KEY }}
