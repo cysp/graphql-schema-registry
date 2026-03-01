@@ -4,65 +4,92 @@
 import fastifyPlugin from "fastify-plugin";
 import type { FastifyPluginAsync, RouteShorthandOptionsWithHandler } from "fastify";
 import type { RouteHandlers } from "./fastify.gen.ts";
-import { zBadRequestRoot, zConflictRoot, zCreateGraphData, zCreateSubgraphData, zDeleteGraphData, zDeleteGraphResponse, zDeleteSubgraphData, zDeleteSubgraphResponse, zForbiddenRoot, zGetGraphData, zGetSubgraphData, zGraphListRoot, zGraphRoot, zListSubgraphsData, zNotFoundRoot, zSubgraphListRoot, zSubgraphRoot, zUnauthorizedRoot, zUpdateGraphData, zUpdateSubgraphData } from "./zod.gen.ts";
+import { zCreateGraphData, zCreateSubgraphData, zDeleteGraphData, zDeleteGraphResponse, zDeleteSubgraphData, zDeleteSubgraphResponse, zGetGraphData, zGetSubgraphData, zGraphListRoot, zGraphRoot, zListSubgraphsData, zRoot, zSubgraphListRoot, zSubgraphRoot, zUpdateGraphData, zUpdateSubgraphData } from "./zod.gen.ts";
 
-export const routePaths = {
-  "listGraphs": "/v1/graphs",
-  "createGraph": "/v1/graphs",
-  "deleteGraph": "/v1/graphs/:graphSlug",
-  "getGraph": "/v1/graphs/:graphSlug",
-  "updateGraph": "/v1/graphs/:graphSlug",
-  "listSubgraphs": "/v1/graphs/:graphSlug/subgraphs",
-  "createSubgraph": "/v1/graphs/:graphSlug/subgraphs",
-  "deleteSubgraph": "/v1/graphs/:graphSlug/subgraphs/:subgraphSlug",
-  "getSubgraph": "/v1/graphs/:graphSlug/subgraphs/:subgraphSlug",
-  "updateSubgraph": "/v1/graphs/:graphSlug/subgraphs/:subgraphSlug",
-} as const;
-
-export const routeSchemas = {
+export const routeDefinitions = {
   "listGraphs": {
-    response: { "200": zGraphListRoot, "401": zUnauthorizedRoot, "403": zForbiddenRoot },
+    method: "GET",
+    url: "/v1/graphs",
+    schema: {
+      response: { "200": zGraphListRoot, "401": zRoot, "403": zRoot },
+    },
   },
   "createGraph": {
-    body: zCreateGraphData.shape.body,
-    response: { "201": zGraphRoot, "401": zUnauthorizedRoot, "403": zForbiddenRoot, "409": zConflictRoot },
+    method: "POST",
+    url: "/v1/graphs",
+    schema: {
+      body: zCreateGraphData.shape.body,
+      response: { "201": zGraphRoot, "401": zRoot, "403": zRoot, "409": zRoot },
+    },
   },
   "deleteGraph": {
-    params: zDeleteGraphData.shape.path,
-    response: { "204": zDeleteGraphResponse, "401": zUnauthorizedRoot, "403": zForbiddenRoot },
+    method: "DELETE",
+    url: "/v1/graphs/:graphSlug",
+    schema: {
+      params: zDeleteGraphData.shape.path,
+      response: { "204": zDeleteGraphResponse, "401": zRoot, "403": zRoot },
+    },
   },
   "getGraph": {
-    params: zGetGraphData.shape.path,
-    response: { "200": zGraphRoot, "401": zUnauthorizedRoot, "403": zForbiddenRoot, "404": zNotFoundRoot },
+    method: "GET",
+    url: "/v1/graphs/:graphSlug",
+    schema: {
+      params: zGetGraphData.shape.path,
+      response: { "200": zGraphRoot, "401": zRoot, "403": zRoot, "404": zRoot },
+    },
   },
   "updateGraph": {
-    params: zUpdateGraphData.shape.path,
-    headers: zUpdateGraphData.shape.headers,
-    body: zUpdateGraphData.shape.body,
-    response: { "200": zGraphRoot, "400": zBadRequestRoot, "401": zUnauthorizedRoot, "403": zForbiddenRoot, "404": zNotFoundRoot, "409": zConflictRoot },
+    method: "PUT",
+    url: "/v1/graphs/:graphSlug",
+    schema: {
+      params: zUpdateGraphData.shape.path,
+      headers: zUpdateGraphData.shape.headers,
+      body: zUpdateGraphData.shape.body,
+      response: { "200": zGraphRoot, "400": zRoot, "401": zRoot, "403": zRoot, "404": zRoot, "409": zRoot },
+    },
   },
   "listSubgraphs": {
-    params: zListSubgraphsData.shape.path,
-    response: { "200": zSubgraphListRoot, "401": zUnauthorizedRoot, "403": zForbiddenRoot, "404": zNotFoundRoot },
+    method: "GET",
+    url: "/v1/graphs/:graphSlug/subgraphs",
+    schema: {
+      params: zListSubgraphsData.shape.path,
+      response: { "200": zSubgraphListRoot, "401": zRoot, "403": zRoot, "404": zRoot },
+    },
   },
   "createSubgraph": {
-    params: zCreateSubgraphData.shape.path,
-    body: zCreateSubgraphData.shape.body,
-    response: { "201": zSubgraphRoot, "401": zUnauthorizedRoot, "403": zForbiddenRoot, "404": zNotFoundRoot, "409": zConflictRoot },
+    method: "POST",
+    url: "/v1/graphs/:graphSlug/subgraphs",
+    schema: {
+      params: zCreateSubgraphData.shape.path,
+      body: zCreateSubgraphData.shape.body,
+      response: { "201": zSubgraphRoot, "401": zRoot, "403": zRoot, "404": zRoot, "409": zRoot },
+    },
   },
   "deleteSubgraph": {
-    params: zDeleteSubgraphData.shape.path,
-    response: { "204": zDeleteSubgraphResponse, "401": zUnauthorizedRoot, "403": zForbiddenRoot },
+    method: "DELETE",
+    url: "/v1/graphs/:graphSlug/subgraphs/:subgraphSlug",
+    schema: {
+      params: zDeleteSubgraphData.shape.path,
+      response: { "204": zDeleteSubgraphResponse, "401": zRoot, "403": zRoot },
+    },
   },
   "getSubgraph": {
-    params: zGetSubgraphData.shape.path,
-    response: { "200": zSubgraphRoot, "401": zUnauthorizedRoot, "403": zForbiddenRoot, "404": zNotFoundRoot },
+    method: "GET",
+    url: "/v1/graphs/:graphSlug/subgraphs/:subgraphSlug",
+    schema: {
+      params: zGetSubgraphData.shape.path,
+      response: { "200": zSubgraphRoot, "401": zRoot, "403": zRoot, "404": zRoot },
+    },
   },
   "updateSubgraph": {
-    params: zUpdateSubgraphData.shape.path,
-    headers: zUpdateSubgraphData.shape.headers,
-    body: zUpdateSubgraphData.shape.body,
-    response: { "200": zSubgraphRoot, "400": zBadRequestRoot, "401": zUnauthorizedRoot, "403": zForbiddenRoot, "404": zNotFoundRoot, "409": zConflictRoot },
+    method: "PUT",
+    url: "/v1/graphs/:graphSlug/subgraphs/:subgraphSlug",
+    schema: {
+      params: zUpdateSubgraphData.shape.path,
+      headers: zUpdateSubgraphData.shape.headers,
+      body: zUpdateSubgraphData.shape.body,
+      response: { "200": zSubgraphRoot, "400": zRoot, "401": zRoot, "403": zRoot, "404": zRoot, "409": zRoot },
+    },
   },
 } as const;
 
@@ -97,16 +124,16 @@ const fastifyRoutesPluginImpl: FastifyPluginAsync<FastifyRoutesPluginOptions> = 
 ): Promise<void> => {
   const routes = options.routes;
 
-  server.get(routePaths["listGraphs"], { ...normalizeRouteEntry(routes["listGraphs"]), schema: routeSchemas["listGraphs"] });
-  server.post(routePaths["createGraph"], { ...normalizeRouteEntry(routes["createGraph"]), schema: routeSchemas["createGraph"] });
-  server.delete(routePaths["deleteGraph"], { ...normalizeRouteEntry(routes["deleteGraph"]), schema: routeSchemas["deleteGraph"] });
-  server.get(routePaths["getGraph"], { ...normalizeRouteEntry(routes["getGraph"]), schema: routeSchemas["getGraph"] });
-  server.put(routePaths["updateGraph"], { ...normalizeRouteEntry(routes["updateGraph"]), schema: routeSchemas["updateGraph"] });
-  server.get(routePaths["listSubgraphs"], { ...normalizeRouteEntry(routes["listSubgraphs"]), schema: routeSchemas["listSubgraphs"] });
-  server.post(routePaths["createSubgraph"], { ...normalizeRouteEntry(routes["createSubgraph"]), schema: routeSchemas["createSubgraph"] });
-  server.delete(routePaths["deleteSubgraph"], { ...normalizeRouteEntry(routes["deleteSubgraph"]), schema: routeSchemas["deleteSubgraph"] });
-  server.get(routePaths["getSubgraph"], { ...normalizeRouteEntry(routes["getSubgraph"]), schema: routeSchemas["getSubgraph"] });
-  server.put(routePaths["updateSubgraph"], { ...normalizeRouteEntry(routes["updateSubgraph"]), schema: routeSchemas["updateSubgraph"] });
+  server.route({ ...routeDefinitions["listGraphs"], ...normalizeRouteEntry(routes["listGraphs"]) });
+  server.route({ ...routeDefinitions["createGraph"], ...normalizeRouteEntry(routes["createGraph"]) });
+  server.route({ ...routeDefinitions["deleteGraph"], ...normalizeRouteEntry(routes["deleteGraph"]) });
+  server.route({ ...routeDefinitions["getGraph"], ...normalizeRouteEntry(routes["getGraph"]) });
+  server.route({ ...routeDefinitions["updateGraph"], ...normalizeRouteEntry(routes["updateGraph"]) });
+  server.route({ ...routeDefinitions["listSubgraphs"], ...normalizeRouteEntry(routes["listSubgraphs"]) });
+  server.route({ ...routeDefinitions["createSubgraph"], ...normalizeRouteEntry(routes["createSubgraph"]) });
+  server.route({ ...routeDefinitions["deleteSubgraph"], ...normalizeRouteEntry(routes["deleteSubgraph"]) });
+  server.route({ ...routeDefinitions["getSubgraph"], ...normalizeRouteEntry(routes["getSubgraph"]) });
+  server.route({ ...routeDefinitions["updateSubgraph"], ...normalizeRouteEntry(routes["updateSubgraph"]) });
 };
 
 export const fastifyRoutesPlugin = fastifyPlugin<FastifyRoutesPluginOptions>(

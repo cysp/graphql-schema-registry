@@ -37,7 +37,7 @@ export type BadRequestRoot = unknown;
 export type ConflictRoot = unknown;
 
 /**
- * Token lacks required scope
+ * Forbidden
  */
 export type ForbiddenRoot = unknown;
 
@@ -47,7 +47,7 @@ export type ForbiddenRoot = unknown;
 export type NotFoundRoot = unknown;
 
 /**
- * Missing/invalid bearer token
+ * Unauthorized
  */
 export type UnauthorizedRoot = unknown;
 
@@ -114,11 +114,11 @@ export type ListGraphsData = {
 
 export type ListGraphsErrors = {
     /**
-     * Missing/invalid bearer token
+     * Unauthorized
      */
     401: unknown;
     /**
-     * Token lacks required scope
+     * Forbidden
      */
     403: unknown;
 };
@@ -141,11 +141,11 @@ export type CreateGraphData = {
 
 export type CreateGraphErrors = {
     /**
-     * Missing/invalid bearer token
+     * Unauthorized
      */
     401: unknown;
     /**
-     * Token lacks required scope
+     * Forbidden
      */
     403: unknown;
     /**
@@ -174,11 +174,11 @@ export type DeleteGraphData = {
 
 export type DeleteGraphErrors = {
     /**
-     * Missing/invalid bearer token
+     * Unauthorized
      */
     401: unknown;
     /**
-     * Token lacks required scope
+     * Forbidden
      */
     403: unknown;
 };
@@ -203,11 +203,11 @@ export type GetGraphData = {
 
 export type GetGraphErrors = {
     /**
-     * Missing/invalid bearer token
+     * Unauthorized
      */
     401: unknown;
     /**
-     * Token lacks required scope
+     * Forbidden
      */
     403: unknown;
     /**
@@ -243,11 +243,11 @@ export type UpdateGraphErrors = {
      */
     400: unknown;
     /**
-     * Missing/invalid bearer token
+     * Unauthorized
      */
     401: unknown;
     /**
-     * Token lacks required scope
+     * Forbidden
      */
     403: unknown;
     /**
@@ -280,11 +280,11 @@ export type ListSubgraphsData = {
 
 export type ListSubgraphsErrors = {
     /**
-     * Missing/invalid bearer token
+     * Unauthorized
      */
     401: unknown;
     /**
-     * Token lacks required scope
+     * Forbidden
      */
     403: unknown;
     /**
@@ -313,11 +313,11 @@ export type CreateSubgraphData = {
 
 export type CreateSubgraphErrors = {
     /**
-     * Missing/invalid bearer token
+     * Unauthorized
      */
     401: unknown;
     /**
-     * Token lacks required scope
+     * Forbidden
      */
     403: unknown;
     /**
@@ -351,11 +351,11 @@ export type DeleteSubgraphData = {
 
 export type DeleteSubgraphErrors = {
     /**
-     * Missing/invalid bearer token
+     * Unauthorized
      */
     401: unknown;
     /**
-     * Token lacks required scope
+     * Forbidden
      */
     403: unknown;
 };
@@ -381,11 +381,11 @@ export type GetSubgraphData = {
 
 export type GetSubgraphErrors = {
     /**
-     * Missing/invalid bearer token
+     * Unauthorized
      */
     401: unknown;
     /**
-     * Token lacks required scope
+     * Forbidden
      */
     403: unknown;
     /**
@@ -422,11 +422,11 @@ export type UpdateSubgraphErrors = {
      */
     400: unknown;
     /**
-     * Missing/invalid bearer token
+     * Unauthorized
      */
     401: unknown;
     /**
-     * Token lacks required scope
+     * Forbidden
      */
     403: unknown;
     /**

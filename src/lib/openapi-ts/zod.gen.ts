@@ -19,7 +19,7 @@ export const zBadRequestRoot = z.unknown();
 export const zConflictRoot = z.unknown();
 
 /**
- * Token lacks required scope
+ * Forbidden
  */
 export const zForbiddenRoot = z.unknown();
 
@@ -29,7 +29,7 @@ export const zForbiddenRoot = z.unknown();
 export const zNotFoundRoot = z.unknown();
 
 /**
- * Missing/invalid bearer token
+ * Unauthorized
  */
 export const zUnauthorizedRoot = z.unknown();
 

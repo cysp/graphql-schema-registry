@@ -1,10 +1,12 @@
-import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
+import { mkdirSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 
 import type { IR } from "@hey-api/openapi-ts";
+
 import { collectResponseInfos } from "./responses.js";
 import type { ResponseInfo } from "./responses.js";
 import { fastifyPluginTypesTemplate } from "./templates.js";
+import { collectRequiredZodSymbols } from "./zod-symbols.js";
 
 type OperationInfo = {
   hasBody: boolean;
@@ -24,7 +26,6 @@ type PluginInstance = {
         path: string;
       };
     };
-    spec: unknown;
   };
   forEach: (
     ...args: [
@@ -57,60 +58,7 @@ function toFastifyPath(path: string): string {
   return path.replaceAll(/\{([^}]+)\}/g, ":$1");
 }
 
-function isRecord(value: unknown): value is Record<string, unknown> {
-  return Boolean(value) && typeof value === "object";
-}
-
-function getResponseSchemaRefFromSpecResponse(specResponse: unknown): string | undefined {
-  if (!isRecord(specResponse)) {
-    return undefined;
-  }
-  if (typeof specResponse["$ref"] === "string") {
-    return specResponse["$ref"];
-  }
-  if (!isRecord(specResponse["content"])) {
-    return undefined;
-  }
-  for (const mediaType of Object.values(specResponse["content"])) {
-    if (!isRecord(mediaType) || !isRecord(mediaType["schema"])) {
-      continue;
-    }
-    if (typeof mediaType["schema"]["$ref"] === "string") {
-      return mediaType["schema"]["$ref"];
-    }
-  }
-  return undefined;
-}
-
-function getResponseSchemaRefsByStatus(
-  spec: unknown,
-  operation: IR.OperationObject,
-): Record<string, string | undefined> {
-  if (!isRecord(spec) || !isRecord(spec["paths"])) {
-    return {};
-  }
-  const pathItem = spec["paths"][operation.path];
-  if (!isRecord(pathItem)) {
-    return {};
-  }
-
-  const operationInSpec = pathItem[operation.method];
-  if (!isRecord(operationInSpec) || !isRecord(operationInSpec["responses"])) {
-    return {};
-  }
-
-  const responseSchemaRefsByStatus: Record<string, string | undefined> = {};
-  for (const [status, response] of Object.entries(operationInSpec["responses"])) {
-    responseSchemaRefsByStatus[status] = getResponseSchemaRefFromSpecResponse(response);
-  }
-
-  return responseSchemaRefsByStatus;
-}
-
-function collectOperationInfo(
-  operation: IR.OperationObject,
-  responseSchemaRefsByStatus: Readonly<Record<string, string | undefined>>,
-): OperationInfo {
+function collectOperationInfo(operation: IR.OperationObject): OperationInfo {
   return {
     hasBody: Boolean(operation.body),
     hasHeaders: Boolean(
@@ -123,87 +71,80 @@ function collectOperationInfo(
       operation.parameters?.query && Object.keys(operation.parameters.query).length > 0,
     ),
     id: operation.id,
-    method: operation.method.toLowerCase(),
+    method: operation.method.toUpperCase(),
     path: toFastifyPath(operation.path),
-    responses: collectResponseInfos(operation, responseSchemaRefsByStatus),
+    responses: collectResponseInfos(operation),
   };
 }
 
-function generateImports(operations: readonly OperationInfo[]): string {
-  const zodSymbols = new Set<string>();
-
-  for (const operation of operations) {
-    const name = toPascalCase(operation.id);
-    const dataSymbol = `z${name}Data`;
-
-    if (operation.hasBody || operation.hasHeaders || operation.hasPath || operation.hasQuery) {
-      zodSymbols.add(dataSymbol);
-    }
-
-    for (const response of operation.responses) {
-      zodSymbols.add(response.schemaSymbol);
-    }
-  }
-
-  const sortedSymbols = Array.from(zodSymbols).toSorted();
-  if (sortedSymbols.length === 0) {
-    return [
-      'import fastifyPlugin from "fastify-plugin";',
-      'import type { FastifyPluginAsync, RouteShorthandOptionsWithHandler } from "fastify";',
-      'import type { RouteHandlers } from "./fastify.gen.ts";',
-    ].join("\n");
-  }
-
-  return [
+function generateImports(requiredZodSymbols: readonly string[]): string {
+  const baseImports = [
     'import fastifyPlugin from "fastify-plugin";',
     'import type { FastifyPluginAsync, RouteShorthandOptionsWithHandler } from "fastify";',
     'import type { RouteHandlers } from "./fastify.gen.ts";',
-    `import { ${sortedSymbols.join(", ")} } from "./zod.gen.ts";`,
+  ];
+
+  if (requiredZodSymbols.length === 0) {
+    return baseImports.join("\n");
+  }
+
+  return [
+    ...baseImports,
+    `import { ${requiredZodSymbols.join(", ")} } from "./zod.gen.ts";`,
   ].join("\n");
 }
 
-function generateRoutePaths(operations: readonly OperationInfo[]): string {
-  const entries = operations.map((operation) => `  "${operation.id}": "${operation.path}",`);
-  return ["export const routePaths = {", ...entries, "} as const;"].join("\n");
-}
-
-function generateOperationSchema(operation: OperationInfo): string {
+function generateSchemaProperties(operation: OperationInfo, indent: string): string[] {
   const lines: string[] = [];
   const operationName = toPascalCase(operation.id);
   const dataSymbol = `z${operationName}Data`;
 
   if (operation.hasPath) {
-    lines.push(`    params: ${dataSymbol}.shape.path,`);
+    lines.push(`${indent}params: ${dataSymbol}.shape.path,`);
   }
 
   if (operation.hasQuery) {
-    lines.push(`    querystring: ${dataSymbol}.shape.query,`);
+    lines.push(`${indent}querystring: ${dataSymbol}.shape.query,`);
   }
 
   if (operation.hasHeaders) {
-    lines.push(`    headers: ${dataSymbol}.shape.headers,`);
+    lines.push(`${indent}headers: ${dataSymbol}.shape.headers,`);
   }
 
   if (operation.hasBody) {
-    lines.push(`    body: ${dataSymbol}.shape.body,`);
+    lines.push(`${indent}body: ${dataSymbol}.shape.body,`);
   }
 
   if (operation.responses.length > 0) {
     const responses = operation.responses
       .map((response) => `"${response.status}": ${response.schemaSymbol}`)
       .join(", ");
-    lines.push(`    response: { ${responses} },`);
+    lines.push(`${indent}response: { ${responses} },`);
   } else {
-    lines.push("    response: {},");
+    lines.push(`${indent}response: {},`);
   }
 
-  return [`  "${operation.id}": {`, ...lines, "  },"].join("\n");
+  return lines;
 }
 
-function generateRouteSchemas(operations: readonly OperationInfo[]): string {
+function generateRouteDefinition(operation: OperationInfo): string {
+  const schemaProperties = generateSchemaProperties(operation, "      ");
+
   return [
-    "export const routeSchemas = {",
-    ...operations.map((operation) => generateOperationSchema(operation)),
+    `  "${operation.id}": {`,
+    `    method: "${operation.method}",`,
+    `    url: ${JSON.stringify(operation.path)},`,
+    "    schema: {",
+    ...schemaProperties,
+    "    },",
+    "  },",
+  ].join("\n");
+}
+
+function generateRouteDefinitions(operations: readonly OperationInfo[]): string {
+  return [
+    "export const routeDefinitions = {",
+    ...operations.map((operation) => generateRouteDefinition(operation)),
     "} as const;",
   ].join("\n");
 }
@@ -211,7 +152,7 @@ function generateRouteSchemas(operations: readonly OperationInfo[]): string {
 function generateFastifyPlugin(operations: readonly OperationInfo[]): string {
   const statements = operations.map(
     (operation) =>
-      `  server.${operation.method}(routePaths["${operation.id}"], { ...normalizeRouteEntry(routes["${operation.id}"]), schema: routeSchemas["${operation.id}"] });`,
+      `  server.route({ ...routeDefinitions["${operation.id}"], ...normalizeRouteEntry(routes["${operation.id}"]) });`,
   );
 
   return [
@@ -233,38 +174,23 @@ function generateFastifyPlugin(operations: readonly OperationInfo[]): string {
   ].join("\n");
 }
 
-function generateFile(operations: readonly OperationInfo[]): string {
+function generateFile(
+  operations: readonly OperationInfo[],
+  requiredZodSymbols: readonly string[],
+): string {
   return [
     "// This file is auto-generated by the fastify-routes OpenAPI-TS plugin.",
     "// Do not edit manually.",
     "",
-    generateImports(operations),
+    generateImports(requiredZodSymbols),
     "",
-    generateRoutePaths(operations),
-    "",
-    generateRouteSchemas(operations),
+    generateRouteDefinitions(operations),
     "",
     fastifyPluginTypesTemplate,
     "",
     generateFastifyPlugin(operations),
     "",
   ].join("\n");
-}
-
-function ensureIndexExport(outputPath: string): void {
-  const indexPath = join(outputPath, "index.ts");
-  if (!existsSync(indexPath)) {
-    return;
-  }
-
-  const exportLine = "export * from './fastify-routes.gen.js';";
-  const indexContents = readFileSync(indexPath, "utf8");
-  if (indexContents.includes(exportLine)) {
-    return;
-  }
-
-  const suffix = indexContents.endsWith("\n") ? "" : "\n";
-  writeFileSync(indexPath, `${indexContents}${suffix}${exportLine}\n`, "utf8");
 }
 
 export const fastifyRoutesPlugin: OpenApiTsPlugin = {
@@ -279,20 +205,17 @@ export const fastifyRoutesPlugin: OpenApiTsPlugin = {
     plugin.forEach(
       "operation",
       ({ operation }) => {
-        const responseSchemaRefsByStatus = getResponseSchemaRefsByStatus(
-          plugin.context.spec,
-          operation,
-        );
-        operations.push(collectOperationInfo(operation, responseSchemaRefsByStatus));
+        operations.push(collectOperationInfo(operation));
       },
       { order: "declarations" },
     );
 
     mkdirSync(plugin.context.config.output.path, { recursive: true });
 
+    const requiredZodSymbols = collectRequiredZodSymbols(operations);
+
     const outputPath = join(plugin.context.config.output.path, "fastify-routes.gen.ts");
-    writeFileSync(outputPath, generateFile(operations), "utf8");
-    ensureIndexExport(plugin.context.config.output.path);
+    writeFileSync(outputPath, generateFile(operations, requiredZodSymbols), "utf8");
   },
   name: "fastify-routes",
 };
