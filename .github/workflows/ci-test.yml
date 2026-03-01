@@ -63,9 +63,6 @@ jobs:
       - id: neon_compute_branch_expires_at
         run: echo "expires_at=$(date -u -d '+15 minutes' +'%Y-%m-%dT%H:%M:%SZ')" >>"${GITHUB_OUTPUT}"
 
-      - id: neon_compute_test_schema
-        run: echo "schema_name=itest_${GITHUB_RUN_ID}_${GITHUB_RUN_ATTEMPT}" >>"${GITHUB_OUTPUT}"
-
       - id: neon_create_branch
         uses: neondatabase/create-branch-action@v6
         with:
@@ -80,18 +77,15 @@ jobs:
       - uses: ./.github/actions/pgschema-apply
         with:
           db-host: ${{ steps.neon_create_branch.outputs.db_host }}
-          db-port: "5432"
           db-name: ${{ env.NEON_DATABASE_NAME }}
           db-user: ${{ env.NEON_ROLE_NAME }}
           db-password: ${{ steps.neon_create_branch.outputs.password }}
           schema-file: db/schema.sql
-          schema-name: ${{ steps.neon_compute_test_schema.outputs.schema_name }}
 
       - shell: bash
         run: pnpm run test -- "src/**/*.integration.test.ts"
         env:
           INTEGRATION_TEST_DATABASE_URL: ${{ steps.neon_create_branch.outputs.db_url }}
-          INTEGRATION_TEST_SCHEMA: ${{ steps.neon_compute_test_schema.outputs.schema_name }}
 
       - if: ${{ always() && steps.neon_create_branch.outputs.branch_id != '' }}
         uses: neondatabase/delete-branch-action@v3
