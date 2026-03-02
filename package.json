@@ -25,7 +25,7 @@
   "devDependencies": {
     "@fastify/swagger": "9.7.0",
     "@tsconfig/node24": "24.0.4",
-    "@types/node": "24.10.15",
+    "@types/node": "24.11.0",
     "drizzle-kit": "1.0.0-beta.15-9485290",
     "oxfmt": "0.35.0",
     "oxlint": "1.50.0",
