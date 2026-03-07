@@ -15,8 +15,8 @@ importers:
         specifier: 6.0.4
         version: 6.0.4
       drizzle-orm:
-        specifier: 1.0.0-beta.15-9485290
-        version: 1.0.0-beta.15-9485290(postgres@3.4.8)(zod@4.3.6)
+        specifier: 1.0.0-beta.16-2ffd1a5
+        version: 1.0.0-beta.16-2ffd1a5(postgres@3.4.8)(zod@4.3.6)
       fastify:
         specifier: 5.8.1
         version: 5.8.1
@@ -592,8 +592,8 @@ packages:
     resolution: {integrity: sha512-26jsg8MuAP0+WORrMv7OvOrtmy+jirUbif478EPrWch3Sp64g0ys2/emKxK1/C2iFnBsNX40EX3MQotgp7ODKg==}
     hasBin: true
 
-  drizzle-orm@1.0.0-beta.15-9485290:
-    resolution: {integrity: sha512-umMDEE19q0RZF7b1dL8GqJthA8ueoCZNJGcKFUQGCUWZqE5fVn2fP298o7hxAzUnp+xhiNY2INsuNO9sqKgxMw==}
+  drizzle-orm@1.0.0-beta.16-2ffd1a5:
+    resolution: {integrity: sha512-EycbUylPe2VtJM9aUrv7sfa38164YZIShHH2CA9LlNzN+8QCjmyRs82+nw2XiUIFUYI1cuLJlv2Xg+Wuc1p0BA==}
     peerDependencies:
       '@aws-sdk/client-rds-data': '>=3'
       '@cloudflare/workers-types': '>=4'
@@ -1311,7 +1311,7 @@ snapshots:
       esbuild: 0.25.12
       jiti: 2.6.1
 
-  drizzle-orm@1.0.0-beta.15-9485290(postgres@3.4.8)(zod@4.3.6):
+  drizzle-orm@1.0.0-beta.16-2ffd1a5(postgres@3.4.8)(zod@4.3.6):
     optionalDependencies:
       postgres: 3.4.8
       zod: 4.3.6
