@@ -7,7 +7,6 @@ import { serializerCompiler, validatorCompiler } from "fastify-type-provider-zod
 import { formatUser } from "./domain/authorization/user.ts";
 import type { PostgresJsDatabase } from "./drizzle/types.ts";
 import { healthcheckPlugin } from "./lib/fastify/healthcheck/plugin.ts";
-import { registryPlugin } from "./lib/fastify/registry/plugin.ts";
 
 type CreateFastifyServerOptions = {
   database?: Pick<PostgresJsDatabase, "execute"> | undefined;
@@ -75,7 +74,6 @@ export function createFastifyServer({
       },
     },
   });
-  server.register(registryPlugin);
 
   return server;
 }
