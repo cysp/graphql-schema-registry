@@ -114,7 +114,7 @@ await test("createFastifyServer authorization hook", async (t) => {
     assert.strictEqual(response.statusCode, 401);
     assert.deepStrictEqual(getJsonPayload(response), {
       error: "Unauthorized",
-      message: "Invalid bearer token.",
+      message: "Unauthorized",
       statusCode: 401,
     });
   });
@@ -154,7 +154,7 @@ await test("createFastifyServer authorization hook", async (t) => {
     assert.strictEqual(response.statusCode, 401);
     assert.deepStrictEqual(getJsonPayload(response), {
       error: "Unauthorized",
-      message: "Invalid bearer token.",
+      message: "Unauthorized",
       statusCode: 401,
     });
   });
