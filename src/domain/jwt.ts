@@ -1,10 +1,10 @@
 import { readFile } from "node:fs/promises";
 
-export type JwtVerification = {
+export type JwtVerification = Readonly<{
   audience: string;
   issuer: string;
   verificationPublicKey: Buffer;
-};
+}>;
 
 export async function loadJwtVerificationPublicKeyFromFile(publicKeyPath: string): Promise<Buffer> {
   const publicKey = await readFile(publicKeyPath);

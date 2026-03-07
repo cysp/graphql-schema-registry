@@ -1,7 +1,8 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 
-import { createJwtFixture } from "./domain/jwt.fixture.ts";
+import { authorizationDetailsType } from "./domain/authorization/details.ts";
+import { createAuthJwtSigner } from "./domain/jwt-signer.ts";
 import { createFastifyServer } from "./server.ts";
 
 function getJsonPayload(response: { body: string }): unknown {
@@ -94,7 +95,7 @@ const graphRouteRequests = [
 await test("server: graph routes", async (t) => {
   let server: ReturnType<typeof createFastifyServer>;
 
-  const { createToken, jwtVerification } = createJwtFixture();
+  const { createToken, jwtVerification } = createAuthJwtSigner();
 
   t.beforeEach(async () => {
     server = createFastifyServer({
@@ -108,14 +109,34 @@ await test("server: graph routes", async (t) => {
   });
 
   async function assertGraphRouteBehavior({ name, request }: GraphRouteRequest): Promise<void> {
-    await t.test(`${name} requires auth and reaches the handler`, async () => {
+    await t.test(`${name} returns 401 without auth`, async () => {
       const unauthorizedResponse = await server.inject(request);
 
       assert.strictEqual(unauthorizedResponse.statusCode, 401);
       assert.deepStrictEqual(getJsonPayload(unauthorizedResponse), {});
+    });
 
-      const authorizedResponse = await server.inject(
+    await t.test(`${name} returns 403 for authenticated non-admin users`, async () => {
+      const authenticatedNonAdminResponse = await server.inject(
         createAuthorizedRequest(request, createToken()),
+      );
+
+      assert.strictEqual(authenticatedNonAdminResponse.statusCode, 403);
+    });
+
+    await t.test(`${name} reaches the handler for admin users`, async () => {
+      const authorizedResponse = await server.inject(
+        createAuthorizedRequest(
+          request,
+          createToken({
+            authorization_details: [
+              {
+                scope: "admin",
+                type: authorizationDetailsType,
+              },
+            ],
+          }),
+        ),
       );
 
       assert.strictEqual(authorizedResponse.statusCode, 501);
