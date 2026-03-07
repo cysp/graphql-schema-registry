@@ -1,0 +1,10 @@
+openapi: 3.1.0
+
+info:
+  title: GraphQL Schema Registry
+  version: 0.1.0
+
+servers:
+  - url: http://localhost:3000
+
+paths: {}
