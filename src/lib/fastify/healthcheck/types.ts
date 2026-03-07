@@ -1,6 +1,6 @@
-import type { z } from "zod";
+import type { FromSchema } from "json-schema-to-ts";
 
-import type { responseSchema, checkStatusSchema } from "./schemas.ts";
+import type { checkStatusJsonSchema, responseJsonSchema } from "./schemas.ts";
 
 export type Probe =
   | (() => Promise<void>)
@@ -8,6 +8,6 @@ export type Probe =
   | (() => Promise<CheckStatus>)
   | (() => CheckStatus);
 
-export type HealthcheckResponse = z.infer<typeof responseSchema>;
+export type HealthcheckResponse = FromSchema<typeof responseJsonSchema>;
 
-export type CheckStatus = z.infer<typeof checkStatusSchema>;
+export type CheckStatus = FromSchema<typeof checkStatusJsonSchema>;

@@ -1,8 +1,8 @@
+import type { FastifyPluginCallback } from "fastify";
 import fastifyPlugin from "fastify-plugin";
-import type { FastifyPluginCallbackZod } from "fastify-type-provider-zod";
 
 import { executeProbes } from "./probes.ts";
-import { responseSchema } from "./schemas.ts";
+import { responseJsonSchema } from "./schemas.ts";
 import { determineOverallStatus } from "./status.ts";
 import type { Probe } from "./types.ts";
 
@@ -10,7 +10,7 @@ export type HealthcheckPluginOptions = {
   probes: Readonly<Record<string, Probe>>;
 };
 
-const healthcheckPluginImpl: FastifyPluginCallbackZod<HealthcheckPluginOptions> = (
+const healthcheckPluginImpl: FastifyPluginCallback<HealthcheckPluginOptions> = (
   server,
   options,
   done,
@@ -20,8 +20,8 @@ const healthcheckPluginImpl: FastifyPluginCallbackZod<HealthcheckPluginOptions> 
     {
       schema: {
         response: {
-          200: responseSchema,
-          503: responseSchema,
+          200: responseJsonSchema,
+          503: responseJsonSchema,
         },
       },
     },
