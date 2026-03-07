@@ -5,6 +5,14 @@ coverage:
         target: 80%
         threshold: 0%
         informational: false
+        paths:
+          - "src"
+      tools:
+        target: 80%
+        threshold: 0%
+        informational: true
+        paths:
+          - "tools"
     patch:
       default:
         informational: true

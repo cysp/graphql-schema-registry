@@ -7,7 +7,7 @@
     "pedantic": "error",
     "restriction": "error"
   },
-  "ignorePatterns": ["dist/**", "node_modules/**"],
+  "ignorePatterns": ["dist/**", "node_modules/**", "**/generated/**"],
   "rules": {
     "eslint/max-lines-per-function": "off",
     "eslint/no-undefined": "off",
