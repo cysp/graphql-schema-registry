@@ -2,7 +2,6 @@ import fastifyJwt, { type FastifyJWTOptions } from "@fastify/jwt";
 import fastifySensible from "@fastify/sensible";
 import { sql } from "drizzle-orm";
 import fastify, { type FastifyInstance } from "fastify";
-import { serializerCompiler, validatorCompiler } from "fastify-type-provider-zod";
 
 import { formatUser } from "./domain/authorization/user.ts";
 import type { PostgresJsDatabase } from "./drizzle/types.ts";
@@ -26,9 +25,6 @@ export function createFastifyServer({
   const server = fastify({
     logger: true,
   });
-
-  server.setValidatorCompiler(validatorCompiler);
-  server.setSerializerCompiler(serializerCompiler);
 
   server.register(fastifySensible);
 
