@@ -6,6 +6,7 @@ import fastify, { type FastifyInstance } from "fastify";
 import { formatUser } from "./domain/authorization/user.ts";
 import type { JwtVerification } from "./domain/jwt.ts";
 import type { PostgresJsDatabase } from "./drizzle/types.ts";
+import { requireAdminUser } from "./lib/fastify/authorization/guards.ts";
 import { healthcheckPlugin } from "./lib/fastify/healthcheck/plugin.ts";
 import { openApiRoutesPlugin } from "./lib/fastify/openapi/plugin.ts";
 
@@ -82,34 +83,74 @@ export function createFastifyServer({
 
     server.register(openApiRoutesPlugin, {
       operationHandlers: {
-        createGraph: () => {
+        createGraph: async (request, reply) => {
+          if (!requireAdminUser(request, reply)) {
+            return;
+          }
+
           throw server.httpErrors.notImplemented();
         },
-        createSubgraph: () => {
+        createSubgraph: async (request, reply) => {
+          if (!requireAdminUser(request, reply)) {
+            return;
+          }
+
           throw server.httpErrors.notImplemented();
         },
-        deleteGraph: () => {
+        deleteGraph: async (request, reply) => {
+          if (!requireAdminUser(request, reply)) {
+            return;
+          }
+
           throw server.httpErrors.notImplemented();
         },
-        deleteSubgraph: () => {
+        deleteSubgraph: async (request, reply) => {
+          if (!requireAdminUser(request, reply)) {
+            return;
+          }
+
           throw server.httpErrors.notImplemented();
         },
-        getGraph: () => {
+        getGraph: async (request, reply) => {
+          if (!requireAdminUser(request, reply)) {
+            return;
+          }
+
           throw server.httpErrors.notImplemented();
         },
-        getSubgraph: () => {
+        getSubgraph: async (request, reply) => {
+          if (!requireAdminUser(request, reply)) {
+            return;
+          }
+
           throw server.httpErrors.notImplemented();
         },
-        listGraphs: () => {
+        listGraphs: async (request, reply) => {
+          if (!requireAdminUser(request, reply)) {
+            return;
+          }
+
           throw server.httpErrors.notImplemented();
         },
-        listSubgraphs: () => {
+        listSubgraphs: async (request, reply) => {
+          if (!requireAdminUser(request, reply)) {
+            return;
+          }
+
           throw server.httpErrors.notImplemented();
         },
-        updateGraph: () => {
+        updateGraph: async (request, reply) => {
+          if (!requireAdminUser(request, reply)) {
+            return;
+          }
+
           throw server.httpErrors.notImplemented();
         },
-        updateSubgraph: () => {
+        updateSubgraph: async (request, reply) => {
+          if (!requireAdminUser(request, reply)) {
+            return;
+          }
+
           throw server.httpErrors.notImplemented();
         },
       },

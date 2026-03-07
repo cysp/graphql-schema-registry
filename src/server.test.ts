@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 
-import { createJwtFixture } from "./domain/jwt.fixture.ts";
+import { createAuthJwtSigner } from "./domain/jwt-signer.ts";
 import { createFastifyServer } from "./server.ts";
 
 function getJsonPayload(response: { body: string }): unknown {
@@ -17,7 +17,7 @@ const unauthorizedResponsePayload = {
 await test("server: /", async (t) => {
   let server: ReturnType<typeof createFastifyServer>;
 
-  const { createToken, jwtVerification } = createJwtFixture();
+  const { createToken, jwtVerification } = createAuthJwtSigner();
 
   t.beforeEach(async () => {
     server = createFastifyServer({

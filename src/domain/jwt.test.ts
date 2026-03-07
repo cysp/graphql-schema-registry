@@ -4,7 +4,7 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import test from "node:test";
 
-import { createJwtSigningKeyPair } from "./jwt.fixture.ts";
+import { createAuthJwtSigner } from "./jwt-signer.ts";
 import { loadJwtVerificationPublicKeyFromFile } from "./jwt.ts";
 
 await test("loadJwtVerificationPublicKeyFromFile", async (t) => {
@@ -12,7 +12,8 @@ await test("loadJwtVerificationPublicKeyFromFile", async (t) => {
     const tempDirectory = await mkdtemp(join(tmpdir(), "graphql-schema-registry-public-key-"));
     const publicKeyPath = join(tempDirectory, "public-key.pem");
 
-    const { verificationPublicKey } = createJwtSigningKeyPair();
+    const signer = createAuthJwtSigner();
+    const { verificationPublicKey } = signer.jwtVerification;
 
     await writeFile(publicKeyPath, verificationPublicKey);
 
