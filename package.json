@@ -27,6 +27,7 @@
     "@tsconfig/node24": "24.0.4",
     "@types/node": "24.11.0",
     "drizzle-kit": "1.0.0-beta.15-9485290",
+    "json-schema-to-ts": "3.1.1",
     "oxfmt": "0.36.0",
     "oxlint": "1.51.0",
     "oxlint-tsgolint": "0.16.0",

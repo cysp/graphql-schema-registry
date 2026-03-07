@@ -2,7 +2,6 @@ import assert from "node:assert/strict";
 import test from "node:test";
 
 import fastify, { type FastifyInstance } from "fastify";
-import { serializerCompiler, validatorCompiler } from "fastify-type-provider-zod";
 
 import { healthcheckPlugin } from "./plugin.ts";
 import type { HealthcheckResponse } from "./types.ts";
@@ -12,8 +11,6 @@ await test("healthcheck plugin", async (t) => {
 
   t.beforeEach(() => {
     server = fastify();
-    server.setValidatorCompiler(validatorCompiler);
-    server.setSerializerCompiler(serializerCompiler);
   });
 
   t.afterEach(async () => {
