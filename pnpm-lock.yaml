@@ -15,8 +15,8 @@ importers:
         specifier: 6.0.4
         version: 6.0.4
       drizzle-orm:
-        specifier: 1.0.0-beta.16-2ffd1a5
-        version: 1.0.0-beta.16-2ffd1a5(postgres@3.4.8)(zod@4.3.6)
+        specifier: 1.0.0-beta.17-160831b
+        version: 1.0.0-beta.17-160831b(postgres@3.4.8)(zod@4.3.6)
       fastify:
         specifier: 5.8.2
         version: 5.8.2
@@ -592,8 +592,8 @@ packages:
     resolution: {integrity: sha512-26jsg8MuAP0+WORrMv7OvOrtmy+jirUbif478EPrWch3Sp64g0ys2/emKxK1/C2iFnBsNX40EX3MQotgp7ODKg==}
     hasBin: true
 
-  drizzle-orm@1.0.0-beta.16-2ffd1a5:
-    resolution: {integrity: sha512-EycbUylPe2VtJM9aUrv7sfa38164YZIShHH2CA9LlNzN+8QCjmyRs82+nw2XiUIFUYI1cuLJlv2Xg+Wuc1p0BA==}
+  drizzle-orm@1.0.0-beta.17-160831b:
+    resolution: {integrity: sha512-caceqrsmhEr3RsYODqHvGrcSKRRBCojLVsX8sML/Xj7n3PePJPZIHCmoOmyHZegEkbtb6ijJojHz4siFxVl6OA==}
     peerDependencies:
       '@aws-sdk/client-rds-data': '>=3'
       '@cloudflare/workers-types': '>=4'
@@ -606,7 +606,6 @@ packages:
       '@op-engineering/op-sqlite': '>=2'
       '@opentelemetry/api': ^1.4.1
       '@planetscale/database': '>=1.13'
-      '@prisma/client': '*'
       '@sinclair/typebox': '>=0.34.8'
       '@sqlitecloud/drivers': '>=1.0.653'
       '@tidbcloud/serverless': '*'
@@ -629,7 +628,6 @@ packages:
       mysql2: '>=2'
       pg: '>=8'
       postgres: '>=3'
-      prisma: '*'
       sql.js: '>=1'
       sqlite3: '>=5'
       typebox: '>=1.0.0'
@@ -657,8 +655,6 @@ packages:
       '@opentelemetry/api':
         optional: true
       '@planetscale/database':
-        optional: true
-      '@prisma/client':
         optional: true
       '@sinclair/typebox':
         optional: true
@@ -699,8 +695,6 @@ packages:
       pg:
         optional: true
       postgres:
-        optional: true
-      prisma:
         optional: true
       sql.js:
         optional: true
@@ -1311,7 +1305,7 @@ snapshots:
       esbuild: 0.25.12
       jiti: 2.6.1
 
-  drizzle-orm@1.0.0-beta.16-2ffd1a5(postgres@3.4.8)(zod@4.3.6):
+  drizzle-orm@1.0.0-beta.17-160831b(postgres@3.4.8)(zod@4.3.6):
     optionalDependencies:
       postgres: 3.4.8
       zod: 4.3.6
