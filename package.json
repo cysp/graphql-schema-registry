@@ -28,7 +28,7 @@
     "drizzle-kit": "1.0.0-beta.16-2ffd1a5",
     "json-schema-to-ts": "3.1.1",
     "oxfmt": "0.37.0",
-    "oxlint": "1.52.0",
+    "oxlint": "1.54.0",
     "oxlint-tsgolint": "0.16.0",
     "typescript": "5.9.3"
   },
