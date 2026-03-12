@@ -4,13 +4,15 @@
   "private": true,
   "type": "module",
   "scripts": {
+    "check": "pnpm run format:check && pnpm run lint && pnpm run typecheck && pnpm run test",
     "dev": "node --env-file-if-exists=.env --watch src/index.ts",
     "format": "oxfmt .",
     "format:check": "oxfmt --check .",
-    "lint": "oxlint --type-aware --type-check .",
-    "lint:fix": "oxlint --type-aware --type-check --fix .",
+    "lint": "oxlint --type-aware --report-unused-disable-directives .",
+    "lint:fix": "oxlint --type-aware --fix .",
     "start": "node src/index.ts",
-    "test": "node --env-file-if-exists=.env --env-file-if-exists=.env.test --test --experimental-test-coverage --experimental-strip-types --enable-source-maps --test-reporter=spec --test-reporter-destination=stdout --test-reporter=lcov --test-reporter-destination=lcov.info"
+    "test": "node --env-file-if-exists=.env --env-file-if-exists=.env.test --test --experimental-test-coverage --enable-source-maps --test-reporter=spec --test-reporter-destination=stdout --test-reporter=lcov --test-reporter-destination=lcov.info",
+    "typecheck": "tsc --noEmit"
   },
   "dependencies": {
     "@fastify/jwt": "10.0.0",
@@ -24,6 +26,8 @@
   "devDependencies": {
     "@fastify/swagger": "9.7.0",
     "@tsconfig/node24": "24.0.4",
+    "@tsconfig/recommended": "1.0.13",
+    "@tsconfig/strictest": "2.0.8",
     "@types/node": "24.12.0",
     "drizzle-kit": "1.0.0-beta.17-160831b",
     "json-schema-to-ts": "3.1.1",
