@@ -10,6 +10,14 @@ dockerfile = "Dockerfile"
 HOST = "0.0.0.0"
 NODE_ENV = "production"
 PORT = "8080"
+AUTH_JWT_ISSUER = "https://graphql-schema-registry.chikachow.org"
+AUTH_JWT_AUDIENCE = "graphql-schema-registry"
+AUTH_JWT_PUBLIC_KEY_PATH = "/app/jwt-authorization.pub"
+
+# fly secrets set AUTH_JWT_PUBLIC_KEY_PEM="$(base64 < jwt-authorization.pub)"
+[[files]]
+guest_path = "/app/jwt-authorization.pub"
+secret_name = "AUTH_JWT_PUBLIC_KEY_PEM"
 
 [http_service]
 internal_port = 8080
