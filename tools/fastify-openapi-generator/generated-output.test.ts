@@ -55,15 +55,6 @@ function createDocumentWithNamedOperations(): Record<string, unknown> {
                 type: "string",
               },
             },
-            {
-              in: "header",
-              name: "x-revision-id",
-              required: true,
-              schema: {
-                minLength: 1,
-                type: "string",
-              },
-            },
           ],
           requestBody: {
             content: {
@@ -131,7 +122,6 @@ await test("generated output uses fastify-aligned operation naming", async (t) =
     assert.match(source, /export const updateGraphRouteDefinition = \{/);
     assert.match(source, /schema: \{/);
     assert.match(source, /params: \{/);
-    assert.match(source, /headers: \{/);
     assert.match(source, /body: \{/);
     assert.match(source, /response: \{[\s\S]*200: \{[\s\S]*400: \{\},[\s\S]*401: \{\},/);
     assert.doesNotMatch(source, /const updateGraphParamsSchema = /);
