@@ -1,0 +1,12 @@
+type: object
+additionalProperties: false
+required:
+  - path
+  - message
+properties:
+  path:
+    type: string
+  message:
+    type: string
+  rule:
+    type: string

@@ -1,10 +1,10 @@
 import assert from "node:assert/strict";
-import { generateKeyPairSync } from "node:crypto";
 import { mkdtemp, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import test from "node:test";
 
+import { createJwtSigningKeyPair } from "./jwt.fixture.ts";
 import { loadJwtVerificationPublicKeyFromFile } from "./jwt.ts";
 
 await test("loadJwtVerificationPublicKeyFromFile", async (t) => {
@@ -12,18 +12,13 @@ await test("loadJwtVerificationPublicKeyFromFile", async (t) => {
     const tempDirectory = await mkdtemp(join(tmpdir(), "graphql-schema-registry-public-key-"));
     const publicKeyPath = join(tempDirectory, "public-key.pem");
 
-    const { publicKey } = generateKeyPairSync("rsa", { modulusLength: 2048 });
-    const exportedPublicKey = publicKey.export({ format: "pem", type: "spki" });
-    const publicKeyPem =
-      typeof exportedPublicKey === "string"
-        ? Buffer.from(exportedPublicKey, "utf8")
-        : exportedPublicKey;
+    const { verificationPublicKey } = createJwtSigningKeyPair();
 
-    await writeFile(publicKeyPath, publicKeyPem);
+    await writeFile(publicKeyPath, verificationPublicKey);
 
     const loadedPublicKey = await loadJwtVerificationPublicKeyFromFile(publicKeyPath);
 
-    assert.deepStrictEqual(loadedPublicKey, publicKeyPem);
+    assert.deepStrictEqual(loadedPublicKey, verificationPublicKey);
   });
 
   await t.test("throws when the key file is empty", async () => {

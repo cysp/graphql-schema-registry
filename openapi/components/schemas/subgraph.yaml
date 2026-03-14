@@ -1,0 +1,31 @@
+type: object
+additionalProperties: false
+required:
+  - id
+  - graphId
+  - slug
+  - revisionId
+  - routingUrl
+  - createdAt
+  - updatedAt
+properties:
+  id:
+    type: string
+    format: uuid
+  graphId:
+    type: string
+    format: uuid
+  slug:
+    type: string
+  revisionId:
+    type: string
+    pattern: "^[1-9][0-9]*$"
+  routingUrl:
+    type: string
+    format: uri
+  createdAt:
+    type: string
+    format: date-time
+  updatedAt:
+    type: string
+    format: date-time

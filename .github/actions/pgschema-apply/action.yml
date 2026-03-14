@@ -1,0 +1,32 @@
+name: pgschema-apply
+description: Run pgschema to apply schema changes.
+
+inputs:
+  pgschema-package:
+    description: Go package path for pgschema.
+    required: false
+    default: github.com/pgplex/pgschema
+  pgschema-package-version:
+    description: pgschema package version.
+    required: false
+    default: latest
+  schema:
+    description: Target Postgres schema name.
+    required: false
+    default: public
+  file:
+    description: Path to the schema SQL file.
+    required: true
+
+runs:
+  using: composite
+  steps:
+    - uses: actions/setup-go@4b73464bb391d4059bd26b0524d20df3927bd417 # v6.3.0
+      with:
+        go-version: "1.26.x"
+    - shell: bash
+      run: |
+        go run "${{ inputs.pgschema-package }}@${{ inputs.pgschema-package-version }}" apply \
+          --schema "${{ inputs.schema }}" \
+          --file "${{ inputs.file }}" \
+          --auto-approve

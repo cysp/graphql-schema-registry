@@ -1,53 +1,33 @@
-// oxlint-disable eslint/require-await,typescript-eslint/require-await
+import type { FastifyReply, FastifyRequest } from "fastify";
 
-import type { FastifyReply, FastifyRequest, RouteGenericInterface } from "fastify";
+import type { RequestUser } from "../../../domain/authorization/user.ts";
 
-import type { AuthorizationGrant } from "../../../domain/authorization/user.ts";
+export function requireAuthenticatedUser(
+  request: FastifyRequest,
+  reply: FastifyReply,
+): RequestUser | undefined {
+  const user = request.user;
+  if (!user) {
+    reply.unauthorized();
+    return undefined;
+  }
 
-export type AdminRouteParams = unknown;
-
-export type GraphRouteParams = {
-  graphId: string;
-};
-
-export type SubgraphRouteParams = {
-  graphId: string;
-  subgraphId: string;
-};
-
-type GuardMatcher<TRequest extends FastifyRequest> = (
-  grant: AuthorizationGrant,
-  request: TRequest,
-) => boolean;
-
-function createGuard<RouteGeneric extends RouteGenericInterface>(
-  matcher: GuardMatcher<FastifyRequest<RouteGeneric>>,
-): (request: FastifyRequest<RouteGeneric>, reply: FastifyReply) => Promise<void> {
-  return async (request, reply) => {
-    const user = request.user;
-    if (!user) {
-      return reply.unauthorized();
-    }
-
-    if (!user.grants.some((grant) => matcher(grant, request))) {
-      return reply.forbidden();
-    }
-  };
+  return user;
 }
 
-export const requireAdmin = createGuard<{ Params: AdminRouteParams }>(
-  (grant) => grant.scope === "admin",
-);
+export function requireAdminUser(
+  request: FastifyRequest,
+  reply: FastifyReply,
+): RequestUser | undefined {
+  const user = requireAuthenticatedUser(request, reply);
+  if (!user) {
+    return undefined;
+  }
 
-export const requireGraphRead = createGuard<{
-  Params: GraphRouteParams;
-}>((grant, request) => grant.scope === "graph:read" && grant.graphId === request.params.graphId);
+  if (!user.grants.some((grant) => grant.scope === "admin")) {
+    reply.forbidden();
+    return undefined;
+  }
 
-export const requireSubgraphWrite = createGuard<{
-  Params: SubgraphRouteParams;
-}>(
-  (grant, request) =>
-    grant.scope === "subgraph:write" &&
-    grant.graphId === request.params.graphId &&
-    grant.subgraphId === request.params.subgraphId,
-);
+  return user;
+}

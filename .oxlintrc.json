@@ -7,15 +7,23 @@
     "pedantic": "error",
     "restriction": "error"
   },
-  "ignorePatterns": ["dist/**", "node_modules/**"],
+  "ignorePatterns": [
+    "dist/**",
+    "node_modules/**",
+    "src/lib/fastify/registry/generated/**",
+    "src/lib/fastify/openapi/generated/**"
+  ],
   "rules": {
     "eslint/max-lines-per-function": "off",
     "eslint/no-undefined": "off",
     "eslint/no-shadow": "off",
+    "eslint/require-await": "off",
+    "import/max-dependencies": "off",
     "import/no-duplicates": "error",
     "import/no-relative-parent-imports": "off",
     "no-async-await": "off",
     "no-optional-chaining": "off",
+    "no-rest-spread-properties": "off",
     "promise/prefer-await-to-callbacks": "error",
     "promise/prefer-await-to-then": "error",
     "typescript/consistent-type-imports": "error",
@@ -29,6 +37,7 @@
       }
     ],
     "typescript/no-unnecessary-condition": "error",
+    "typescript/require-await": "off",
     "typescript/strict-boolean-expressions": "off"
   }
 }

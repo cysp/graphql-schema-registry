@@ -1,0 +1,11 @@
+type: object
+additionalProperties: false
+required:
+  - slug
+  - routingUrl
+properties:
+  slug:
+    type: string
+  routingUrl:
+    type: string
+    format: uri

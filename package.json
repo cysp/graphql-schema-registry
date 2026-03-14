@@ -4,33 +4,42 @@
   "private": true,
   "type": "module",
   "scripts": {
+    "check": "pnpm run format:check && pnpm run lint && pnpm run typecheck && pnpm run test",
     "dev": "node --env-file-if-exists=.env --watch src/index.ts",
+    "fastify:openapi:generate": "node tools/generate-fastify-openapi.ts && pnpm exec oxfmt .",
     "format": "oxfmt .",
     "format:check": "oxfmt --check .",
-    "lint": "oxlint --type-aware --type-check .",
-    "lint:fix": "oxlint --type-aware --type-check --fix .",
+    "lint": "oxlint --type-aware --report-unused-disable-directives .",
+    "lint:fix": "oxlint --type-aware --fix .",
     "start": "node src/index.ts",
-    "test": "node --env-file-if-exists=.env --env-file-if-exists=.env.test --test --experimental-test-coverage --experimental-strip-types --enable-source-maps --test-reporter=spec --test-reporter-destination=stdout --test-reporter=lcov --test-reporter-destination=lcov.info"
+    "test": "node --env-file-if-exists=.env --env-file-if-exists=.env.test --test --experimental-test-coverage --test-coverage-exclude='**/*.fixture.ts' --test-coverage-exclude='**/*.test.ts' --enable-source-maps --test-reporter=spec --test-reporter-destination=stdout --test-reporter=lcov --test-reporter-destination=lcov.info",
+    "typecheck": "tsc --noEmit"
   },
   "dependencies": {
     "@fastify/jwt": "10.0.0",
     "@fastify/sensible": "6.0.4",
-    "drizzle-orm": "1.0.0-beta.15-9485290",
-    "fastify": "5.7.4",
+    "drizzle-orm": "1.0.0-beta.17-160831b",
+    "fastify": "5.8.2",
     "fastify-plugin": "5.1.0",
-    "fastify-type-provider-zod": "6.1.0",
     "postgres": "3.4.8",
     "zod": "4.3.6"
   },
   "devDependencies": {
+    "@apidevtools/json-schema-ref-parser": "15.1.2",
     "@fastify/swagger": "9.7.0",
     "@tsconfig/node24": "24.0.4",
-    "@types/node": "24.10.15",
-    "drizzle-kit": "1.0.0-beta.15-9485290",
-    "oxfmt": "0.35.0",
-    "oxlint": "1.50.0",
-    "oxlint-tsgolint": "0.15.0",
-    "typescript": "5.9.3"
+    "@tsconfig/recommended": "1.0.13",
+    "@tsconfig/strictest": "2.0.8",
+    "@types/json-schema": "7.0.15",
+    "@types/node": "24.12.0",
+    "drizzle-kit": "1.0.0-beta.17-160831b",
+    "json-schema-to-ts": "3.1.1",
+    "oxfmt": "0.40.0",
+    "oxlint": "1.55.0",
+    "oxlint-tsgolint": "0.16.0",
+    "type-fest": "5.4.4",
+    "typescript": "5.9.3",
+    "yaml": "2.8.1"
   },
   "engines": {
     "node": "24"
