@@ -1,0 +1,27 @@
+type: object
+additionalProperties: false
+required:
+  - id
+  - slug
+  - revisionId
+  - federationVersion
+  - createdAt
+  - updatedAt
+properties:
+  id:
+    type: string
+    format: uuid
+  slug:
+    type: string
+    minLength: 1
+  revisionId:
+    type: string
+    pattern: "^[1-9][0-9]*$"
+  federationVersion:
+    type: string
+  createdAt:
+    type: string
+    format: date-time
+  updatedAt:
+    type: string
+    format: date-time

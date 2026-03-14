@@ -13,6 +13,53 @@ export function registerOpenApiRoutes(
   server: FastifyJsonSchemaToTsInstance,
   operationHandlers: OpenApiOperationHandlers,
 ): void {
-  void server;
-  void operationHandlers;
+  server.route({
+    ...operationRouteDefinitions["listGraphs"],
+    handler: operationHandlers["listGraphs"],
+  });
+
+  server.route({
+    ...operationRouteDefinitions["createGraph"],
+    handler: operationHandlers["createGraph"],
+  });
+
+  server.route({
+    ...operationRouteDefinitions["getGraph"],
+    handler: operationHandlers["getGraph"],
+  });
+
+  server.route({
+    ...operationRouteDefinitions["updateGraph"],
+    handler: operationHandlers["updateGraph"],
+  });
+
+  server.route({
+    ...operationRouteDefinitions["deleteGraph"],
+    handler: operationHandlers["deleteGraph"],
+  });
+
+  server.route({
+    ...operationRouteDefinitions["listSubgraphs"],
+    handler: operationHandlers["listSubgraphs"],
+  });
+
+  server.route({
+    ...operationRouteDefinitions["createSubgraph"],
+    handler: operationHandlers["createSubgraph"],
+  });
+
+  server.route({
+    ...operationRouteDefinitions["getSubgraph"],
+    handler: operationHandlers["getSubgraph"],
+  });
+
+  server.route({
+    ...operationRouteDefinitions["updateSubgraph"],
+    handler: operationHandlers["updateSubgraph"],
+  });
+
+  server.route({
+    ...operationRouteDefinitions["deleteSubgraph"],
+    handler: operationHandlers["deleteSubgraph"],
+  });
 }

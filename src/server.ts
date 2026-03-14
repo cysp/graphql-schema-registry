@@ -7,6 +7,7 @@ import { formatUser } from "./domain/authorization/user.ts";
 import type { JwtVerification } from "./domain/jwt.ts";
 import type { PostgresJsDatabase } from "./drizzle/types.ts";
 import { healthcheckPlugin } from "./lib/fastify/healthcheck/plugin.ts";
+import { openApiRoutesPlugin } from "./lib/fastify/openapi/plugin.ts";
 
 type CreateFastifyServerOptions = {
   database?: Pick<PostgresJsDatabase, "execute"> | undefined;
@@ -77,6 +78,41 @@ export function createFastifyServer({
       }
 
       return reply.code(200).send(request.user.grants);
+    });
+
+    server.register(openApiRoutesPlugin, {
+      operationHandlers: {
+        createGraph: () => {
+          throw server.httpErrors.notImplemented();
+        },
+        createSubgraph: () => {
+          throw server.httpErrors.notImplemented();
+        },
+        deleteGraph: () => {
+          throw server.httpErrors.notImplemented();
+        },
+        deleteSubgraph: () => {
+          throw server.httpErrors.notImplemented();
+        },
+        getGraph: () => {
+          throw server.httpErrors.notImplemented();
+        },
+        getSubgraph: () => {
+          throw server.httpErrors.notImplemented();
+        },
+        listGraphs: () => {
+          throw server.httpErrors.notImplemented();
+        },
+        listSubgraphs: () => {
+          throw server.httpErrors.notImplemented();
+        },
+        updateGraph: () => {
+          throw server.httpErrors.notImplemented();
+        },
+        updateSubgraph: () => {
+          throw server.httpErrors.notImplemented();
+        },
+      },
     });
   });
 
