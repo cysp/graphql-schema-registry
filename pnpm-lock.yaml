@@ -52,8 +52,8 @@ importers:
         specifier: 24.12.0
         version: 24.12.0
       drizzle-kit:
-        specifier: 1.0.0-beta.17-160831b
-        version: 1.0.0-beta.17-160831b
+        specifier: 1.0.0-beta.18-5ffac6d
+        version: 1.0.0-beta.18-5ffac6d
       json-schema-to-ts:
         specifier: 3.1.1
         version: 3.1.1
@@ -621,8 +621,8 @@ packages:
     resolution: {integrity: sha512-0je+qPKHEMohvfRTCEo3CrPG6cAzAYgmzKyxRiYSSDkS6eGJdyVJm7WaYA5ECaAD9wLB2T4EEeymA5aFVcYXCA==}
     engines: {node: '>=6'}
 
-  drizzle-kit@1.0.0-beta.17-160831b:
-    resolution: {integrity: sha512-D4QSaypZkrI3djw181FYCgPconzgjzaWcoRz2NJzfReB08PUQeCGoR+p8ArsfEopr0aNjjzbbTWq6rP0/MRAOw==}
+  drizzle-kit@1.0.0-beta.18-5ffac6d:
+    resolution: {integrity: sha512-RlJeChRiQvi+Bl0PzDEubiu2k40Daafl1XIL8bECLSfh/BNiKmi9nfYAvBb9454c4oQb8pgu0YBQKhUW6R8y5g==}
     hasBin: true
 
   drizzle-orm@1.0.0-beta.17-160831b:
@@ -794,6 +794,9 @@ packages:
     resolution: {integrity: sha512-buRG0fpBtRHSTCOASe6hD258tEubFoRLb4ZNA6NxMVHNw2gOcwHo9wyablzMzOA5z9xA9L1KNjk/Nt6MT9aYow==}
     engines: {node: '>= 0.6'}
 
+  get-tsconfig@4.13.6:
+    resolution: {integrity: sha512-shZT/QMiSHc/YBLxxOkMtgSid5HFoauqCE3/exfsEcwg1WkeqjG+V40yBbBrsD+jW2HDXcs28xOfcbm2jI8Ddw==}
+
   http-errors@2.0.1:
     resolution: {integrity: sha512-4FbRdAX+bSdmo4AUFuS0WNiPz8NgFt+r8ThgNWmlrjQjt1Q7ZR9+zTlce2859x4KSXrwIsaeTqDoKQmtP8pLmQ==}
     engines: {node: '>= 0.8'}
@@ -913,6 +916,9 @@ packages:
   require-from-string@2.0.2:
     resolution: {integrity: sha512-Xf0nWe6RseziFMu+Ap9biiUbmplq6S9/p+7w7YXP/JBHhrUDDUhwa+vANyubuqfZWTveU//DYVGsDG7RKL/vEw==}
     engines: {node: '>=0.10.0'}
+
+  resolve-pkg-maps@1.0.0:
+    resolution: {integrity: sha512-seS2Tj26TBVOC2NIc2rOe2y2ZO7efxITtLZcGSOnHHNOQ7CkiUBfw0Iw2ck6xkIhPwLhKNLS8BO+hEpngQlqzw==}
 
   ret@0.5.0:
     resolution: {integrity: sha512-I1XxrZSQ+oErkRR4jYbAyEEu2I0avBvvMM5JN+6EBprOGRCs63ENqZ3vjavq8fBw2+62G5LF5XelKwuJpcvcxw==}
@@ -1349,11 +1355,12 @@ snapshots:
 
   dequal@2.0.3: {}
 
-  drizzle-kit@1.0.0-beta.17-160831b:
+  drizzle-kit@1.0.0-beta.18-5ffac6d:
     dependencies:
       '@drizzle-team/brocli': 0.11.0
       '@js-temporal/polyfill': 0.5.1
       esbuild: 0.25.12
+      get-tsconfig: 4.13.6
       jiti: 2.6.1
 
   drizzle-orm@1.0.0-beta.17-160831b(postgres@3.4.8)(zod@4.3.6):
@@ -1465,6 +1472,10 @@ snapshots:
       safe-regex2: 5.1.0
 
   forwarded@0.2.0: {}
+
+  get-tsconfig@4.13.6:
+    dependencies:
+      resolve-pkg-maps: 1.0.0
 
   http-errors@2.0.1:
     dependencies:
@@ -1620,6 +1631,8 @@ snapshots:
   real-require@0.2.0: {}
 
   require-from-string@2.0.2: {}
+
+  resolve-pkg-maps@1.0.0: {}
 
   ret@0.5.0: {}
 
