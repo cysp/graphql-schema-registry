@@ -1,1 +1,8 @@
 description: Unauthorized
+headers:
+  WWW-Authenticate:
+    $ref: ../headers/www-authenticate.yaml
+content:
+  application/problem+json:
+    schema:
+      $ref: ../schemas/problem-details.yaml

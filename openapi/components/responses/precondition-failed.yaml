@@ -1,4 +1,4 @@
-description: Bad Request
+description: Precondition Failed
 content:
   application/problem+json:
     schema:
