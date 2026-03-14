@@ -5,17 +5,19 @@ info:
   version: 0.1.0
 
 servers:
-  - url: http://localhost:3000
+  - url: /
+
+security:
+  - bearerAuth: []
 
 paths:
   /v1/graphs:
     get:
       operationId: listGraphs
-      security:
-        - bearerAuth: []
+      summary: List graphs
       responses:
         "200":
-          description: The list of registered graphs
+          description: OK
           content:
             application/json:
               schema:
@@ -24,10 +26,13 @@ paths:
           $ref: "#/components/responses/Unauthorized"
         "403":
           $ref: "#/components/responses/Forbidden"
+        "500":
+          $ref: "#/components/responses/InternalServerError"
+        "501":
+          $ref: "#/components/responses/NotImplemented"
     post:
       operationId: createGraph
-      security:
-        - bearerAuth: []
+      summary: Create a graph
       requestBody:
         required: true
         content:
@@ -36,28 +41,43 @@ paths:
               $ref: "#/components/schemas/CreateGraphRequest"
       responses:
         "201":
-          description: The newly created graph
+          description: Created
+          headers:
+            ETag:
+              $ref: "#/components/headers/ETag"
+            Location:
+              $ref: "#/components/headers/Location"
           content:
             application/json:
               schema:
                 $ref: "#/components/schemas/Graph"
+        "400":
+          $ref: "#/components/responses/BadRequest"
         "401":
           $ref: "#/components/responses/Unauthorized"
         "403":
           $ref: "#/components/responses/Forbidden"
         "409":
           $ref: "#/components/responses/Conflict"
+        "422":
+          $ref: "#/components/responses/UnprocessableEntity"
+        "500":
+          $ref: "#/components/responses/InternalServerError"
+        "501":
+          $ref: "#/components/responses/NotImplemented"
 
   /v1/graphs/{graphSlug}:
     get:
       operationId: getGraph
-      security:
-        - bearerAuth: []
+      summary: Get a graph
       parameters:
         - $ref: "#/components/parameters/GraphSlug"
       responses:
         "200":
-          description: The requested graph
+          description: OK
+          headers:
+            ETag:
+              $ref: "#/components/headers/ETag"
           content:
             application/json:
               schema:
@@ -68,13 +88,17 @@ paths:
           $ref: "#/components/responses/Forbidden"
         "404":
           $ref: "#/components/responses/NotFound"
+        "500":
+          $ref: "#/components/responses/InternalServerError"
+        "501":
+          $ref: "#/components/responses/NotImplemented"
 
     put:
       operationId: updateGraph
-      security:
-        - bearerAuth: []
+      summary: Update a graph
       parameters:
         - $ref: "#/components/parameters/GraphSlug"
+        - $ref: "#/components/parameters/IfMatch"
       requestBody:
         required: true
         content:
@@ -83,46 +107,64 @@ paths:
               $ref: "#/components/schemas/UpdateGraphRequest"
       responses:
         "200":
-          description: The updated graph
+          description: Updated
+          headers:
+            ETag:
+              $ref: "#/components/headers/ETag"
           content:
             application/json:
               schema:
                 $ref: "#/components/schemas/Graph"
+        "400":
+          $ref: "#/components/responses/BadRequest"
         "401":
           $ref: "#/components/responses/Unauthorized"
         "403":
           $ref: "#/components/responses/Forbidden"
         "404":
           $ref: "#/components/responses/NotFound"
-        "409":
-          $ref: "#/components/responses/Conflict"
-        "400":
-          $ref: "#/components/responses/BadRequest"
+        "412":
+          $ref: "#/components/responses/PreconditionFailed"
+        "422":
+          $ref: "#/components/responses/UnprocessableEntity"
+        "500":
+          $ref: "#/components/responses/InternalServerError"
+        "501":
+          $ref: "#/components/responses/NotImplemented"
 
     delete:
       operationId: deleteGraph
-      security:
-        - bearerAuth: []
+      summary: Delete a graph
       parameters:
         - $ref: "#/components/parameters/GraphSlug"
+        - $ref: "#/components/parameters/IfMatch"
       responses:
         "204":
-          description: Success
+          description: No Content
+        "400":
+          $ref: "#/components/responses/BadRequest"
         "401":
           $ref: "#/components/responses/Unauthorized"
         "403":
           $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "412":
+          $ref: "#/components/responses/PreconditionFailed"
+        "500":
+          $ref: "#/components/responses/InternalServerError"
+        "501":
+          $ref: "#/components/responses/NotImplemented"
 
   /v1/graphs/{graphSlug}/subgraphs:
     get:
       operationId: listSubgraphs
-      security:
-        - bearerAuth: []
+      summary: List subgraphs
       parameters:
         - $ref: "#/components/parameters/GraphSlug"
       responses:
         "200":
-          description: The list of subgraphs registered for the graph
+          description: OK
           content:
             application/json:
               schema:
@@ -133,10 +175,13 @@ paths:
           $ref: "#/components/responses/Forbidden"
         "404":
           $ref: "#/components/responses/NotFound"
+        "500":
+          $ref: "#/components/responses/InternalServerError"
+        "501":
+          $ref: "#/components/responses/NotImplemented"
     post:
       operationId: createSubgraph
-      security:
-        - bearerAuth: []
+      summary: Create a subgraph
       parameters:
         - $ref: "#/components/parameters/GraphSlug"
       requestBody:
@@ -147,11 +192,18 @@ paths:
               $ref: "#/components/schemas/CreateSubgraphRequest"
       responses:
         "201":
-          description: The newly created subgraph
+          description: Created
+          headers:
+            ETag:
+              $ref: "#/components/headers/ETag"
+            Location:
+              $ref: "#/components/headers/Location"
           content:
             application/json:
               schema:
                 $ref: "#/components/schemas/Subgraph"
+        "400":
+          $ref: "#/components/responses/BadRequest"
         "401":
           $ref: "#/components/responses/Unauthorized"
         "403":
@@ -160,18 +212,26 @@ paths:
           $ref: "#/components/responses/NotFound"
         "409":
           $ref: "#/components/responses/Conflict"
+        "422":
+          $ref: "#/components/responses/UnprocessableEntity"
+        "500":
+          $ref: "#/components/responses/InternalServerError"
+        "501":
+          $ref: "#/components/responses/NotImplemented"
 
   /v1/graphs/{graphSlug}/subgraphs/{subgraphSlug}:
     get:
       operationId: getSubgraph
-      security:
-        - bearerAuth: []
+      summary: Get a subgraph
       parameters:
         - $ref: "#/components/parameters/GraphSlug"
         - $ref: "#/components/parameters/SubgraphSlug"
       responses:
         "200":
-          description: The requested subgraph
+          description: OK
+          headers:
+            ETag:
+              $ref: "#/components/headers/ETag"
           content:
             application/json:
               schema:
@@ -182,14 +242,18 @@ paths:
           $ref: "#/components/responses/Forbidden"
         "404":
           $ref: "#/components/responses/NotFound"
+        "500":
+          $ref: "#/components/responses/InternalServerError"
+        "501":
+          $ref: "#/components/responses/NotImplemented"
 
     put:
       operationId: updateSubgraph
-      security:
-        - bearerAuth: []
+      summary: Update a subgraph
       parameters:
         - $ref: "#/components/parameters/GraphSlug"
         - $ref: "#/components/parameters/SubgraphSlug"
+        - $ref: "#/components/parameters/IfMatch"
       requestBody:
         required: true
         content:
@@ -198,46 +262,74 @@ paths:
               $ref: "#/components/schemas/UpdateSubgraphRequest"
       responses:
         "200":
-          description: The updated subgraph
+          description: Updated
+          headers:
+            ETag:
+              $ref: "#/components/headers/ETag"
           content:
             application/json:
               schema:
                 $ref: "#/components/schemas/Subgraph"
+        "400":
+          $ref: "#/components/responses/BadRequest"
         "401":
           $ref: "#/components/responses/Unauthorized"
         "403":
           $ref: "#/components/responses/Forbidden"
         "404":
           $ref: "#/components/responses/NotFound"
-        "409":
-          $ref: "#/components/responses/Conflict"
-        "400":
-          $ref: "#/components/responses/BadRequest"
+        "412":
+          $ref: "#/components/responses/PreconditionFailed"
+        "422":
+          $ref: "#/components/responses/UnprocessableEntity"
+        "500":
+          $ref: "#/components/responses/InternalServerError"
+        "501":
+          $ref: "#/components/responses/NotImplemented"
 
     delete:
       operationId: deleteSubgraph
-      security:
-        - bearerAuth: []
+      summary: Delete a subgraph
       parameters:
         - $ref: "#/components/parameters/GraphSlug"
         - $ref: "#/components/parameters/SubgraphSlug"
+        - $ref: "#/components/parameters/IfMatch"
       responses:
         "204":
-          description: Success
+          description: No Content
+        "400":
+          $ref: "#/components/responses/BadRequest"
         "401":
           $ref: "#/components/responses/Unauthorized"
         "403":
           $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "412":
+          $ref: "#/components/responses/PreconditionFailed"
+        "500":
+          $ref: "#/components/responses/InternalServerError"
+        "501":
+          $ref: "#/components/responses/NotImplemented"
 
 components:
   securitySchemes:
     bearerAuth:
       $ref: "./components/security-schemes/bearer-auth.yaml"
+  headers:
+    ETag:
+      $ref: "./components/headers/etag.yaml"
+    Location:
+      $ref: "./components/headers/location.yaml"
+    WWWAuthenticate:
+      $ref: "./components/headers/www-authenticate.yaml"
   parameters:
     GraphSlug:
       $ref: "./components/parameters/graph-slug.yaml"
     SubgraphSlug:
       $ref: "./components/parameters/subgraph-slug.yaml"
+    IfMatch:
+      $ref: "./components/parameters/if-match.yaml"
   schemas:
     Graph:
       $ref: "./components/schemas/graph.yaml"
@@ -255,6 +347,8 @@ components:
       $ref: "./components/schemas/create-subgraph-request.yaml"
     UpdateSubgraphRequest:
       $ref: "./components/schemas/update-subgraph-request.yaml"
+    Problem:
+      $ref: "./components/schemas/problem-details.yaml"
   responses:
     BadRequest:
       $ref: "./components/responses/bad-request.yaml"
@@ -268,3 +362,9 @@ components:
       $ref: "./components/responses/conflict.yaml"
     UnprocessableEntity:
       $ref: "./components/responses/unprocessable-entity.yaml"
+    PreconditionFailed:
+      $ref: "./components/responses/precondition-failed.yaml"
+    InternalServerError:
+      $ref: "./components/responses/internal-server-error.yaml"
+    NotImplemented:
+      $ref: "./components/responses/not-implemented.yaml"

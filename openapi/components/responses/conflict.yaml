@@ -1,1 +1,5 @@
 description: Conflict
+content:
+  application/problem+json:
+    schema:
+      $ref: ../schemas/problem-details.yaml
