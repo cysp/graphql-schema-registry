@@ -9,12 +9,6 @@ function getJsonPayload(response: { body: string }): unknown {
   return JSON.parse(response.body) as unknown;
 }
 
-const notImplementedResponsePayload = {
-  error: "Not Implemented",
-  message: "Not Implemented",
-  statusCode: 501,
-};
-
 type GraphRouteRequest = {
   name: string;
   request: {
@@ -39,6 +33,14 @@ function createAuthorizedRequest(
             authorization: `Bearer ${token}`,
           },
   };
+}
+
+function assertProblemPayload(payload: unknown, status: number, title: string): void {
+  assert.deepStrictEqual(payload, {
+    type: "about:blank",
+    status,
+    title,
+  });
 }
 
 const graphRouteRequests = [
@@ -113,7 +115,8 @@ await test("server: graph routes", async (t) => {
       const unauthorizedResponse = await server.inject(request);
 
       assert.strictEqual(unauthorizedResponse.statusCode, 401);
-      assert.deepStrictEqual(getJsonPayload(unauthorizedResponse), {});
+      assert.strictEqual(unauthorizedResponse.headers["www-authenticate"], "Bearer");
+      assertProblemPayload(getJsonPayload(unauthorizedResponse), 401, "Unauthorized");
     });
 
     await t.test(`${name} returns 403 for authenticated non-admin users`, async () => {
@@ -122,6 +125,7 @@ await test("server: graph routes", async (t) => {
       );
 
       assert.strictEqual(authenticatedNonAdminResponse.statusCode, 403);
+      assertProblemPayload(getJsonPayload(authenticatedNonAdminResponse), 403, "Forbidden");
     });
 
     await t.test(`${name} reaches the handler for admin users`, async () => {
@@ -140,7 +144,7 @@ await test("server: graph routes", async (t) => {
       );
 
       assert.strictEqual(authorizedResponse.statusCode, 501);
-      assert.deepStrictEqual(getJsonPayload(authorizedResponse), notImplementedResponsePayload);
+      assertProblemPayload(getJsonPayload(authorizedResponse), 501, "Not Implemented");
     });
   }
 

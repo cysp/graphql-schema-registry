@@ -1,6 +1,7 @@
 import type { FastifyReply, FastifyRequest } from "fastify";
 
 import type { RequestUser } from "../../../domain/authorization/user.ts";
+import { bearerAuthenticateHeaders } from "./bearer-authenticate-headers.ts";
 
 export function requireAuthenticatedUser(
   request: FastifyRequest,
@@ -8,7 +9,10 @@ export function requireAuthenticatedUser(
 ): RequestUser | undefined {
   const user = request.user;
   if (!user) {
-    reply.unauthorized();
+    reply.problemDetails({
+      status: 401,
+      headers: bearerAuthenticateHeaders,
+    });
     return undefined;
   }
 
@@ -25,7 +29,7 @@ export function requireAdminUser(
   }
 
   if (!user.grants.some((grant) => grant.scope === "admin")) {
-    reply.forbidden();
+    reply.problemDetails({ status: 403 });
     return undefined;
   }
 
