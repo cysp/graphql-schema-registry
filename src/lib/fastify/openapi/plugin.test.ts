@@ -3,6 +3,8 @@ import test from "node:test";
 
 import fastify, { type FastifyInstance } from "fastify";
 
+import { problemDetailsErrorHandler } from "../problem-details/error-handler.ts";
+import { problemDetailsPlugin } from "../problem-details/plugin.ts";
 import type { OpenApiOperationHandlers } from "./plugin.ts";
 import { openApiRoutesPlugin } from "./plugin.ts";
 
@@ -52,6 +54,8 @@ await test("openApiRoutesPlugin", async (t) => {
 
   t.beforeEach(() => {
     server = fastify();
+    server.register(problemDetailsPlugin);
+    server.setErrorHandler(problemDetailsErrorHandler);
   });
 
   t.afterEach(async () => {
@@ -124,6 +128,16 @@ await test("openApiRoutesPlugin", async (t) => {
 
     assert.equal(missingBodyResponse.statusCode, 400);
     assert.equal(invalidBodyResponse.statusCode, 400);
+    assert.deepEqual(missingBodyResponse.json(), {
+      type: "about:blank",
+      status: 400,
+      title: "Bad Request",
+    });
+    assert.deepEqual(invalidBodyResponse.json(), {
+      type: "about:blank",
+      status: 400,
+      title: "Bad Request",
+    });
     assert.equal(validBodyResponse.statusCode, 201);
     assert.deepEqual(receivedBodies, [
       {
@@ -173,6 +187,11 @@ await test("openApiRoutesPlugin", async (t) => {
     });
 
     assert.equal(invalidBodyResponse.statusCode, 400);
+    assert.deepEqual(invalidBodyResponse.json(), {
+      type: "about:blank",
+      status: 400,
+      title: "Bad Request",
+    });
     assert.equal(validBodyResponse.statusCode, 201);
     assert.deepEqual(validBodyResponse.json(), subgraph);
   });

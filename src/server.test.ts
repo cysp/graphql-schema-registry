@@ -9,9 +9,9 @@ function getJsonPayload(response: { body: string }): unknown {
 }
 
 const unauthorizedResponsePayload = {
-  error: "Unauthorized",
-  message: "Unauthorized",
-  statusCode: 401,
+  type: "about:blank",
+  status: 401,
+  title: "Unauthorized",
 };
 
 await test("server: /", async (t) => {
@@ -37,6 +37,7 @@ await test("server: /", async (t) => {
     });
 
     assert.strictEqual(response.statusCode, 401);
+    assert.strictEqual(response.headers["www-authenticate"], "Bearer");
     assert.deepStrictEqual(getJsonPayload(response), unauthorizedResponsePayload);
   });
 
@@ -50,6 +51,7 @@ await test("server: /", async (t) => {
     });
 
     assert.strictEqual(response.statusCode, 401);
+    assert.strictEqual(response.headers["www-authenticate"], "Bearer");
     assert.deepStrictEqual(getJsonPayload(response), unauthorizedResponsePayload);
   });
 
@@ -95,5 +97,19 @@ await test("server: /", async (t) => {
 
     assert.strictEqual(response.statusCode, 401);
     assert.deepStrictEqual(getJsonPayload(response), unauthorizedResponsePayload);
+  });
+
+  await t.test("returns 404 problem details for unknown routes", async () => {
+    const response = await server.inject({
+      method: "GET",
+      url: "/unknown",
+    });
+
+    assert.strictEqual(response.statusCode, 404);
+    assert.deepStrictEqual(getJsonPayload(response), {
+      type: "about:blank",
+      status: 404,
+      title: "Not Found",
+    });
   });
 });

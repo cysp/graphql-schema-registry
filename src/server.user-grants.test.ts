@@ -10,9 +10,9 @@ function getJsonPayload(response: { body: string }): unknown {
 }
 
 const unauthorizedResponsePayload = {
-  error: "Unauthorized",
-  message: "Unauthorized",
-  statusCode: 401,
+  type: "about:blank",
+  status: 401,
+  title: "Unauthorized",
 };
 
 await test("server: /user/grants", async (t) => {
