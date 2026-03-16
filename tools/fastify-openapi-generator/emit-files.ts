@@ -1,21 +1,17 @@
-import { emitComponentSchemaFiles } from "./emit-component-schemas.ts";
-import { emitFastifyRoutesFile } from "./emit-fastify-routes.ts";
 import { emitOperationFile } from "./emit-operation-files.ts";
-import { buildComponentJsonSchemaConstNamesByJsonSchema } from "./emit-shared.ts";
-import type { GeneratedFile, OpenApiRouteCatalog } from "./types.ts";
+import { emitOperationIndexFile } from "./emit-operation-index.ts";
+import { emitRoutesFile } from "./emit-routes.ts";
+import { assertNoGeneratedOperationFilePathCollisions } from "./emit-shared.ts";
+import type { GeneratedFile, NormalizedOperation } from "./types.ts";
 
 export function emitGeneratedOpenApiFiles(
-  openApiRouteCatalog: OpenApiRouteCatalog,
+  operations: readonly NormalizedOperation[],
 ): GeneratedFile[] {
-  const componentJsonSchemaConstNamesByJsonSchema =
-    buildComponentJsonSchemaConstNamesByJsonSchema(openApiRouteCatalog);
-  const operationFiles = openApiRouteCatalog.operations.map((operation) =>
-    emitOperationFile(operation, openApiRouteCatalog),
-  );
-  const componentFiles = emitComponentSchemaFiles(
-    openApiRouteCatalog,
-    componentJsonSchemaConstNamesByJsonSchema,
-  );
+  assertNoGeneratedOperationFilePathCollisions(operations);
 
-  return [...componentFiles, ...operationFiles, emitFastifyRoutesFile(openApiRouteCatalog)];
+  return [
+    ...operations.map((operation) => emitOperationFile(operation)),
+    emitOperationIndexFile(operations),
+    emitRoutesFile(operations),
+  ];
 }

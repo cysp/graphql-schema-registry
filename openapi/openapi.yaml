@@ -15,7 +15,7 @@ paths:
         - bearerAuth: []
       responses:
         "200":
-          description: OK
+          description: The list of registered graphs
           content:
             application/json:
               schema:
@@ -36,7 +36,7 @@ paths:
               $ref: "#/components/schemas/CreateGraphRequest"
       responses:
         "201":
-          description: Created
+          description: The newly created graph
           content:
             application/json:
               schema:
@@ -57,7 +57,7 @@ paths:
         - $ref: "#/components/parameters/GraphSlug"
       responses:
         "200":
-          description: OK
+          description: The requested graph
           content:
             application/json:
               schema:
@@ -75,7 +75,6 @@ paths:
         - bearerAuth: []
       parameters:
         - $ref: "#/components/parameters/GraphSlug"
-        - $ref: "#/components/parameters/XRevisionId"
       requestBody:
         required: true
         content:
@@ -84,7 +83,7 @@ paths:
               $ref: "#/components/schemas/UpdateGraphRequest"
       responses:
         "200":
-          description: Updated
+          description: The updated graph
           content:
             application/json:
               schema:
@@ -108,7 +107,7 @@ paths:
         - $ref: "#/components/parameters/GraphSlug"
       responses:
         "204":
-          description: No Content
+          description: Success
         "401":
           $ref: "#/components/responses/Unauthorized"
         "403":
@@ -123,7 +122,7 @@ paths:
         - $ref: "#/components/parameters/GraphSlug"
       responses:
         "200":
-          description: OK
+          description: The list of subgraphs registered for the graph
           content:
             application/json:
               schema:
@@ -148,7 +147,7 @@ paths:
               $ref: "#/components/schemas/CreateSubgraphRequest"
       responses:
         "201":
-          description: Created
+          description: The newly created subgraph
           content:
             application/json:
               schema:
@@ -172,7 +171,7 @@ paths:
         - $ref: "#/components/parameters/SubgraphSlug"
       responses:
         "200":
-          description: OK
+          description: The requested subgraph
           content:
             application/json:
               schema:
@@ -191,7 +190,6 @@ paths:
       parameters:
         - $ref: "#/components/parameters/GraphSlug"
         - $ref: "#/components/parameters/SubgraphSlug"
-        - $ref: "#/components/parameters/XRevisionId"
       requestBody:
         required: true
         content:
@@ -200,7 +198,7 @@ paths:
               $ref: "#/components/schemas/UpdateSubgraphRequest"
       responses:
         "200":
-          description: Updated
+          description: The updated subgraph
           content:
             application/json:
               schema:
@@ -225,7 +223,7 @@ paths:
         - $ref: "#/components/parameters/SubgraphSlug"
       responses:
         "204":
-          description: No Content
+          description: Success
         "401":
           $ref: "#/components/responses/Unauthorized"
         "403":
@@ -240,8 +238,6 @@ components:
       $ref: "./components/parameters/graph-slug.yaml"
     SubgraphSlug:
       $ref: "./components/parameters/subgraph-slug.yaml"
-    XRevisionId:
-      $ref: "./components/parameters/x-revision-id.yaml"
   schemas:
     Graph:
       $ref: "./components/schemas/graph.yaml"

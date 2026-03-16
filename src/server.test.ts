@@ -1,9 +1,7 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 
-import { authorizationDetailsType } from "./domain/authorization/details.ts";
 import { createAuthJwtSigner } from "./domain/jwt-signer.ts";
-import { createJwtFixture } from "./domain/jwt.fixture.ts";
 import { createFastifyServer } from "./server.ts";
 
 function getJsonPayload(response: { body: string }): unknown {
@@ -11,19 +9,19 @@ function getJsonPayload(response: { body: string }): unknown {
 }
 
 const unauthorizedResponsePayload = {
-  error: "Unauthorized",
-  message: "Unauthorized",
-  statusCode: 401,
+  type: "about:blank",
+  status: 401,
+  title: "Unauthorized",
 };
 
 await test("server: /", async (t) => {
   let server: ReturnType<typeof createFastifyServer>;
 
-  const { createToken, jwtVerification } = createJwtFixture();
+  const { createToken, jwtVerification } = createAuthJwtSigner();
 
   t.beforeEach(async () => {
     server = createFastifyServer({
-      jwtVerification: jwtSigner.jwtVerification,
+      jwtVerification,
     });
     await server.ready();
   });
@@ -39,6 +37,7 @@ await test("server: /", async (t) => {
     });
 
     assert.strictEqual(response.statusCode, 401);
+    assert.strictEqual(response.headers["www-authenticate"], "Bearer");
     assert.deepStrictEqual(getJsonPayload(response), unauthorizedResponsePayload);
   });
 
@@ -52,6 +51,7 @@ await test("server: /", async (t) => {
     });
 
     assert.strictEqual(response.statusCode, 401);
+    assert.strictEqual(response.headers["www-authenticate"], "Bearer");
     assert.deepStrictEqual(getJsonPayload(response), unauthorizedResponsePayload);
   });
 
@@ -60,7 +60,7 @@ await test("server: /", async (t) => {
       method: "GET",
       url: "/",
       headers: {
-        authorization: `Bearer ${jwtSigner.createToken()}`,
+        authorization: `Bearer ${createToken()}`,
       },
     });
 
@@ -86,7 +86,7 @@ await test("server: /", async (t) => {
       method: "GET",
       url: "/",
       headers: {
-        authorization: `Bearer ${jwtSigner.createToken({
+        authorization: `Bearer ${createToken({
           authorization_details: {
             scope: "admin",
             type: "graphql-schema-registry",
@@ -99,59 +99,17 @@ await test("server: /", async (t) => {
     assert.deepStrictEqual(getJsonPayload(response), unauthorizedResponsePayload);
   });
 
-  await t.test(
-    "returns 503 before bearer auth checks on graph routes when DB is missing",
-    async () => {
-      const response = await server.inject({
-        method: "GET",
-        url: "/v1/graphs",
-      });
-
-      assert.strictEqual(response.statusCode, 503);
-    },
-  );
-
-  await t.test(
-    "returns 503 before admin grant checks on graph routes when DB is missing",
-    async () => {
-      const response = await server.inject({
-        method: "GET",
-        url: "/v1/graphs",
-        headers: {
-          authorization: `Bearer ${jwtSigner.createToken({
-            authorization_details: [
-              {
-                graph_id: "00000000-0000-4000-8000-000000000001",
-                scope: "graph:read",
-                type: authorizationDetailsType,
-              },
-            ],
-          })}`,
-        },
-      });
-
-      assert.strictEqual(response.statusCode, 503);
-    },
-  );
-
-  await t.test("allows admins to list graphs", async () => {
+  await t.test("returns 404 problem details for unknown routes", async () => {
     const response = await server.inject({
       method: "GET",
-      url: "/v1/graphs",
-      headers: {
-        authorization: `Bearer ${jwtSigner.createToken({
-          authorization_details: [
-            {
-              scope: "admin",
-              type: authorizationDetailsType,
-            },
-          ],
-        })}`,
-      },
+      url: "/unknown",
     });
 
-    // No database is configured in this test setup, so authorized access reaches
-    // the handler and returns service unavailable.
-    assert.strictEqual(response.statusCode, 503);
+    assert.strictEqual(response.statusCode, 404);
+    assert.deepStrictEqual(getJsonPayload(response), {
+      type: "about:blank",
+      status: 404,
+      title: "Not Found",
+    });
   });
 });

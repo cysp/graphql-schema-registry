@@ -1,23 +1,16 @@
-import { fastifyPlugin } from "fastify-plugin";
-import type { FastifyPluginCallbackZod } from "fastify-type-provider-zod";
+import type { FastifyPluginAsync } from "fastify";
 
-import { fastifyOperationIds, registerFastifyOperationRoute } from "./routes.ts";
-import type { FastifyOperationHandlers } from "./routes.ts";
+import type { FastifyJsonSchemaToTsTypeProvider } from "../fastify-json-schema-to-ts-type-provider.ts";
+import type { OpenApiOperationHandlers } from "./generated/routes.ts";
+import { registerOpenApiRoutes } from "./generated/routes.ts";
 
-export type FastifyOpenApiRoutesPluginOptions = {
-  operationHandlers: FastifyOperationHandlers;
+export type { OpenApiOperationHandlers } from "./generated/routes.ts";
+
+export const openApiRoutesPlugin: FastifyPluginAsync<{
+  operationHandlers: OpenApiOperationHandlers;
+}> = async (server, options) => {
+  registerOpenApiRoutes(
+    server.withTypeProvider<FastifyJsonSchemaToTsTypeProvider>(),
+    options.operationHandlers,
+  );
 };
-
-const fastifyOpenApiRoutesPluginImpl: FastifyPluginCallbackZod<
-  FastifyOpenApiRoutesPluginOptions
-> = (server, options, done): void => {
-  for (const operationId of fastifyOperationIds) {
-    registerFastifyOperationRoute(server, options.operationHandlers, operationId);
-  }
-
-  done();
-};
-
-export const fastifyOpenApiRoutesPlugin = fastifyPlugin(fastifyOpenApiRoutesPluginImpl, {
-  name: "fastify-openapi-routes",
-});

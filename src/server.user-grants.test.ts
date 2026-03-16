@@ -2,7 +2,7 @@ import assert from "node:assert/strict";
 import test from "node:test";
 
 import { authorizationDetailsType } from "./domain/authorization/details.ts";
-import { createJwtFixture } from "./domain/jwt.fixture.ts";
+import { createAuthJwtSigner } from "./domain/jwt-signer.ts";
 import { createFastifyServer } from "./server.ts";
 
 function getJsonPayload(response: { body: string }): unknown {
@@ -10,15 +10,15 @@ function getJsonPayload(response: { body: string }): unknown {
 }
 
 const unauthorizedResponsePayload = {
-  error: "Unauthorized",
-  message: "Unauthorized",
-  statusCode: 401,
+  type: "about:blank",
+  status: 401,
+  title: "Unauthorized",
 };
 
 await test("server: /user/grants", async (t) => {
   let server: ReturnType<typeof createFastifyServer>;
 
-  const { createToken, jwtVerification } = createJwtFixture();
+  const { createToken, jwtVerification } = createAuthJwtSigner();
 
   t.beforeEach(async () => {
     server = createFastifyServer({

@@ -1,13 +1,9 @@
 import { generateKeyPairSync, sign } from "node:crypto";
 
+import type { JwtVerification } from "./jwt.ts";
+
 export type JwtClaims = Record<string, unknown>;
 type JwtHeader = Record<string, unknown>;
-
-export type JwtVerification = Readonly<{
-  audience: string;
-  issuer: string;
-  verificationPublicKey: Buffer;
-}>;
 
 export type AuthJwtSigner = Readonly<{
   createToken: (claimsOverrides?: JwtClaims) => string;

@@ -1,45 +1,48 @@
 import type {
+  ContextConfigDefault,
+  FastifyBaseLogger,
+  FastifyInstance,
   RawReplyDefaultExpression,
   RawRequestDefaultExpression,
+  RawServerBase,
   RawServerDefault,
+  RouteGenericInterface,
   RouteHandlerMethod,
+  RouteOptions,
 } from "fastify";
-import type { z } from "zod";
+import type { JSONSchema } from "json-schema-to-ts";
 
-type EmptyObject = Record<never, never>;
+import type { FastifyJsonSchemaToTsTypeProvider } from "../fastify-json-schema-to-ts-type-provider.ts";
+
+type FastifyResponseStatusCode = number | `${number}`;
 
 export type FastifyRouteSchema = {
-  response: Record<PropertyKey, z.ZodType>;
+  body?: JSONSchema;
+  headers?: JSONSchema;
+  params?: JSONSchema;
+  querystring?: JSONSchema;
+  response: Partial<Record<FastifyResponseStatusCode, JSONSchema>>;
 };
 
-type ReplyByStatusFromFastifyRouteSchema<RouteSchema extends FastifyRouteSchema> = {
-  [Status in keyof RouteSchema["response"]]: z.output<RouteSchema["response"][Status]>;
+export type FastifyRouteDefinition = Pick<RouteOptions, "method" | "url"> & {
+  schema: FastifyRouteSchema;
 };
 
-type FastifyRequestTypesFromSchema<RouteSchema extends FastifyRouteSchema> = (RouteSchema extends {
-  body: z.ZodType;
-}
-  ? { Body: z.input<RouteSchema["body"]> }
-  : EmptyObject) &
-  (RouteSchema extends { headers: z.ZodType }
-    ? { Headers: z.input<RouteSchema["headers"]> }
-    : EmptyObject) &
-  (RouteSchema extends { params: z.ZodType }
-    ? { Params: z.input<RouteSchema["params"]> }
-    : EmptyObject) &
-  (RouteSchema extends { querystring: z.ZodType }
-    ? { Querystring: z.input<RouteSchema["querystring"]> }
-    : EmptyObject);
+export type FastifyJsonSchemaToTsInstance<
+  RawServer extends RawServerBase = RawServerDefault,
+  RawRequest extends RawRequestDefaultExpression<RawServer> =
+    RawRequestDefaultExpression<RawServer>,
+  RawReply extends RawReplyDefaultExpression<RawServer> = RawReplyDefaultExpression<RawServer>,
+  Logger extends FastifyBaseLogger = FastifyBaseLogger,
+> = FastifyInstance<RawServer, RawRequest, RawReply, Logger, FastifyJsonSchemaToTsTypeProvider>;
 
-type FastifyRouteGenericFromSchema<RouteSchema extends FastifyRouteSchema> =
-  FastifyRequestTypesFromSchema<RouteSchema> & {
-    Reply: ReplyByStatusFromFastifyRouteSchema<RouteSchema>;
-  };
-
-export type FastifyRouteHandlerFromSchema<RouteSchema extends FastifyRouteSchema> =
+export type FastifyRouteHandlerFromDefinition<RouteDefinition extends FastifyRouteDefinition> =
   RouteHandlerMethod<
     RawServerDefault,
     RawRequestDefaultExpression,
     RawReplyDefaultExpression,
-    FastifyRouteGenericFromSchema<RouteSchema>
+    RouteGenericInterface,
+    ContextConfigDefault,
+    RouteDefinition["schema"],
+    FastifyJsonSchemaToTsTypeProvider
   >;

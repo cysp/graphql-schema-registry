@@ -1,5 +1,4 @@
 import type { FastifyPluginCallback } from "fastify";
-import fastifyPlugin from "fastify-plugin";
 
 import { executeProbes } from "./probes.ts";
 import { responseJsonSchema } from "./schemas.ts";
@@ -10,7 +9,7 @@ export type HealthcheckPluginOptions = {
   probes: Readonly<Record<string, Probe>>;
 };
 
-const healthcheckPluginImpl: FastifyPluginCallback<HealthcheckPluginOptions> = (
+export const healthcheckPlugin: FastifyPluginCallback<HealthcheckPluginOptions> = (
   server,
   options,
   done,
@@ -39,8 +38,3 @@ const healthcheckPluginImpl: FastifyPluginCallback<HealthcheckPluginOptions> = (
 
   done();
 };
-
-export const healthcheckPlugin = fastifyPlugin(healthcheckPluginImpl, {
-  fastify: "5.x",
-  name: "healthcheck",
-});

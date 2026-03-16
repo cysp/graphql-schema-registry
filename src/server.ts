@@ -5,23 +5,16 @@ import fastify, { type FastifyInstance } from "fastify";
 
 import { formatUser } from "./domain/authorization/user.ts";
 import type { JwtVerification } from "./domain/jwt.ts";
-import { createGraphHandler } from "./domain/routes/create-graph.ts";
-import { createSubgraphHandler } from "./domain/routes/create-subgraph.ts";
-import { deleteGraphHandler } from "./domain/routes/delete-graph.ts";
-import { deleteSubgraphHandler } from "./domain/routes/delete-subgraph.ts";
-import { getGraphHandler } from "./domain/routes/get-graph.ts";
-import { getSubgraphHandler } from "./domain/routes/get-subgraph.ts";
-import { listGraphsHandler } from "./domain/routes/list-graphs.ts";
-import { listSubgraphsHandler } from "./domain/routes/list-subgraphs.ts";
-import { updateGraphHandler } from "./domain/routes/update-graph.ts";
-import { updateSubgraphHandler } from "./domain/routes/update-subgraph.ts";
 import type { PostgresJsDatabase } from "./drizzle/types.ts";
-import { fastifyHandlerWithDependencies } from "./lib/fastify/handler-with-dependencies.ts";
+import { bearerAuthenticateHeaders } from "./lib/fastify/authorization/bearer-authenticate-headers.ts";
+import { requireAdminUser } from "./lib/fastify/authorization/guards.ts";
 import { healthcheckPlugin } from "./lib/fastify/healthcheck/plugin.ts";
-import { fastifyOpenApiRoutesPlugin } from "./lib/fastify/openapi/plugin.ts";
+import { openApiRoutesPlugin } from "./lib/fastify/openapi/plugin.ts";
+import { problemDetailsErrorHandler } from "./lib/fastify/problem-details/error-handler.ts";
+import { problemDetailsPlugin } from "./lib/fastify/problem-details/plugin.ts";
 
 type CreateFastifyServerOptions = {
-  database?: PostgresJsDatabase | undefined;
+  database?: Pick<PostgresJsDatabase, "execute"> | undefined;
   jwtVerification?: JwtVerification | undefined;
 };
 
@@ -34,81 +27,13 @@ export function createFastifyServer({
   });
 
   server.register(fastifySensible);
+  server.register(problemDetailsPlugin);
 
-  if (jwtVerification) {
-    const verifyOptions: NonNullable<FastifyJWTOptions["verify"]> = {
-      algorithms: ["RS256"],
-      allowedAud: jwtVerification.audience,
-      allowedIss: jwtVerification.issuer,
-    };
-
-    server.register(fastifyJwt, {
-      formatUser,
-      secret: {
-        public: jwtVerification.verificationPublicKey,
-      },
-      verify: verifyOptions,
-    });
-
-    server.addHook("onRequest", async (request, reply) => {
-      const authorizationHeader = request.headers.authorization;
-      if (typeof authorizationHeader !== "string" || !authorizationHeader.startsWith("Bearer ")) {
-        return;
-      }
-
-      try {
-        await request.jwtVerify();
-      } catch (error) {
-        request.log.warn({ error }, "failed to validate bearer token claims");
-        reply.unauthorized();
-      }
-    });
-  }
-
-  server.register(fastifyOpenApiRoutesPlugin, {
-    operationHandlers: {
-      listGraphs: fastifyHandlerWithDependencies(listGraphsHandler, { database }),
-      createGraph: fastifyHandlerWithDependencies(createGraphHandler, { database }),
-      getGraph: fastifyHandlerWithDependencies(getGraphHandler, { database }),
-      updateGraph: fastifyHandlerWithDependencies(updateGraphHandler, { database }),
-      deleteGraph: fastifyHandlerWithDependencies(deleteGraphHandler, { database }),
-      listSubgraphs: fastifyHandlerWithDependencies(listSubgraphsHandler, { database }),
-      createSubgraph: fastifyHandlerWithDependencies(createSubgraphHandler, { database }),
-      getSubgraph: fastifyHandlerWithDependencies(getSubgraphHandler, { database }),
-      updateSubgraph: fastifyHandlerWithDependencies(updateSubgraphHandler, { database }),
-      deleteSubgraph: fastifyHandlerWithDependencies(deleteSubgraphHandler, { database }),
-    },
+  server.setNotFoundHandler((_request, reply) => {
+    return reply.problemDetails({ status: 404 });
   });
 
-  if (jwtVerification) {
-    const verifyOptions: NonNullable<FastifyJWTOptions["verify"]> = {
-      algorithms: ["RS256"],
-      allowedAud: jwtVerification.audience,
-      allowedIss: jwtVerification.issuer,
-    };
-
-    server.register(fastifyJwt, {
-      formatUser,
-      secret: {
-        public: jwtVerification.verificationPublicKey,
-      },
-      verify: verifyOptions,
-    });
-
-    server.addHook("onRequest", async (request, reply) => {
-      const authorizationHeader = request.headers.authorization;
-      if (typeof authorizationHeader !== "string" || !authorizationHeader.startsWith("Bearer ")) {
-        return;
-      }
-
-      try {
-        await request.jwtVerify();
-      } catch (error) {
-        request.log.warn({ error }, "failed to validate bearer token claims");
-        reply.unauthorized();
-      }
-    });
-  }
+  server.setErrorHandler(problemDetailsErrorHandler);
 
   server.register(healthcheckPlugin, {
     probes: {
@@ -123,33 +48,41 @@ export function createFastifyServer({
     },
   });
 
+  if (jwtVerification) {
+    const verifyOptions: NonNullable<FastifyJWTOptions["verify"]> = {
+      algorithms: ["RS256"],
+      allowedAud: jwtVerification.audience,
+      allowedIss: jwtVerification.issuer,
+    };
+
+    server.register(fastifyJwt, {
+      formatUser,
+      secret: {
+        public: jwtVerification.verificationPublicKey,
+      },
+      verify: verifyOptions,
+    });
+  }
+
   server.register(async function (server) {
     if (jwtVerification) {
-      const verifyOptions: NonNullable<FastifyJWTOptions["verify"]> = {
-        algorithms: ["RS256"],
-        allowedAud: jwtVerification.audience,
-        allowedIss: jwtVerification.issuer,
-      };
-
-      server.register(fastifyJwt, {
-        formatUser,
-        secret: {
-          public: jwtVerification.verificationPublicKey,
-        },
-        verify: verifyOptions,
-      });
-
       server.addHook("onRequest", async (request, reply) => {
         const authorizationHeader = request.headers.authorization;
         if (typeof authorizationHeader !== "string" || authorizationHeader.trim() === "") {
-          return reply.unauthorized();
+          return reply.problemDetails({
+            status: 401,
+            headers: bearerAuthenticateHeaders,
+          });
         }
 
         try {
           await request.jwtVerify();
         } catch (error) {
           request.log.warn({ error }, "failed to validate bearer token claims");
-          return reply.unauthorized();
+          return reply.problemDetails({
+            status: 401,
+            headers: bearerAuthenticateHeaders,
+          });
         }
       });
     }
@@ -160,7 +93,10 @@ export function createFastifyServer({
 
     server.get("/user/grants", async (request, reply) => {
       if (!request.user) {
-        return reply.unauthorized();
+        return reply.problemDetails({
+          status: 401,
+          headers: bearerAuthenticateHeaders,
+        });
       }
 
       return reply.code(200).send(request.user.grants);
@@ -173,70 +109,70 @@ export function createFastifyServer({
             return;
           }
 
-          throw server.httpErrors.notImplemented();
+          return reply.problemDetails({ status: 501 });
         },
         createSubgraph: async (request, reply) => {
           if (!requireAdminUser(request, reply)) {
             return;
           }
 
-          throw server.httpErrors.notImplemented();
+          return reply.problemDetails({ status: 501 });
         },
         deleteGraph: async (request, reply) => {
           if (!requireAdminUser(request, reply)) {
             return;
           }
 
-          throw server.httpErrors.notImplemented();
+          return reply.problemDetails({ status: 501 });
         },
         deleteSubgraph: async (request, reply) => {
           if (!requireAdminUser(request, reply)) {
             return;
           }
 
-          throw server.httpErrors.notImplemented();
+          return reply.problemDetails({ status: 501 });
         },
         getGraph: async (request, reply) => {
           if (!requireAdminUser(request, reply)) {
             return;
           }
 
-          throw server.httpErrors.notImplemented();
+          return reply.problemDetails({ status: 501 });
         },
         getSubgraph: async (request, reply) => {
           if (!requireAdminUser(request, reply)) {
             return;
           }
 
-          throw server.httpErrors.notImplemented();
+          return reply.problemDetails({ status: 501 });
         },
         listGraphs: async (request, reply) => {
           if (!requireAdminUser(request, reply)) {
             return;
           }
 
-          throw server.httpErrors.notImplemented();
+          return reply.problemDetails({ status: 501 });
         },
         listSubgraphs: async (request, reply) => {
           if (!requireAdminUser(request, reply)) {
             return;
           }
 
-          throw server.httpErrors.notImplemented();
+          return reply.problemDetails({ status: 501 });
         },
         updateGraph: async (request, reply) => {
           if (!requireAdminUser(request, reply)) {
             return;
           }
 
-          throw server.httpErrors.notImplemented();
+          return reply.problemDetails({ status: 501 });
         },
         updateSubgraph: async (request, reply) => {
           if (!requireAdminUser(request, reply)) {
             return;
           }
 
-          throw server.httpErrors.notImplemented();
+          return reply.problemDetails({ status: 501 });
         },
       },
     });

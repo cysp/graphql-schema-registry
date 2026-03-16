@@ -1,15 +1,8 @@
 // oxlint-disable eslint/max-lines
 
 import { GeneratorError } from "./errors.ts";
-import { isValidIdentifier, toComponentSchemaVariableName, toFastifyPath } from "./naming.ts";
-import { createJsonSchemaObjectReader, type ReadJsonSchemaObject } from "./read-schema-object.ts";
-import type {
-  OpenApiComponentSchema,
-  OpenApiRouteCatalog,
-  OpenApiOperation,
-  OpenApiOperationResponse,
-  JsonSchemaObject,
-} from "./types.ts";
+import { isValidIdentifier, toFastifyPath } from "./naming.ts";
+import type { JsonSchema, NormalizedOperation, NormalizedRouteSchema } from "./types.ts";
 import {
   readNonEmptyString,
   readOptionalArray,
@@ -20,25 +13,27 @@ import {
 } from "./value-readers.ts";
 
 const supportedOpenApiMethods = ["get", "post", "put", "delete"] as const;
+
 type SupportedOpenApiMethod = (typeof supportedOpenApiMethods)[number];
+
 type ResolvedParameter = {
   in: "header" | "path" | "query";
   name: string;
   required?: boolean;
-  schema: JsonSchemaObject;
+  schema: JsonSchema;
 };
 
-const httpMethodNames: Record<SupportedOpenApiMethod, OpenApiOperation["httpMethod"]> = {
+const httpMethodNames: Record<SupportedOpenApiMethod, NormalizedOperation["method"]> = {
   delete: "DELETE",
   get: "GET",
   post: "POST",
   put: "PUT",
 };
 
-function readOperationId(value: unknown, operationContext: string): string {
+function readOperationId(value: unknown, operationContext: string): string | undefined {
   const operationId = readOptionalString(value, `${operationContext}.operationId`)?.trim();
   if (!operationId) {
-    throw new GeneratorError(`${operationContext} must define a non-empty operationId.`);
+    return undefined;
   }
 
   if (!isValidIdentifier(operationId)) {
@@ -48,6 +43,10 @@ function readOperationId(value: unknown, operationContext: string): string {
   }
 
   return operationId;
+}
+
+function readJsonSchema(value: unknown, context: string): JsonSchema {
+  return readRecord(value, context) as JsonSchema;
 }
 
 function readParameterLocation(value: unknown, context: string): ResolvedParameter["in"] {
@@ -66,11 +65,7 @@ function readParameterLocation(value: unknown, context: string): ResolvedParamet
   return parameterLocation;
 }
 
-function readParameters(
-  value: unknown,
-  context: string,
-  readJsonSchemaObject: ReadJsonSchemaObject,
-): ResolvedParameter[] {
+function readParameters(value: unknown, context: string): ResolvedParameter[] {
   const parameterValues = readOptionalArray(value, context);
   if (parameterValues === undefined) {
     return [];
@@ -89,7 +84,7 @@ function readParameters(
     const resolvedParameter: ResolvedParameter = {
       in: parameterLocation,
       name: readNonEmptyString(parameter["name"], `${parameterContext}.name`),
-      schema: readJsonSchemaObject(parameter["schema"], `${parameterContext}.schema`),
+      schema: readJsonSchema(parameter["schema"], `${parameterContext}.schema`),
     };
 
     if (required !== undefined) {
@@ -122,16 +117,68 @@ function mergeParameters(
   return Array.from(parametersByKey.values());
 }
 
+function readPathTemplateParameterNames(openApiPath: string): string[] {
+  const parameterNames: string[] = [];
+
+  for (const match of openApiPath.matchAll(/\{([^}]+)\}/g)) {
+    const parameterName = match[1];
+    if (parameterName !== undefined) {
+      parameterNames.push(parameterName);
+    }
+  }
+
+  return parameterNames;
+}
+
+function assertPathTemplateParametersMatch(
+  openApiPath: string,
+  parameters: readonly ResolvedParameter[],
+  operationContext: string,
+): void {
+  const templateParameterNames = readPathTemplateParameterNames(openApiPath);
+  const templateParameterNameSet = new Set(templateParameterNames);
+  const declaredPathParameterNames = parameters
+    .filter((parameter) => parameter.in === "path")
+    .map((parameter) => parameter.name);
+  const declaredPathParameterNameSet = new Set(declaredPathParameterNames);
+  const missingDeclaredPathParameters = templateParameterNames
+    .filter((parameterName) => !declaredPathParameterNameSet.has(parameterName))
+    .toSorted();
+  const unusedDeclaredPathParameters = declaredPathParameterNames
+    .filter((parameterName) => !templateParameterNameSet.has(parameterName))
+    .toSorted();
+
+  if (missingDeclaredPathParameters.length === 0 && unusedDeclaredPathParameters.length === 0) {
+    return;
+  }
+
+  const validationMessages: string[] = [];
+  if (missingDeclaredPathParameters.length > 0) {
+    validationMessages.push(
+      `missing path parameter declarations for: ${missingDeclaredPathParameters.join(", ")}`,
+    );
+  }
+  if (unusedDeclaredPathParameters.length > 0) {
+    validationMessages.push(
+      `declared path parameters not present in template: ${unusedDeclaredPathParameters.join(", ")}`,
+    );
+  }
+
+  throw new GeneratorError(
+    `${operationContext} path template parameters must match declared path parameters; ${validationMessages.join("; ")}.`,
+  );
+}
+
 function buildParameterSchema(
   parameters: readonly ResolvedParameter[],
   location: ResolvedParameter["in"],
-): JsonSchemaObject | undefined {
+): JsonSchema | undefined {
   const parametersForLocation = parameters.filter((parameter) => parameter.in === location);
   if (parametersForLocation.length === 0) {
     return undefined;
   }
 
-  const properties: Record<string, JsonSchemaObject> = {};
+  const properties: Record<string, JsonSchema> = {};
   const requiredProperties: string[] = [];
 
   for (const parameter of parametersForLocation) {
@@ -143,54 +190,64 @@ function buildParameterSchema(
     }
   }
 
-  const parameterSchema: JsonSchemaObject = {
-    additionalProperties: location === "header",
-    properties,
-    type: "object",
-  };
-
-  if (requiredProperties.length > 0) {
-    parameterSchema.required = requiredProperties.toSorted();
+  if (requiredProperties.length === 0) {
+    return {
+      additionalProperties: location === "header",
+      properties,
+      type: "object",
+    };
   }
 
-  return parameterSchema;
+  return {
+    additionalProperties: location === "header",
+    properties,
+    required: requiredProperties.toSorted(),
+    type: "object",
+  };
 }
 
-function readJsonContentSchema(
-  value: unknown,
-  context: string,
-  readJsonSchemaObject: ReadJsonSchemaObject,
-): JsonSchemaObject {
+function readJsonContentSchema(value: unknown, context: string): JsonSchema {
   const content = readRecord(value, context);
   const contentTypes = Object.keys(content).toSorted();
-  if (contentTypes.length !== 1 || contentTypes[0] !== "application/json") {
+  const preferredJsonContentType = contentTypes.includes("application/json")
+    ? "application/json"
+    : undefined;
+  const fallbackJsonContentTypes = contentTypes.filter((contentType) =>
+    contentType.endsWith("+json"),
+  );
+  const jsonContentType =
+    preferredJsonContentType ??
+    (fallbackJsonContentTypes.length === 1 ? fallbackJsonContentTypes[0] : undefined);
+  if (jsonContentType === undefined) {
     throw new GeneratorError(
-      `${context} supports only exactly one content type: application/json.`,
+      `${context} must include exactly one supported JSON content type (application/json or a single application/*+json variant).`,
     );
   }
 
-  const jsonMediaType = readRecord(content["application/json"], `${context}["application/json"]`);
+  const jsonMediaType = readRecord(
+    content[jsonContentType],
+    `${context}[${JSON.stringify(jsonContentType)}]`,
+  );
   if (jsonMediaType["schema"] === undefined) {
-    throw new GeneratorError(`${context}["application/json"].schema is required.`);
+    throw new GeneratorError(`${context}[${JSON.stringify(jsonContentType)}].schema is required.`);
   }
 
-  return readJsonSchemaObject(jsonMediaType["schema"], `${context}["application/json"].schema`);
+  return readJsonSchema(
+    jsonMediaType["schema"],
+    `${context}[${JSON.stringify(jsonContentType)}].schema`,
+  );
 }
 
 function readRequestBody(
   operation: Record<string, unknown>,
   operationContext: string,
-  readJsonSchemaObject: ReadJsonSchemaObject,
-): { bodySchema: JsonSchemaObject | undefined; hasRequiredBody: boolean } {
+): JsonSchema | undefined {
   const requestBody = readOptionalRecord(
     operation["requestBody"],
     `${operationContext}.requestBody`,
   );
   if (requestBody === undefined) {
-    return {
-      bodySchema: undefined,
-      hasRequiredBody: false,
-    };
+    return undefined;
   }
 
   const content = requestBody["content"];
@@ -200,23 +257,27 @@ function readRequestBody(
     );
   }
 
-  return {
-    bodySchema: readJsonContentSchema(
-      content,
-      `${operationContext}.requestBody.content`,
-      readJsonSchemaObject,
-    ),
-    hasRequiredBody:
-      readOptionalBoolean(requestBody["required"], `${operationContext}.requestBody.required`) !==
-      false,
-  };
+  const requestBodySchema = readJsonContentSchema(
+    content,
+    `${operationContext}.requestBody.content`,
+  );
+  const isRequired = readOptionalBoolean(
+    requestBody["required"],
+    `${operationContext}.requestBody.required`,
+  );
+  if (isRequired !== true) {
+    throw new GeneratorError(
+      `${operationContext}.requestBody must set required: true when a request body is defined.`,
+    );
+  }
+
+  return requestBodySchema;
 }
 
 function readResponseSchemas(
   operation: Record<string, unknown>,
   operationContext: string,
-  readJsonSchemaObject: ReadJsonSchemaObject,
-): OpenApiOperationResponse[] {
+): NormalizedRouteSchema["response"] {
   const responses = readOptionalRecord(operation["responses"], `${operationContext}.responses`);
   if (responses === undefined) {
     throw new GeneratorError(`${operationContext}.responses must be defined.`);
@@ -244,82 +305,96 @@ function readResponseSchemas(
             : readJsonContentSchema(
                 content,
                 `${operationContext}.responses["${statusCode}"].content`,
-                readJsonSchemaObject,
               ),
         statusCode,
       };
-    });
+    })
+    .toSorted((left, right) => Number(left.statusCode) - Number(right.statusCode));
 
   if (responseSchemas.length === 0) {
     throw new GeneratorError(`${operationContext}.responses must contain at least one response.`);
   }
 
-  return responseSchemas.toSorted(
-    (left, right) => Number(left.statusCode) - Number(right.statusCode),
+  return Object.fromEntries(
+    responseSchemas.map((responseSchema) => [responseSchema.statusCode, responseSchema.schema]),
   );
 }
 
-function readComponentSchemas(
-  document: Record<string, unknown>,
-  readJsonSchemaObject: ReadJsonSchemaObject,
-): {
-  componentZodSchemaVariableNamesByJsonSchema: Map<JsonSchemaObject, string>;
-  componentSchemas: OpenApiComponentSchema[];
-} {
-  const componentZodSchemaVariableNamesByJsonSchema = new Map<JsonSchemaObject, string>();
-  const componentSchemas: OpenApiComponentSchema[] = [];
-  const componentNamesByVariableName = new Map<string, string>();
+function buildOperationSchema(
+  parameters: readonly ResolvedParameter[],
+  operation: Record<string, unknown>,
+  operationContext: string,
+): NormalizedRouteSchema {
+  const schema: NormalizedRouteSchema = {
+    response: readResponseSchemas(operation, operationContext),
+  };
+  const headersSchema = buildParameterSchema(parameters, "header");
+  const paramsSchema = buildParameterSchema(parameters, "path");
+  const querystringSchema = buildParameterSchema(parameters, "query");
+  const bodySchema = readRequestBody(operation, operationContext);
 
-  const components = readOptionalRecord(document["components"], "components");
-  const schemaValues = readOptionalRecord(components?.["schemas"], "components.schemas");
-  if (schemaValues === undefined) {
-    return {
-      componentZodSchemaVariableNamesByJsonSchema,
-      componentSchemas,
-    };
+  if (bodySchema !== undefined) {
+    schema.body = bodySchema;
+  }
+  if (headersSchema !== undefined) {
+    schema.headers = headersSchema;
+  }
+  if (paramsSchema !== undefined) {
+    schema.params = paramsSchema;
+  }
+  if (querystringSchema !== undefined) {
+    schema.querystring = querystringSchema;
   }
 
-  for (const componentName of Object.keys(schemaValues).toSorted()) {
-    const schema = readJsonSchemaObject(
-      schemaValues[componentName],
-      `components.schemas.${componentName}`,
-    );
-    const zodSchemaVariableName = toComponentSchemaVariableName(componentName);
-    const existingComponentName = componentNamesByVariableName.get(zodSchemaVariableName);
-    if (existingComponentName !== undefined) {
-      throw new GeneratorError(
-        `Component schemas "${existingComponentName}" and "${componentName}" collide on Zod schema variable name "${zodSchemaVariableName}".`,
-      );
-    }
+  return schema;
+}
 
-    componentNamesByVariableName.set(zodSchemaVariableName, componentName);
-    componentZodSchemaVariableNamesByJsonSchema.set(schema, zodSchemaVariableName);
-    componentSchemas.push({
-      componentName,
-      schema,
-      zodSchemaVariableName,
-    });
+function readNamedOperation(
+  openApiPath: string,
+  openApiMethod: SupportedOpenApiMethod,
+  pathParameters: readonly ResolvedParameter[],
+  operationValue: unknown,
+  operationIds: Set<string>,
+): NormalizedOperation | undefined {
+  if (operationValue === undefined) {
+    return undefined;
   }
+
+  const operationContext = `paths.${openApiPath}.${openApiMethod}`;
+  const operation = readRecord(operationValue, operationContext);
+  const operationId = readOperationId(operation["operationId"], operationContext);
+  if (operationId === undefined) {
+    return undefined;
+  }
+
+  if (operationIds.has(operationId)) {
+    throw new GeneratorError(`Duplicate operationId "${operationId}" found.`);
+  }
+
+  operationIds.add(operationId);
+
+  const operationParameters = readParameters(
+    operation["parameters"],
+    `${operationContext}.parameters`,
+  );
+  const mergedParameters = mergeParameters(pathParameters, operationParameters);
+  assertPathTemplateParametersMatch(openApiPath, mergedParameters, operationContext);
 
   return {
-    componentZodSchemaVariableNamesByJsonSchema,
-    componentSchemas,
+    method: httpMethodNames[openApiMethod],
+    operationId,
+    schema: buildOperationSchema(mergedParameters, operation, operationContext),
+    url: toFastifyPath(openApiPath),
   };
 }
 
-export function buildOpenApiRouteCatalog(document: Record<string, unknown>): OpenApiRouteCatalog {
-  const readJsonSchemaObject = createJsonSchemaObjectReader();
-  const { componentZodSchemaVariableNamesByJsonSchema, componentSchemas } = readComponentSchemas(
-    document,
-    readJsonSchemaObject,
-  );
-
+export function buildOpenApiOperations(document: Record<string, unknown>): NormalizedOperation[] {
   const pathItems = readOptionalRecord(document["paths"], "paths");
   if (pathItems === undefined) {
     throw new GeneratorError("OpenAPI document must define a paths object.");
   }
 
-  const operations: OpenApiOperation[] = [];
+  const operations: NormalizedOperation[] = [];
   const operationIds = new Set<string>();
 
   for (const openApiPath of Object.keys(pathItems).toSorted()) {
@@ -327,57 +402,23 @@ export function buildOpenApiRouteCatalog(document: Record<string, unknown>): Ope
     const pathParameters = readParameters(
       pathItem["parameters"],
       `paths.${openApiPath}.parameters`,
-      readJsonSchemaObject,
     );
 
     for (const openApiMethod of supportedOpenApiMethods) {
-      const operationValue = pathItem[openApiMethod];
-      if (operationValue === undefined) {
+      const namedOperation = readNamedOperation(
+        openApiPath,
+        openApiMethod,
+        pathParameters,
+        pathItem[openApiMethod],
+        operationIds,
+      );
+      if (namedOperation === undefined) {
         continue;
       }
 
-      const operationContext = `paths.${openApiPath}.${openApiMethod}`;
-      const operation = readRecord(operationValue, operationContext);
-      const operationId = readOperationId(operation["operationId"], operationContext);
-      if (operationIds.has(operationId)) {
-        throw new GeneratorError(`Duplicate operationId "${operationId}" found.`);
-      }
-
-      operationIds.add(operationId);
-
-      const operationParameters = readParameters(
-        operation["parameters"],
-        `${operationContext}.parameters`,
-        readJsonSchemaObject,
-      );
-      const mergedParameters = mergeParameters(pathParameters, operationParameters);
-      const { bodySchema, hasRequiredBody } = readRequestBody(
-        operation,
-        operationContext,
-        readJsonSchemaObject,
-      );
-
-      operations.push({
-        bodySchema,
-        fastifyPath: toFastifyPath(openApiPath),
-        hasRequiredBody,
-        headersSchema: buildParameterSchema(mergedParameters, "header"),
-        httpMethod: httpMethodNames[openApiMethod],
-        operationId,
-        paramsSchema: buildParameterSchema(mergedParameters, "path"),
-        querystringSchema: buildParameterSchema(mergedParameters, "query"),
-        responseSchemas: readResponseSchemas(operation, operationContext, readJsonSchemaObject),
-      });
+      operations.push(namedOperation);
     }
   }
 
-  if (operations.length === 0) {
-    throw new GeneratorError("OpenAPI document does not define any operations.");
-  }
-
-  return {
-    componentZodSchemaVariableNamesByJsonSchema,
-    componentSchemas,
-    operations,
-  };
+  return operations;
 }
