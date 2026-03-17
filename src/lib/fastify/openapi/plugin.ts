@@ -1,16 +1,36 @@
-import type { FastifyPluginAsync } from "fastify";
+import type { FastifyPluginAsync, RawServerDefault } from "fastify";
 
 import type { FastifyJsonSchemaToTsTypeProvider } from "../fastify-json-schema-to-ts-type-provider.ts";
-import type { OpenApiOperationHandlers } from "./generated/routes.ts";
-import { registerOpenApiRoutes } from "./generated/routes.ts";
+import type { FastifyRouteDefinition, FastifyRouteHandlerFromDefinition } from "./route-types.ts";
 
-export type { OpenApiOperationHandlers } from "./generated/routes.ts";
-
-export const openApiRoutesPlugin: FastifyPluginAsync<{
-  operationHandlers: OpenApiOperationHandlers;
-}> = async (server, options) => {
-  registerOpenApiRoutes(
-    server.withTypeProvider<FastifyJsonSchemaToTsTypeProvider>(),
-    options.operationHandlers,
-  );
+export type OpenApiOperationHandlers<
+  OperationId extends string,
+  Routes extends Record<OperationId, FastifyRouteDefinition>,
+> = {
+  [OperationId in keyof Routes]: FastifyRouteHandlerFromDefinition<Routes[OperationId]>;
 };
+
+export function openApiRoutesPlugin<
+  OperationId extends string,
+  Routes extends Record<OperationId, FastifyRouteDefinition>,
+>(
+  routeDefinitions: Routes,
+): FastifyPluginAsync<
+  {
+    operationHandlers: OpenApiOperationHandlers<OperationId, Routes>;
+  },
+  RawServerDefault,
+  FastifyJsonSchemaToTsTypeProvider
+> {
+  return async (server, { operationHandlers }) => {
+    for (const operationId in routeDefinitions) {
+      const routeDefinition = routeDefinitions[operationId];
+      const handler = operationHandlers[operationId];
+
+      server.route({
+        ...routeDefinition,
+        handler,
+      });
+    }
+  };
+}

@@ -9,6 +9,7 @@ import type { PostgresJsDatabase } from "./drizzle/types.ts";
 import { bearerAuthenticateHeaders } from "./lib/fastify/authorization/bearer-authenticate-headers.ts";
 import { requireAdminUser } from "./lib/fastify/authorization/guards.ts";
 import { healthcheckPlugin } from "./lib/fastify/healthcheck/plugin.ts";
+import { operationRouteDefinitions } from "./lib/fastify/openapi/generated/operations/index.ts";
 import { openApiRoutesPlugin } from "./lib/fastify/openapi/plugin.ts";
 import { problemDetailsErrorHandler } from "./lib/fastify/problem-details/error-handler.ts";
 import { problemDetailsPlugin } from "./lib/fastify/problem-details/plugin.ts";
@@ -102,7 +103,7 @@ export function createFastifyServer({
       return reply.code(200).send(request.user.grants);
     });
 
-    server.register(openApiRoutesPlugin, {
+    server.register(openApiRoutesPlugin(operationRouteDefinitions), {
       operationHandlers: {
         createGraph: async (request, reply) => {
           if (!requireAdminUser(request, reply)) {
