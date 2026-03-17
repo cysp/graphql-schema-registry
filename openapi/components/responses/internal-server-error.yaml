@@ -1,4 +1,4 @@
-description: Bad Request
+description: Internal Server Error
 content:
   application/problem+json:
     schema:

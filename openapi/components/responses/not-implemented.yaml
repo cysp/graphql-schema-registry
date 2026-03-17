@@ -1,4 +1,4 @@
-description: Bad Request
+description: Not Implemented
 content:
   application/problem+json:
     schema:

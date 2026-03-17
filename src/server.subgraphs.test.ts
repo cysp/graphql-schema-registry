@@ -15,7 +15,14 @@ const graphReadGrant = {
   type: authorizationDetailsType,
 } as const;
 
-await test("server: graph routes", async (t) => {
+const subgraphWriteGrant = {
+  graph_id: "graph-1",
+  scope: "subgraph:write",
+  subgraph_id: "products",
+  type: authorizationDetailsType,
+} as const;
+
+await test("server: subgraph routes", async (t) => {
   let server: ReturnType<typeof createFastifyServer>;
 
   const { createToken, jwtVerification } = createAuthJwtSigner();
@@ -48,10 +55,16 @@ await test("server: graph routes", async (t) => {
     });
   }
 
-  await t.test("GET /v1/graphs", async (t) => {
+  function createSubgraphWriteToken(): string {
+    return createToken({
+      authorization_details: [subgraphWriteGrant],
+    });
+  }
+
+  await t.test("GET /v1/graphs/:graphSlug/subgraphs", async (t) => {
     const request = {
       method: "GET",
-      url: "/v1/graphs",
+      url: "/v1/graphs/graph-1/subgraphs",
     } as const satisfies RouteRequest;
 
     await assertProtectedRouteBehavior(t, {
@@ -63,30 +76,30 @@ await test("server: graph routes", async (t) => {
     });
   });
 
-  await t.test("POST /v1/graphs", async (t) => {
+  await t.test("POST /v1/graphs/:graphSlug/subgraphs", async (t) => {
     const request = {
       method: "POST",
-      url: "/v1/graphs",
+      url: "/v1/graphs/graph-1/subgraphs",
       headers: jsonHeaders,
       payload: {
-        federationVersion: "2",
-        slug: "graph-1",
+        routingUrl: "https://example.com/graphql",
+        slug: "products",
       },
     } as const satisfies RouteRequest;
 
     await assertProtectedRouteBehavior(t, {
       createAdminToken,
-      forbiddenDescription: "graph:read users",
-      forbiddenToken: createGraphReadToken(),
+      forbiddenDescription: "subgraph:write users",
+      forbiddenToken: createSubgraphWriteToken(),
       request,
       server,
     });
   });
 
-  await t.test("GET /v1/graphs/:graphSlug", async (t) => {
+  await t.test("GET /v1/graphs/:graphSlug/subgraphs/:subgraphSlug", async (t) => {
     const request = {
       method: "GET",
-      url: "/v1/graphs/graph-1",
+      url: "/v1/graphs/graph-1/subgraphs/products",
     } as const satisfies RouteRequest;
 
     await assertProtectedRouteBehavior(t, {
@@ -98,35 +111,35 @@ await test("server: graph routes", async (t) => {
     });
   });
 
-  await t.test("PUT /v1/graphs/:graphSlug", async (t) => {
+  await t.test("PUT /v1/graphs/:graphSlug/subgraphs/:subgraphSlug", async (t) => {
     const request = {
       method: "PUT",
-      url: "/v1/graphs/graph-1",
+      url: "/v1/graphs/graph-1/subgraphs/products",
       headers: jsonHeaders,
       payload: {
-        federationVersion: "2",
+        routingUrl: "https://example.com/updated-graphql",
       },
     } as const satisfies RouteRequest;
 
     await assertProtectedRouteBehavior(t, {
       createAdminToken,
-      forbiddenDescription: "graph:read users",
-      forbiddenToken: createGraphReadToken(),
+      forbiddenDescription: "subgraph:write users",
+      forbiddenToken: createSubgraphWriteToken(),
       request,
       server,
     });
   });
 
-  await t.test("DELETE /v1/graphs/:graphSlug", async (t) => {
+  await t.test("DELETE /v1/graphs/:graphSlug/subgraphs/:subgraphSlug", async (t) => {
     const request = {
       method: "DELETE",
-      url: "/v1/graphs/graph-1",
+      url: "/v1/graphs/graph-1/subgraphs/products",
     } as const satisfies RouteRequest;
 
     await assertProtectedRouteBehavior(t, {
       createAdminToken,
-      forbiddenDescription: "graph:read users",
-      forbiddenToken: createGraphReadToken(),
+      forbiddenDescription: "subgraph:write users",
+      forbiddenToken: createSubgraphWriteToken(),
       request,
       server,
     });

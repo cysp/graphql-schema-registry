@@ -19,6 +19,16 @@ export const updateGraphRouteDefinition = {
       ],
       "type": "object"
     },
+    headers: {
+      "additionalProperties": true,
+      "properties": {
+        "if-match": {
+          "type": "string",
+          "pattern": "^(?:[*]|(?:W/)?\"[\\u0021\\u0023-\\u007E\\u0080-\\u00FF]*\"(?:[ \\t]*,[ \\t]*(?:W/)?\"[\\u0021\\u0023-\\u007E\\u0080-\\u00FF]*\")*)$"
+        }
+      },
+      "type": "object"
+    },
     body: {
       "type": "object",
       "additionalProperties": false,
@@ -69,11 +79,198 @@ export const updateGraphRouteDefinition = {
           }
         }
       },
-      400: {},
-      401: {},
-      403: {},
-      404: {},
-      409: {},
+      400: {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "type",
+          "title",
+          "status"
+        ],
+        "properties": {
+          "type": {
+            "type": "string",
+            "format": "uri-reference"
+          },
+          "title": {
+            "type": "string"
+          },
+          "status": {
+            "type": "integer",
+            "format": "int32",
+            "minimum": 100,
+            "maximum": 599
+          }
+        }
+      },
+      401: {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "type",
+          "title",
+          "status"
+        ],
+        "properties": {
+          "type": {
+            "type": "string",
+            "format": "uri-reference"
+          },
+          "title": {
+            "type": "string"
+          },
+          "status": {
+            "type": "integer",
+            "format": "int32",
+            "minimum": 100,
+            "maximum": 599
+          }
+        }
+      },
+      403: {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "type",
+          "title",
+          "status"
+        ],
+        "properties": {
+          "type": {
+            "type": "string",
+            "format": "uri-reference"
+          },
+          "title": {
+            "type": "string"
+          },
+          "status": {
+            "type": "integer",
+            "format": "int32",
+            "minimum": 100,
+            "maximum": 599
+          }
+        }
+      },
+      404: {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "type",
+          "title",
+          "status"
+        ],
+        "properties": {
+          "type": {
+            "type": "string",
+            "format": "uri-reference"
+          },
+          "title": {
+            "type": "string"
+          },
+          "status": {
+            "type": "integer",
+            "format": "int32",
+            "minimum": 100,
+            "maximum": 599
+          }
+        }
+      },
+      412: {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "type",
+          "title",
+          "status"
+        ],
+        "properties": {
+          "type": {
+            "type": "string",
+            "format": "uri-reference"
+          },
+          "title": {
+            "type": "string"
+          },
+          "status": {
+            "type": "integer",
+            "format": "int32",
+            "minimum": 100,
+            "maximum": 599
+          }
+        }
+      },
+      422: {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "type",
+          "title",
+          "status"
+        ],
+        "properties": {
+          "type": {
+            "type": "string",
+            "format": "uri-reference"
+          },
+          "title": {
+            "type": "string"
+          },
+          "status": {
+            "type": "integer",
+            "format": "int32",
+            "minimum": 100,
+            "maximum": 599
+          }
+        }
+      },
+      500: {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "type",
+          "title",
+          "status"
+        ],
+        "properties": {
+          "type": {
+            "type": "string",
+            "format": "uri-reference"
+          },
+          "title": {
+            "type": "string"
+          },
+          "status": {
+            "type": "integer",
+            "format": "int32",
+            "minimum": 100,
+            "maximum": 599
+          }
+        }
+      },
+      501: {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "type",
+          "title",
+          "status"
+        ],
+        "properties": {
+          "type": {
+            "type": "string",
+            "format": "uri-reference"
+          },
+          "title": {
+            "type": "string"
+          },
+          "status": {
+            "type": "integer",
+            "format": "int32",
+            "minimum": 100,
+            "maximum": 599
+          }
+        }
+      },
     },
   },
 } as const satisfies FastifyRouteDefinition;
