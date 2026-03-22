@@ -34,6 +34,12 @@
     ],
     "typescript/no-unnecessary-condition": "error",
     "typescript/require-await": "off",
-    "typescript/strict-boolean-expressions": "off"
+    "typescript/strict-boolean-expressions": "off",
+    "unicorn/no-useless-undefined": [
+      "error",
+      {
+        "checkArguments": false
+      }
+    ]
   }
 }
