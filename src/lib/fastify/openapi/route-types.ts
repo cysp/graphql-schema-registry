@@ -1,10 +1,7 @@
 import type {
   ContextConfigDefault,
-  FastifyBaseLogger,
-  FastifyInstance,
   RawReplyDefaultExpression,
   RawRequestDefaultExpression,
-  RawServerBase,
   RawServerDefault,
   RouteGenericInterface,
   RouteHandlerMethod,
@@ -27,14 +24,6 @@ export type FastifyRouteSchema = {
 export type FastifyRouteDefinition = Pick<RouteOptions, "method" | "url"> & {
   schema: FastifyRouteSchema;
 };
-
-export type FastifyJsonSchemaToTsInstance<
-  RawServer extends RawServerBase = RawServerDefault,
-  RawRequest extends RawRequestDefaultExpression<RawServer> =
-    RawRequestDefaultExpression<RawServer>,
-  RawReply extends RawReplyDefaultExpression<RawServer> = RawReplyDefaultExpression<RawServer>,
-  Logger extends FastifyBaseLogger = FastifyBaseLogger,
-> = FastifyInstance<RawServer, RawRequest, RawReply, Logger, FastifyJsonSchemaToTsTypeProvider>;
 
 export type FastifyRouteHandlerFromDefinition<RouteDefinition extends FastifyRouteDefinition> =
   RouteHandlerMethod<
