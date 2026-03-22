@@ -69,12 +69,16 @@ export function assertProblemResponse(
 export async function assertProtectedRouteBehavior(
   t: TestContext,
   {
+    adminExpectedStatus = 501,
+    adminExpectedTitle = "Not Implemented",
     createAdminToken,
     forbiddenDescription,
     forbiddenToken,
     request,
     server,
   }: {
+    adminExpectedStatus?: number;
+    adminExpectedTitle?: string;
     createAdminToken: () => string;
     forbiddenDescription: string;
     forbiddenToken: string;
@@ -96,10 +100,10 @@ export async function assertProtectedRouteBehavior(
     assert.equal(response.headers["www-authenticate"], undefined);
   });
 
-  await t.test("returns 501 for admin users", async () => {
+  await t.test(`returns ${String(adminExpectedStatus)} for admin users`, async () => {
     const response = await server.inject(createAuthorizedRequest(request, createAdminToken()));
 
-    assertProblemResponse(response, 501, "Not Implemented");
+    assertProblemResponse(response, adminExpectedStatus, adminExpectedTitle);
     assert.equal(response.headers["www-authenticate"], undefined);
   });
 }

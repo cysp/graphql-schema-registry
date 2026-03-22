@@ -3,3 +3,5 @@ import type { PostgresJsDatabase as DrizzlePostgresJsDatabase } from "drizzle-or
 import type * as schema from "./schema.ts";
 
 export type PostgresJsDatabase = DrizzlePostgresJsDatabase<typeof schema>;
+export type PostgresJsTransaction = Parameters<Parameters<PostgresJsDatabase["transaction"]>[0]>[0];
+export type PostgresJsExecutor = PostgresJsDatabase | PostgresJsTransaction;

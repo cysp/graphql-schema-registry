@@ -55,6 +55,8 @@ await test("server: graph routes", async (t) => {
     } as const satisfies RouteRequest;
 
     await assertProtectedRouteBehavior(t, {
+      adminExpectedStatus: 503,
+      adminExpectedTitle: "Service Unavailable",
       createAdminToken,
       forbiddenDescription: "graph:read users",
       forbiddenToken: createGraphReadToken(),
@@ -75,6 +77,8 @@ await test("server: graph routes", async (t) => {
     } as const satisfies RouteRequest;
 
     await assertProtectedRouteBehavior(t, {
+      adminExpectedStatus: 503,
+      adminExpectedTitle: "Service Unavailable",
       createAdminToken,
       forbiddenDescription: "graph:read users",
       forbiddenToken: createGraphReadToken(),
@@ -90,6 +94,8 @@ await test("server: graph routes", async (t) => {
     } as const satisfies RouteRequest;
 
     await assertProtectedRouteBehavior(t, {
+      adminExpectedStatus: 503,
+      adminExpectedTitle: "Service Unavailable",
       createAdminToken,
       forbiddenDescription: "graph:read users",
       forbiddenToken: createGraphReadToken(),
@@ -109,6 +115,8 @@ await test("server: graph routes", async (t) => {
     } as const satisfies RouteRequest;
 
     await assertProtectedRouteBehavior(t, {
+      adminExpectedStatus: 503,
+      adminExpectedTitle: "Service Unavailable",
       createAdminToken,
       forbiddenDescription: "graph:read users",
       forbiddenToken: createGraphReadToken(),
@@ -124,6 +132,8 @@ await test("server: graph routes", async (t) => {
     } as const satisfies RouteRequest;
 
     await assertProtectedRouteBehavior(t, {
+      adminExpectedStatus: 503,
+      adminExpectedTitle: "Service Unavailable",
       createAdminToken,
       forbiddenDescription: "graph:read users",
       forbiddenToken: createGraphReadToken(),

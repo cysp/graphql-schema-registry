@@ -24,8 +24,8 @@ function parseEntityTags(headerValue: string): string[] {
   );
 }
 
-export function formatStrongETag(resourceId: string, revisionId: number): string {
-  return `"${resourceId}:${String(revisionId)}"`;
+export function formatStrongETag(resourceId: string, revision: number): string {
+  return `"${resourceId}:${String(revision)}"`;
 }
 
 export function parseIfMatchHeader(

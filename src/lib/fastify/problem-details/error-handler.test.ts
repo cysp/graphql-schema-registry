@@ -110,6 +110,30 @@ await test("problemDetailsErrorHandler", async (t) => {
     assertProblemDetails(response, 401, "Unauthorized");
   });
 
+  await t.test("forwards valid array-valued headers", async () => {
+    server.get("/session", async () => {
+      throw createProblemError("Session expired.", {
+        status: 401,
+        headers: {
+          "set-cookie": ["session=; Max-Age=0; Path=/", "refresh=; Max-Age=0; Path=/"],
+        },
+      });
+    });
+
+    await server.ready();
+
+    const response = await server.inject({
+      method: "GET",
+      url: "/session",
+    });
+
+    assert.deepEqual(response.headers["set-cookie"], [
+      "session=; Max-Age=0; Path=/",
+      "refresh=; Max-Age=0; Path=/",
+    ]);
+    assertProblemDetails(response, 401, "Unauthorized");
+  });
+
   await t.test("falls back to 500 when error metadata is invalid", async () => {
     server.get("/invalid-error-metadata", async () => {
       throw createProblemError("Authentication required.", {
@@ -127,6 +151,33 @@ await test("problemDetailsErrorHandler", async (t) => {
 
     assert.equal(response.headers["0"], undefined);
     assertProblemDetails(response, 500, "Internal Server Error");
+  });
+
+  await t.test("ignores header bags with custom prototypes", async () => {
+    class HeaderBag {
+      constructor() {
+        this["www-authenticate"] = "Bearer";
+      }
+
+      ["www-authenticate"]: string;
+    }
+
+    server.get("/custom-header-bag", async () => {
+      throw createProblemError("Authentication required.", {
+        status: 401,
+        headers: new HeaderBag(),
+      });
+    });
+
+    await server.ready();
+
+    const response = await server.inject({
+      method: "GET",
+      url: "/custom-header-bag",
+    });
+
+    assert.equal(response.headers["www-authenticate"], undefined);
+    assertProblemDetails(response, 401, "Unauthorized");
   });
 
   await t.test(

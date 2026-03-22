@@ -15,7 +15,7 @@ export const listGraphsRouteDefinition = {
           "required": [
             "id",
             "slug",
-            "revisionId",
+            "revision",
             "federationVersion",
             "createdAt",
             "updatedAt"
@@ -29,7 +29,7 @@ export const listGraphsRouteDefinition = {
               "type": "string",
               "minLength": 1
             },
-            "revisionId": {
+            "revision": {
               "type": "string",
               "pattern": "^[1-9][0-9]*$"
             },
@@ -119,7 +119,7 @@ export const listGraphsRouteDefinition = {
           }
         }
       },
-      501: {
+      503: {
         "type": "object",
         "additionalProperties": false,
         "required": [

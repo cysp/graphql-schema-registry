@@ -6,13 +6,14 @@
   "scripts": {
     "check": "pnpm run format:check && pnpm run lint && pnpm run typecheck && pnpm run test",
     "dev": "node --env-file-if-exists=.env --watch src/index.ts",
+    "drizzle:schema:generate": "drizzle-kit export --dialect postgresql --schema ./src/drizzle/schema.ts > db/schema.sql",
     "fastify:openapi:generate": "node tools/generate-fastify-openapi.ts",
     "format": "oxfmt .",
     "format:check": "oxfmt --check .",
     "lint": "oxlint --type-aware --report-unused-disable-directives .",
     "lint:fix": "oxlint --type-aware --fix .",
     "start": "node src/index.ts",
-    "test": "node --env-file-if-exists=.env --env-file-if-exists=.env.test --test --experimental-test-coverage --test-coverage-exclude='**/*.fixture.ts' --test-coverage-exclude='**/*.test.ts' --test-coverage-exclude='**/*.test-support.ts' --enable-source-maps --test-reporter=spec --test-reporter-destination=stdout --test-reporter=lcov --test-reporter-destination=lcov.info",
+    "test": "node --env-file-if-exists=.env --env-file-if-exists=.env.test --test --experimental-test-coverage --test-coverage-exclude='**/*.fixture.ts' --test-coverage-exclude='**/*.test.ts' --test-coverage-exclude='**/*.test-support.ts' --test-coverage-exclude='src/test-support/**' --enable-source-maps --test-reporter=spec --test-reporter-destination=stdout --test-reporter=lcov --test-reporter-destination=lcov.info",
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {

@@ -55,7 +55,7 @@ export const updateSubgraphRouteDefinition = {
           "id",
           "graphId",
           "slug",
-          "revisionId",
+          "revision",
           "routingUrl",
           "createdAt",
           "updatedAt"
@@ -73,7 +73,7 @@ export const updateSubgraphRouteDefinition = {
             "type": "string",
             "minLength": 1
           },
-          "revisionId": {
+          "revision": {
             "type": "string",
             "pattern": "^[1-9][0-9]*$"
           },
@@ -259,7 +259,7 @@ export const updateSubgraphRouteDefinition = {
           }
         }
       },
-      501: {
+      503: {
         "type": "object",
         "additionalProperties": false,
         "required": [
