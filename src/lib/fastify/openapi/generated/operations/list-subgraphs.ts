@@ -29,7 +29,7 @@ export const listSubgraphsRouteDefinition = {
             "id",
             "graphId",
             "slug",
-            "revisionId",
+            "revision",
             "routingUrl",
             "createdAt",
             "updatedAt"
@@ -47,7 +47,7 @@ export const listSubgraphsRouteDefinition = {
               "type": "string",
               "minLength": 1
             },
-            "revisionId": {
+            "revision": {
               "type": "string",
               "pattern": "^[1-9][0-9]*$"
             },
@@ -162,7 +162,7 @@ export const listSubgraphsRouteDefinition = {
           }
         }
       },
-      501: {
+      503: {
         "type": "object",
         "additionalProperties": false,
         "required": [

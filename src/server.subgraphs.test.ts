@@ -68,6 +68,8 @@ await test("server: subgraph routes", async (t) => {
     } as const satisfies RouteRequest;
 
     await assertProtectedRouteBehavior(t, {
+      adminExpectedStatus: 503,
+      adminExpectedTitle: "Service Unavailable",
       createAdminToken,
       forbiddenDescription: "graph:read users",
       forbiddenToken: createGraphReadToken(),
@@ -88,6 +90,8 @@ await test("server: subgraph routes", async (t) => {
     } as const satisfies RouteRequest;
 
     await assertProtectedRouteBehavior(t, {
+      adminExpectedStatus: 503,
+      adminExpectedTitle: "Service Unavailable",
       createAdminToken,
       forbiddenDescription: "subgraph:write users",
       forbiddenToken: createSubgraphWriteToken(),
@@ -103,6 +107,8 @@ await test("server: subgraph routes", async (t) => {
     } as const satisfies RouteRequest;
 
     await assertProtectedRouteBehavior(t, {
+      adminExpectedStatus: 503,
+      adminExpectedTitle: "Service Unavailable",
       createAdminToken,
       forbiddenDescription: "graph:read users",
       forbiddenToken: createGraphReadToken(),
@@ -122,6 +128,8 @@ await test("server: subgraph routes", async (t) => {
     } as const satisfies RouteRequest;
 
     await assertProtectedRouteBehavior(t, {
+      adminExpectedStatus: 503,
+      adminExpectedTitle: "Service Unavailable",
       createAdminToken,
       forbiddenDescription: "subgraph:write users",
       forbiddenToken: createSubgraphWriteToken(),
@@ -137,6 +145,8 @@ await test("server: subgraph routes", async (t) => {
     } as const satisfies RouteRequest;
 
     await assertProtectedRouteBehavior(t, {
+      adminExpectedStatus: 503,
+      adminExpectedTitle: "Service Unavailable",
       createAdminToken,
       forbiddenDescription: "subgraph:write users",
       forbiddenToken: createSubgraphWriteToken(),

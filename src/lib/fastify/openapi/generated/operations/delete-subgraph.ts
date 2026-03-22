@@ -108,30 +108,6 @@ export const deleteSubgraphRouteDefinition = {
           }
         }
       },
-      404: {
-        "type": "object",
-        "additionalProperties": false,
-        "required": [
-          "type",
-          "title",
-          "status"
-        ],
-        "properties": {
-          "type": {
-            "type": "string",
-            "format": "uri-reference"
-          },
-          "title": {
-            "type": "string"
-          },
-          "status": {
-            "type": "integer",
-            "format": "int32",
-            "minimum": 100,
-            "maximum": 599
-          }
-        }
-      },
       412: {
         "type": "object",
         "additionalProperties": false,
@@ -180,7 +156,7 @@ export const deleteSubgraphRouteDefinition = {
           }
         }
       },
-      501: {
+      503: {
         "type": "object",
         "additionalProperties": false,
         "required": [

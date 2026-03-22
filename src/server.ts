@@ -5,9 +5,23 @@ import fastify, { type FastifyInstance } from "fastify";
 
 import { formatUser } from "./domain/authorization/user.ts";
 import type { JwtVerification } from "./domain/jwt.ts";
+import {
+  createGraphHandler,
+  deleteGraphHandler,
+  getGraphHandler,
+  listGraphsHandler,
+  updateGraphHandler,
+} from "./domain/routes/graph-handlers.ts";
+import {
+  createSubgraphHandler,
+  deleteSubgraphHandler,
+  getSubgraphHandler,
+  listSubgraphsHandler,
+  updateSubgraphHandler,
+} from "./domain/routes/subgraph-handlers.ts";
 import type { PostgresJsDatabase } from "./drizzle/types.ts";
 import { bearerAuthenticateHeaders } from "./lib/fastify/authorization/bearer-authenticate-headers.ts";
-import { requireAdminUser } from "./lib/fastify/authorization/guards.ts";
+import { fastifyHandlerWithDependencies } from "./lib/fastify/handler-with-dependencies.ts";
 import { healthcheckPlugin } from "./lib/fastify/healthcheck/plugin.ts";
 import { operationRouteDefinitions } from "./lib/fastify/openapi/generated/operations/index.ts";
 import { openApiRoutesPlugin } from "./lib/fastify/openapi/plugin.ts";
@@ -15,7 +29,7 @@ import { problemDetailsErrorHandler } from "./lib/fastify/problem-details/error-
 import { problemDetailsPlugin } from "./lib/fastify/problem-details/plugin.ts";
 
 type CreateFastifyServerOptions = {
-  database?: Pick<PostgresJsDatabase, "execute"> | undefined;
+  database?: PostgresJsDatabase | undefined;
   jwtVerification?: JwtVerification | undefined;
 };
 
@@ -103,78 +117,20 @@ export function createFastifyServer({
       return reply.code(200).send(request.user.grants);
     });
 
+    const routeDependencies = { database };
+
     server.register(openApiRoutesPlugin(operationRouteDefinitions), {
       operationHandlers: {
-        createGraph: async (request, reply) => {
-          if (!requireAdminUser(request, reply)) {
-            return;
-          }
-
-          return reply.problemDetails({ status: 501 });
-        },
-        createSubgraph: async (request, reply) => {
-          if (!requireAdminUser(request, reply)) {
-            return;
-          }
-
-          return reply.problemDetails({ status: 501 });
-        },
-        deleteGraph: async (request, reply) => {
-          if (!requireAdminUser(request, reply)) {
-            return;
-          }
-
-          return reply.problemDetails({ status: 501 });
-        },
-        deleteSubgraph: async (request, reply) => {
-          if (!requireAdminUser(request, reply)) {
-            return;
-          }
-
-          return reply.problemDetails({ status: 501 });
-        },
-        getGraph: async (request, reply) => {
-          if (!requireAdminUser(request, reply)) {
-            return;
-          }
-
-          return reply.problemDetails({ status: 501 });
-        },
-        getSubgraph: async (request, reply) => {
-          if (!requireAdminUser(request, reply)) {
-            return;
-          }
-
-          return reply.problemDetails({ status: 501 });
-        },
-        listGraphs: async (request, reply) => {
-          if (!requireAdminUser(request, reply)) {
-            return;
-          }
-
-          return reply.problemDetails({ status: 501 });
-        },
-        listSubgraphs: async (request, reply) => {
-          if (!requireAdminUser(request, reply)) {
-            return;
-          }
-
-          return reply.problemDetails({ status: 501 });
-        },
-        updateGraph: async (request, reply) => {
-          if (!requireAdminUser(request, reply)) {
-            return;
-          }
-
-          return reply.problemDetails({ status: 501 });
-        },
-        updateSubgraph: async (request, reply) => {
-          if (!requireAdminUser(request, reply)) {
-            return;
-          }
-
-          return reply.problemDetails({ status: 501 });
-        },
+        createGraph: fastifyHandlerWithDependencies(createGraphHandler, routeDependencies),
+        createSubgraph: fastifyHandlerWithDependencies(createSubgraphHandler, routeDependencies),
+        deleteGraph: fastifyHandlerWithDependencies(deleteGraphHandler, routeDependencies),
+        deleteSubgraph: fastifyHandlerWithDependencies(deleteSubgraphHandler, routeDependencies),
+        getGraph: fastifyHandlerWithDependencies(getGraphHandler, routeDependencies),
+        getSubgraph: fastifyHandlerWithDependencies(getSubgraphHandler, routeDependencies),
+        listGraphs: fastifyHandlerWithDependencies(listGraphsHandler, routeDependencies),
+        listSubgraphs: fastifyHandlerWithDependencies(listSubgraphsHandler, routeDependencies),
+        updateGraph: fastifyHandlerWithDependencies(updateGraphHandler, routeDependencies),
+        updateSubgraph: fastifyHandlerWithDependencies(updateSubgraphHandler, routeDependencies),
       },
     });
   });

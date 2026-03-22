@@ -1,0 +1,5 @@
+description: Service Unavailable
+content:
+  application/problem+json:
+    schema:
+      $ref: "../schemas/problem-details.yaml"
