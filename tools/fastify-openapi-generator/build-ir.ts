@@ -1,5 +1,3 @@
-// oxlint-disable eslint/max-lines
-
 import { GeneratorError } from "./errors.ts";
 import { isValidIdentifier, toFastifyPath } from "./naming.ts";
 import type { JsonSchema, NormalizedOperation, NormalizedRouteSchema } from "./types.ts";

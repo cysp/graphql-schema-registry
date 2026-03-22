@@ -1,5 +1,3 @@
-// oxlint-disable eslint/max-lines
-
 import assert from "node:assert/strict";
 import test from "node:test";
 
