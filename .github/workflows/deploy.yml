@@ -1,0 +1,72 @@
+name: deploy
+
+on:
+  workflow_run:
+    workflows:
+      - ci
+    branches:
+      - main
+    types:
+      - completed
+
+permissions:
+  contents: read
+  deployments: write
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event.workflow_run.head_branch || github.ref_name }}
+  cancel-in-progress: false
+
+jobs:
+  neon-pgschema-apply:
+    if: >-
+      ${{
+        github.event.workflow_run.conclusion == 'success' &&
+        github.event.workflow_run.event == 'push' &&
+        github.event.workflow_run.head_branch == 'main'
+      }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+
+    environment:
+      name: production
+      deployment: false
+
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+        with:
+          ref: ${{ github.event.workflow_run.head_sha }}
+
+      - uses: ./.github/actions/pgschema-apply
+        env:
+          PGHOST: ${{ vars.NEON_HOST }}
+          PGPORT: "5432"
+          PGDATABASE: ${{ vars.NEON_DATABASE_NAME || 'neondb' }}
+          PGUSER: ${{ vars.NEON_ROLE_NAME || 'neondb_owner' }}
+          PGPASSWORD: ${{ secrets.NEON_OWNER_PASSWORD }}
+        with:
+          pgschema-package-version: 51e4d7085fe6a324c6f6a88ad153f6821f197940
+          pgschema-package: github.com/pgplex/pgschema
+          file: db/neon.sql
+
+  fly-deploy:
+    needs:
+      - neon-pgschema-apply
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+
+    environment:
+      name: production
+
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+        with:
+          ref: ${{ github.event.workflow_run.head_sha }}
+
+      - uses: superfly/flyctl-actions/setup-flyctl@63da3ecc5e2793b98a3f2519b3d75d4f4c11cec2
+        with:
+          version: 0.4.26
+
+      - run: flyctl deploy --remote-only --config fly.toml
+        env:
+          FLY_API_TOKEN: ${{ secrets.FLY_API_TOKEN }}
