@@ -1,0 +1,36 @@
+name: ci
+
+on:
+  push:
+    branches:
+      - main
+      - master
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  format:
+    uses: ./.github/workflows/ci-format.yml
+    secrets: inherit
+
+  lint:
+    uses: ./.github/workflows/ci-lint.yml
+    secrets: inherit
+
+  typecheck:
+    uses: ./.github/workflows/ci-typecheck.yml
+    secrets: inherit
+
+  fastify-openapi-generated:
+    uses: ./.github/workflows/ci-fastify-openapi-generated.yml
+    secrets: inherit
+
+  drizzle-schema:
+    uses: ./.github/workflows/ci-drizzle-schema.yml
+    secrets: inherit
+
+  test:
+    uses: ./.github/workflows/ci-test.yml
+    secrets: inherit
