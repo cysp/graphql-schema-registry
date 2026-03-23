@@ -60,26 +60,11 @@ jobs:
         run: echo "expires_at=$(date -u -d '+20 minutes' +'%Y-%m-%dT%H:%M:%SZ')" >>"${GITHUB_OUTPUT}"
 
       - id: neon_create_branch
-        uses: neondatabase/create-branch-action@72ed4f69a12b6be9c16aebfad893f6a21e9aba8b # v6.4.0
-        with:
-          project_id: ${{ env.NEON_PROJECT_ID }}
-          branch_name: github-actions-${{ github.run_id }}-${{ github.run_attempt }}-${{ github.job }}
-          parent_branch: ${{ env.NEON_PARENT_BRANCH }}
-          database: ${{ env.NEON_DATABASE_NAME }}
-          role: ${{ env.NEON_ROLE_NAME }}
-          expires_at: ${{ steps.neon_compute_branch_expires_at.outputs.expires_at }}
-          api_key: ${{ secrets.NEON_API_KEY }}
-
-      - name: Mask Neon connection secrets
-        shell: bash
         env:
-          NEON_PASSWORD: ${{ steps.neon_create_branch.outputs.password }}
-          NEON_DB_URL: ${{ steps.neon_create_branch.outputs.db_url }}
-          NEON_DB_URL_POOLED: ${{ steps.neon_create_branch.outputs.db_url_pooled }}
-        run: |
-          printf '::add-mask::%s\n' "$NEON_PASSWORD"
-          printf '::add-mask::%s\n' "$NEON_DB_URL"
-          printf '::add-mask::%s\n' "$NEON_DB_URL_POOLED"
+          NEON_API_KEY: ${{ secrets.NEON_API_KEY }}
+          NEON_BRANCH_NAME: github-actions-${{ github.run_id }}-${{ github.run_attempt }}-${{ github.job }}
+          NEON_EXPIRES_AT: ${{ steps.neon_compute_branch_expires_at.outputs.expires_at }}
+        run: node .github/scripts/create-neon-branch.mjs
 
       - uses: ./.github/actions/pgschema-apply
         env:
