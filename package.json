@@ -19,7 +19,7 @@
   "dependencies": {
     "@fastify/jwt": "10.0.0",
     "@fastify/sensible": "6.0.4",
-    "drizzle-orm": "1.0.0-beta.17-160831b",
+    "drizzle-orm": "1.0.0-beta.19",
     "fastify": "5.8.4",
     "fastify-plugin": "5.1.0",
     "postgres": "3.4.8",
@@ -33,7 +33,7 @@
     "@tsconfig/strictest": "2.0.8",
     "@types/json-schema": "7.0.15",
     "@types/node": "24.12.0",
-    "drizzle-kit": "1.0.0-beta.17-160831b",
+    "drizzle-kit": "1.0.0-beta.19",
     "json-schema-to-ts": "3.1.1",
     "oxfmt": "0.42.0",
     "oxlint": "1.57.0",
