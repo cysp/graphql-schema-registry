@@ -2,7 +2,7 @@ import { and, eq, isNull } from "drizzle-orm";
 
 import { graphs, graphRevisions, subgraphs } from "../../drizzle/schema.ts";
 import type { PostgresJsTransaction } from "../../drizzle/types.ts";
-import type { IfMatchCondition } from "../etag.ts";
+import type { EntityTagCondition } from "../etag.ts";
 import { etagSatisfiesIfMatch, formatStrongETag } from "../etag.ts";
 import type { ActiveGraph } from "./graph-records.ts";
 
@@ -96,7 +96,7 @@ export async function insertGraphWithInitialRevision(
 
 export function checkGraphIfMatch(
   graph: ActiveGraph,
-  ifMatch: IfMatchCondition | undefined,
+  ifMatch: EntityTagCondition | undefined,
 ): { kind: "precondition_failed" } | undefined {
   if (etagSatisfiesIfMatch(ifMatch, formatStrongETag(graph.id, graph.revision))) {
     return undefined;
