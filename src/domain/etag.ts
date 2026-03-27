@@ -1,76 +1,230 @@
-export type IfMatchCondition =
+export type EntityTagCondition =
   | {
-      kind: "any";
+      kind: "wildcard";
     }
   | {
-      kind: "tags";
-      tags: string[];
+      kind: "entity-tag-list";
+      entityTags: string[];
     };
 
-const entityTagPatternSource = String.raw`(?:W/)?"[\u0021\u0023-\u007E\u0080-\u00FF]*"`;
-const optionalWhitespacePatternSource = String.raw`[ \t]*`;
-const ifMatchPattern = new RegExp(
-  String.raw`^(?:\*|${entityTagPatternSource}(?:${optionalWhitespacePatternSource},${optionalWhitespacePatternSource}${entityTagPatternSource})*)$`,
-);
+function isOptionalWhitespace(char: string | undefined): boolean {
+  return char === " " || char === "\t";
+}
 
-function parseEntityTags(headerValue: string): string[] {
-  if (!ifMatchPattern.test(headerValue)) {
-    throw new Error("Invalid If-Match header.");
+function skipOptionalWhitespace(value: string, index: number): number {
+  let nextIndex = index;
+
+  while (isOptionalWhitespace(value[nextIndex])) {
+    nextIndex += 1;
   }
 
-  return Array.from(
-    headerValue.matchAll(new RegExp(entityTagPatternSource, "g")),
-    ([entityTag]) => entityTag,
-  );
+  return nextIndex;
+}
+
+function isEntityTagCharacter(char: string | undefined): boolean {
+  if (char === undefined) {
+    return false;
+  }
+
+  const codePoint = char.codePointAt(0);
+  if (codePoint === undefined) {
+    return false;
+  }
+
+  return codePoint === 0x21 || (codePoint >= 0x23 && codePoint <= 0x7e) || codePoint >= 0x80;
+}
+
+function parseEntityTag(
+  value: string,
+  index: number,
+): { entityTag: string; nextIndex: number } | undefined {
+  let nextIndex = index;
+
+  if (value.startsWith("W/", nextIndex)) {
+    nextIndex += 2;
+  }
+
+  if (value[nextIndex] !== '"') {
+    return undefined;
+  }
+
+  nextIndex += 1;
+
+  while (nextIndex < value.length && value[nextIndex] !== '"') {
+    if (!isEntityTagCharacter(value[nextIndex])) {
+      return undefined;
+    }
+
+    nextIndex += 1;
+  }
+
+  if (value[nextIndex] !== '"') {
+    return undefined;
+  }
+
+  nextIndex += 1;
+
+  return {
+    entityTag: value.slice(index, nextIndex),
+    nextIndex,
+  };
+}
+
+function parseEntityTagList(headerValue: string): string[] {
+  const entityTags: string[] = [];
+  let nextIndex = 0;
+
+  while (nextIndex < headerValue.length) {
+    nextIndex = skipOptionalWhitespace(headerValue, nextIndex);
+
+    if (headerValue[nextIndex] === ",") {
+      nextIndex += 1;
+      continue;
+    }
+
+    const parsedEntityTag = parseEntityTag(headerValue, nextIndex);
+    if (parsedEntityTag === undefined) {
+      break;
+    }
+
+    entityTags.push(parsedEntityTag.entityTag);
+    nextIndex = skipOptionalWhitespace(headerValue, parsedEntityTag.nextIndex);
+
+    if (headerValue[nextIndex] === ",") {
+      nextIndex += 1;
+      continue;
+    }
+
+    break;
+  }
+
+  nextIndex = skipOptionalWhitespace(headerValue, nextIndex);
+
+  if (entityTags.length === 0 || nextIndex !== headerValue.length) {
+    throw new Error("Invalid entity-tag list.");
+  }
+
+  return entityTags;
+}
+
+function encodeEntityTagComponent(value: string): string {
+  // RFC 9110 entity-tags are opaque quoted strings, not quoted-string values.
+  // Percent-encoding keeps arbitrary IDs within the allowed character set and
+  // avoids raw backslashes, which the RFC recommends servers avoid emitting.
+  return encodeURIComponent(value);
 }
 
 export function formatStrongETag(resourceId: string, revision: number): string {
-  return `"${resourceId}:${String(revision)}"`;
+  return `"${encodeEntityTagComponent(resourceId)}:${String(revision)}"`;
 }
 
-export function parseIfMatchHeader(
+function parseEntityTagHeader(
   headerValue: string | string[] | undefined,
-): IfMatchCondition | undefined {
+): EntityTagCondition | undefined {
   if (headerValue === undefined) {
     return undefined;
   }
 
-  const normalizedHeaderValue =
-    typeof headerValue === "string" ? headerValue.trim() : headerValue.join(",").trim();
+  const values = typeof headerValue === "string" ? [headerValue] : headerValue;
+  const entityTags: string[] = [];
+  let hasWildcard = false;
 
-  if (normalizedHeaderValue === "") {
-    return undefined;
+  for (const value of values) {
+    const normalizedValue = value.trim();
+
+    if (normalizedValue === "") {
+      continue;
+    }
+
+    if (normalizedValue === "*") {
+      hasWildcard = true;
+      continue;
+    }
+
+    entityTags.push(...parseEntityTagList(normalizedValue));
   }
 
-  if (normalizedHeaderValue === "*") {
+  if (hasWildcard) {
+    if (entityTags.length > 0) {
+      throw new Error("Invalid entity-tag condition.");
+    }
+
     return {
-      kind: "any",
+      kind: "wildcard",
     };
   }
 
+  if (entityTags.length === 0) {
+    return undefined;
+  }
+
   return {
-    kind: "tags",
-    tags: parseEntityTags(normalizedHeaderValue),
+    kind: "entity-tag-list",
+    entityTags,
   };
 }
 
+export function parseIfMatchHeader(
+  headerValue: string | string[] | undefined,
+): EntityTagCondition | undefined {
+  return parseEntityTagHeader(headerValue);
+}
+
+export function parseIfNoneMatchHeader(
+  headerValue: string | string[] | undefined,
+): EntityTagCondition | undefined {
+  return parseEntityTagHeader(headerValue);
+}
+
 export function etagSatisfiesIfMatch(
-  condition: IfMatchCondition | undefined,
-  currentEtag: string | undefined,
+  precondition: EntityTagCondition | undefined,
+  currentEntityTag: string | undefined,
 ): boolean {
-  if (condition === undefined) {
+  if (precondition === undefined) {
     return true;
   }
 
-  if (currentEtag === undefined) {
+  if (currentEntityTag === undefined) {
     return false;
   }
 
-  if (condition.kind === "any") {
+  if (precondition.kind === "wildcard") {
     return true;
   }
 
-  return condition.tags.some(
-    (candidate) => !candidate.startsWith("W/") && candidate === currentEtag,
+  return precondition.entityTags.some(
+    (candidateEntityTag) =>
+      !candidateEntityTag.startsWith("W/") && candidateEntityTag === currentEntityTag,
   );
+}
+
+function normalizeEntityTag(entityTag: string): string {
+  return entityTag.startsWith("W/") ? entityTag.slice(2) : entityTag;
+}
+
+export function etagSatisfiesIfNoneMatch(
+  precondition: EntityTagCondition | undefined,
+  currentEntityTag: string | undefined,
+): boolean {
+  if (precondition === undefined) {
+    return true;
+  }
+
+  if (precondition.kind === "wildcard") {
+    return currentEntityTag === undefined;
+  }
+
+  if (currentEntityTag === undefined) {
+    return true;
+  }
+
+  const normalizedCurrentEntityTag = normalizeEntityTag(currentEntityTag);
+
+  for (const candidateEntityTag of precondition.entityTags) {
+    if (normalizeEntityTag(candidateEntityTag) === normalizedCurrentEntityTag) {
+      return false;
+    }
+  }
+
+  return true;
 }
