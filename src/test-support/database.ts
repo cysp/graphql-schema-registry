@@ -60,9 +60,11 @@ export async function connectIntegrationDatabase(databaseUrl: string): Promise<{
 }
 
 export async function queryCount(sql: postgres.Sql, statement: string): Promise<number> {
-  const rows = (await sql.unsafe(statement)) as Array<{
-    count: bigint | number | string;
-  }>;
+  const rows = await sql.unsafe<
+    Array<{
+      count: bigint | number | string;
+    }>
+  >(statement);
   const count = rows[0]?.count;
 
   if (typeof count === "bigint") {

@@ -1,6 +1,8 @@
 // oxlint-disable eslint/no-console
 // oxlint-disable eslint-node/no-process-env
 
+/// <reference types="node" />
+
 import { appendFileSync } from "node:fs";
 
 /**
