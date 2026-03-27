@@ -13,7 +13,7 @@ export type IntegrationDatabase = Readonly<{
 const integrationDatabaseLockKey = 32768012;
 const dropAllTablesSql =
   "DROP TABLE IF EXISTS subgraph_revisions, subgraphs, graph_revisions, graphs CASCADE";
-const revisionConstraintsSqlPath = new URL("../../db/revision-constraints.sql", import.meta.url);
+const schemaConstraintsSqlPath = new URL("../../db/schema-constraints.sql", import.meta.url);
 const schemaSqlPath = new URL("../../db/schema.sql", import.meta.url);
 const truncateAllDataSql =
   "TRUNCATE TABLE subgraph_revisions, subgraphs, graph_revisions, graphs CASCADE";
@@ -22,7 +22,7 @@ async function lockAndResetDatabase(sql: postgres.Sql): Promise<void> {
   await sql`SELECT pg_advisory_lock(${integrationDatabaseLockKey})`;
   await sql.unsafe(dropAllTablesSql);
   await sql.unsafe(await readFile(schemaSqlPath, "utf8"));
-  await sql.unsafe(await readFile(revisionConstraintsSqlPath, "utf8"));
+  await sql.unsafe(await readFile(schemaConstraintsSqlPath, "utf8"));
   await sql.unsafe(truncateAllDataSql);
 }
 
