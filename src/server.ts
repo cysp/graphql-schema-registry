@@ -5,20 +5,16 @@ import fastify, { type FastifyInstance } from "fastify";
 
 import { formatUser } from "./domain/authorization/user.ts";
 import type { JwtVerification } from "./domain/jwt.ts";
-import {
-  createGraphHandler,
-  deleteGraphHandler,
-  getGraphHandler,
-  listGraphsHandler,
-  updateGraphHandler,
-} from "./domain/routes/graph-handlers.ts";
-import {
-  createSubgraphHandler,
-  deleteSubgraphHandler,
-  getSubgraphHandler,
-  listSubgraphsHandler,
-  updateSubgraphHandler,
-} from "./domain/routes/subgraph-handlers.ts";
+import { createGraphHandler } from "./domain/routes/create-graph.ts";
+import { createSubgraphHandler } from "./domain/routes/create-subgraph.ts";
+import { deleteGraphHandler } from "./domain/routes/delete-graph.ts";
+import { deleteSubgraphHandler } from "./domain/routes/delete-subgraph.ts";
+import { getGraphHandler } from "./domain/routes/get-graph.ts";
+import { getSubgraphHandler } from "./domain/routes/get-subgraph.ts";
+import { listGraphsHandler } from "./domain/routes/list-graphs.ts";
+import { listSubgraphsHandler } from "./domain/routes/list-subgraphs.ts";
+import { updateGraphHandler } from "./domain/routes/update-graph.ts";
+import { updateSubgraphHandler } from "./domain/routes/update-subgraph.ts";
 import type { PostgresJsDatabase } from "./drizzle/types.ts";
 import { bearerAuthenticateHeaders } from "./lib/fastify/authorization/bearer-authenticate-headers.ts";
 import { fastifyHandlerWithDependencies } from "./lib/fastify/handler-with-dependencies.ts";
