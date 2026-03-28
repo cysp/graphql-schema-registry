@@ -20,7 +20,7 @@ export const createGraphRouteDefinition = {
         },
         "federationVersion": {
           "type": "string",
-          "minLength": 1
+          "pattern": "^v[0-9]+\\.[0-9]+$"
         }
       }
     },
@@ -50,7 +50,8 @@ export const createGraphRouteDefinition = {
             "pattern": "^[1-9][0-9]*$"
           },
           "federationVersion": {
-            "type": "string"
+            "type": "string",
+            "pattern": "^v[0-9]+\\.[0-9]+$"
           },
           "createdAt": {
             "type": "string",

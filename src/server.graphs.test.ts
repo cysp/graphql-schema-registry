@@ -71,7 +71,7 @@ await test("server: graph routes", async (t) => {
       url: "/v1/graphs",
       headers: jsonHeaders,
       payload: {
-        federationVersion: "2",
+        federationVersion: "v2.9",
         slug: "graph-1",
       },
     } as const satisfies RouteRequest;
@@ -110,7 +110,7 @@ await test("server: graph routes", async (t) => {
       url: "/v1/graphs/graph-1",
       headers: jsonHeaders,
       payload: {
-        federationVersion: "2",
+        federationVersion: "v2.9",
       },
     } as const satisfies RouteRequest;
 

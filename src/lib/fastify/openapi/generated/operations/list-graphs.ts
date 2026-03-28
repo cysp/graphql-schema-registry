@@ -34,7 +34,8 @@ export const listGraphsRouteDefinition = {
               "pattern": "^[1-9][0-9]*$"
             },
             "federationVersion": {
-              "type": "string"
+              "type": "string",
+              "pattern": "^v[0-9]+\\.[0-9]+$"
             },
             "createdAt": {
               "type": "string",
