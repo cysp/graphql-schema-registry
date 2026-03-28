@@ -30,16 +30,6 @@ function selectGraphWithRevisionQuery(database: PostgresJsExecutor) {
     .innerJoin(graphRevisions, graphRevisionJoinCondition());
 }
 
-function selectActiveGraphIdBySlugQuery(database: PostgresJsExecutor, slug: string) {
-  return database
-    .select({
-      id: graphs.id,
-    })
-    .from(graphs)
-    .where(and(eq(graphs.slug, slug), isNull(graphs.deletedAt)))
-    .limit(1);
-}
-
 function selectActiveGraphBySlugQuery(database: PostgresJsExecutor, slug: string) {
   return selectGraphWithRevisionQuery(database)
     .where(and(eq(graphs.slug, slug), isNull(graphs.deletedAt)))
@@ -54,7 +44,7 @@ export async function selectActiveGraphBySlug(
   return graph;
 }
 
-export async function lockActiveGraphBySlug(
+export async function selectActiveGraphBySlugForUpdate(
   database: PostgresJsExecutor,
   slug: string,
 ): Promise<ActiveGraph | undefined> {
@@ -65,14 +55,15 @@ export async function lockActiveGraphBySlug(
   return graph;
 }
 
-export async function lockActiveGraphIdBySlug(
+export async function selectActiveGraphBySlugForShare(
   database: PostgresJsExecutor,
   slug: string,
-): Promise<string | undefined> {
-  const [graphId] = await selectActiveGraphIdBySlugQuery(database, slug).for("update", {
+): Promise<ActiveGraph | undefined> {
+  const [graph] = await selectActiveGraphBySlugQuery(database, slug).for("share", {
     of: graphs,
   });
-  return graphId?.id;
+
+  return graph;
 }
 
 export async function selectActiveGraphs(database: PostgresJsDatabase): Promise<ActiveGraph[]> {

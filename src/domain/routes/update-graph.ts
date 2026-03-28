@@ -1,13 +1,13 @@
 import type { PostgresJsDatabase } from "../../drizzle/types.ts";
-import { assertNever } from "../../lib/assert-never.ts";
 import { requireAdminUser } from "../../lib/fastify/authorization/guards.ts";
 import type { DependencyInjectedHandler } from "../../lib/fastify/handler-with-dependencies.ts";
 import type { operationRouteDefinitions } from "../../lib/fastify/openapi/generated/operations/index.ts";
 import type { OpenApiOperationHandlers } from "../../lib/fastify/openapi/plugin.ts";
 import { requireDatabase } from "../../lib/fastify/require-database.ts";
-import { updateGraphBySlug } from "../database/graphs.ts";
-import { parseIfMatchHeader } from "../etag.ts";
-import { sendGraphResponse } from "./payloads.ts";
+import { selectActiveGraphBySlugForUpdate, type ActiveGraph } from "../database/graph-records.ts";
+import { advanceGraphRevision } from "../database/graph-write-helpers.ts";
+import { etagSatisfiesIfMatch, formatStrongETag, parseIfMatchHeader } from "../etag.ts";
+import { toGraphPayload } from "./payloads.ts";
 
 type OperationHandlers = OpenApiOperationHandlers<
   keyof typeof operationRouteDefinitions,
@@ -17,6 +17,18 @@ type OperationHandlers = OpenApiOperationHandlers<
 type RouteDependencies = {
   database: PostgresJsDatabase | undefined;
 };
+
+type UpdateGraphTransactionResult =
+  | {
+      kind: "not_found";
+    }
+  | {
+      kind: "precondition_failed";
+    }
+  | {
+      kind: "ok";
+      graph: ActiveGraph;
+    };
 
 export const updateGraphHandler: DependencyInjectedHandler<
   OperationHandlers["updateGraph"],
@@ -30,21 +42,39 @@ export const updateGraphHandler: DependencyInjectedHandler<
     return;
   }
 
-  const result = await updateGraphBySlug(database, {
-    slug: request.params.graphSlug,
-    ifMatch: parseIfMatchHeader(request.headers["if-match"]),
-    federationVersion: request.body.federationVersion,
-    now: new Date(),
+  const ifMatch = parseIfMatchHeader(request.headers["if-match"]);
+
+  const result: UpdateGraphTransactionResult = await database.transaction(async (transaction) => {
+    const now = new Date();
+
+    let graph = await selectActiveGraphBySlugForUpdate(transaction, request.params.graphSlug);
+
+    if (!etagSatisfiesIfMatch(ifMatch, graph && formatStrongETag(graph.id, graph.revision))) {
+      return { kind: "precondition_failed" };
+    }
+
+    if (!graph) {
+      return { kind: "not_found" };
+    }
+
+    if (graph.federationVersion !== request.body.federationVersion) {
+      graph = await advanceGraphRevision(transaction, graph, request.body.federationVersion, now);
+    }
+
+    return {
+      graph,
+      kind: "ok",
+    };
   });
 
-  switch (result.kind) {
-    case "not_found":
-      return reply.problemDetails({ status: 404 });
-    case "precondition_failed":
-      return reply.problemDetails({ status: 412 });
-    case "ok":
-      return sendGraphResponse(reply, result.graph);
-    default:
-      return assertNever(result);
+  if (result.kind === "precondition_failed") {
+    return reply.problemDetails({ status: 412 });
   }
+
+  if (result.kind === "not_found") {
+    return reply.problemDetails({ status: 404 });
+  }
+
+  reply.header("ETag", formatStrongETag(result.graph.id, result.graph.revision));
+  return reply.code(200).send(toGraphPayload(result.graph));
 };

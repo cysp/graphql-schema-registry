@@ -4,8 +4,9 @@ import type { DependencyInjectedHandler } from "../../lib/fastify/handler-with-d
 import type { operationRouteDefinitions } from "../../lib/fastify/openapi/generated/operations/index.ts";
 import type { OpenApiOperationHandlers } from "../../lib/fastify/openapi/plugin.ts";
 import { requireDatabase } from "../../lib/fastify/require-database.ts";
-import { selectActiveSubgraphByGraphSlugAndSubgraphSlug } from "../database/subgraph-records.ts";
-import { sendSubgraphResponse } from "./payloads.ts";
+import { selectActiveSubgraphByGraphSlugAndSlug } from "../database/subgraph-records.ts";
+import { formatStrongETag } from "../etag.ts";
+import { toSubgraphPayload } from "./payloads.ts";
 
 type OperationHandlers = OpenApiOperationHandlers<
   keyof typeof operationRouteDefinitions,
@@ -28,7 +29,7 @@ export const getSubgraphHandler: DependencyInjectedHandler<
     return;
   }
 
-  const subgraph = await selectActiveSubgraphByGraphSlugAndSubgraphSlug(
+  const subgraph = await selectActiveSubgraphByGraphSlugAndSlug(
     database,
     request.params.graphSlug,
     request.params.subgraphSlug,
@@ -37,5 +38,6 @@ export const getSubgraphHandler: DependencyInjectedHandler<
     return reply.problemDetails({ status: 404 });
   }
 
-  return sendSubgraphResponse(reply, subgraph);
+  reply.header("ETag", formatStrongETag(subgraph.id, subgraph.revision));
+  return reply.code(200).send(toSubgraphPayload(subgraph));
 };

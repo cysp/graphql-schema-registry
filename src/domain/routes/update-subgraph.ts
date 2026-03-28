@@ -1,13 +1,17 @@
 import type { PostgresJsDatabase } from "../../drizzle/types.ts";
-import { assertNever } from "../../lib/assert-never.ts";
 import { requireAdminUser } from "../../lib/fastify/authorization/guards.ts";
 import type { DependencyInjectedHandler } from "../../lib/fastify/handler-with-dependencies.ts";
 import type { operationRouteDefinitions } from "../../lib/fastify/openapi/generated/operations/index.ts";
 import type { OpenApiOperationHandlers } from "../../lib/fastify/openapi/plugin.ts";
 import { requireDatabase } from "../../lib/fastify/require-database.ts";
-import { updateSubgraphBySlugs } from "../database/subgraphs.ts";
-import { parseIfMatchHeader } from "../etag.ts";
-import { sendSubgraphResponse } from "./payloads.ts";
+import { selectActiveGraphBySlugForUpdate } from "../database/graph-records.ts";
+import {
+  selectActiveSubgraphByGraphIdAndSlugForUpdate,
+  type ActiveSubgraph,
+} from "../database/subgraph-records.ts";
+import { advanceSubgraphRevision } from "../database/subgraph-write-helpers.ts";
+import { etagSatisfiesIfMatch, formatStrongETag, parseIfMatchHeader } from "../etag.ts";
+import { toSubgraphPayload } from "./payloads.ts";
 
 type OperationHandlers = OpenApiOperationHandlers<
   keyof typeof operationRouteDefinitions,
@@ -17,6 +21,18 @@ type OperationHandlers = OpenApiOperationHandlers<
 type RouteDependencies = {
   database: PostgresJsDatabase | undefined;
 };
+
+type UpdateSubgraphTransactionResult =
+  | {
+      kind: "not_found";
+    }
+  | {
+      kind: "precondition_failed";
+    }
+  | {
+      kind: "ok";
+      subgraph: ActiveSubgraph;
+    };
 
 export const updateSubgraphHandler: DependencyInjectedHandler<
   OperationHandlers["updateSubgraph"],
@@ -30,22 +46,61 @@ export const updateSubgraphHandler: DependencyInjectedHandler<
     return;
   }
 
-  const result = await updateSubgraphBySlugs(database, {
-    graphSlug: request.params.graphSlug,
-    subgraphSlug: request.params.subgraphSlug,
-    ifMatch: parseIfMatchHeader(request.headers["if-match"]),
-    routingUrl: request.body.routingUrl,
-    now: new Date(),
-  });
+  const ifMatch = parseIfMatchHeader(request.headers["if-match"]);
 
-  switch (result.kind) {
-    case "not_found":
-      return reply.problemDetails({ status: 404 });
-    case "precondition_failed":
-      return reply.problemDetails({ status: 412 });
-    case "ok":
-      return sendSubgraphResponse(reply, result.subgraph);
-    default:
-      return assertNever(result);
+  const result: UpdateSubgraphTransactionResult = await database.transaction(
+    async (transaction) => {
+      const now = new Date();
+
+      const graph = await selectActiveGraphBySlugForUpdate(transaction, request.params.graphSlug);
+      if (!graph) {
+        if (!etagSatisfiesIfMatch(ifMatch, undefined)) {
+          return { kind: "precondition_failed" };
+        }
+
+        return { kind: "not_found" };
+      }
+
+      let subgraph = await selectActiveSubgraphByGraphIdAndSlugForUpdate(
+        transaction,
+        graph.id,
+        request.params.subgraphSlug,
+      );
+
+      if (
+        !etagSatisfiesIfMatch(ifMatch, subgraph && formatStrongETag(subgraph.id, subgraph.revision))
+      ) {
+        return { kind: "precondition_failed" };
+      }
+
+      if (!subgraph) {
+        return { kind: "not_found" };
+      }
+
+      if (subgraph.routingUrl !== request.body.routingUrl) {
+        subgraph = await advanceSubgraphRevision(
+          transaction,
+          subgraph,
+          request.body.routingUrl,
+          now,
+        );
+      }
+
+      return {
+        kind: "ok",
+        subgraph,
+      };
+    },
+  );
+
+  if (result.kind === "precondition_failed") {
+    return reply.problemDetails({ status: 412 });
   }
+
+  if (result.kind === "not_found") {
+    return reply.problemDetails({ status: 404 });
+  }
+
+  reply.header("ETag", formatStrongETag(result.subgraph.id, result.subgraph.revision));
+  return reply.code(200).send(toSubgraphPayload(result.subgraph));
 };
