@@ -1,20 +1,8 @@
 import { and, asc, eq, isNull } from "drizzle-orm";
 
-import { graphRevisions, graphs } from "../../drizzle/schema.ts";
-import type { PostgresJsDatabase, PostgresJsExecutor } from "../../drizzle/types.ts";
-
-export type ActiveGraph = {
-  id: string;
-  slug: string;
-  revision: number;
-  federationVersion: string;
-  createdAt: Date;
-  updatedAt: Date;
-};
-
-function graphRevisionJoinCondition() {
-  return and(eq(graphRevisions.graphId, graphs.id), eq(graphRevisions.revision, graphs.revision));
-}
+import { graphRevisions, graphs } from "../../../drizzle/schema.ts";
+import type { PostgresJsExecutor } from "../../../drizzle/types.ts";
+import type { ActiveGraph } from "../types.ts";
 
 function selectGraphWithRevisionQuery(database: PostgresJsExecutor) {
   return database
@@ -27,7 +15,16 @@ function selectGraphWithRevisionQuery(database: PostgresJsExecutor) {
       updatedAt: graphs.updatedAt,
     })
     .from(graphs)
-    .innerJoin(graphRevisions, graphRevisionJoinCondition());
+    .innerJoin(
+      graphRevisions,
+      and(eq(graphRevisions.graphId, graphs.id), eq(graphRevisions.revision, graphs.revision)),
+    );
+}
+
+export async function selectActiveGraphs(database: PostgresJsExecutor): Promise<ActiveGraph[]> {
+  return selectGraphWithRevisionQuery(database)
+    .where(isNull(graphs.deletedAt))
+    .orderBy(asc(graphs.slug));
 }
 
 function selectActiveGraphBySlugQuery(database: PostgresJsExecutor, slug: string) {
@@ -44,17 +41,6 @@ export async function selectActiveGraphBySlug(
   return graph;
 }
 
-export async function selectActiveGraphBySlugForUpdate(
-  database: PostgresJsExecutor,
-  slug: string,
-): Promise<ActiveGraph | undefined> {
-  const [graph] = await selectActiveGraphBySlugQuery(database, slug).for("update", {
-    of: graphs,
-  });
-
-  return graph;
-}
-
 export async function selectActiveGraphBySlugForShare(
   database: PostgresJsExecutor,
   slug: string,
@@ -66,8 +52,13 @@ export async function selectActiveGraphBySlugForShare(
   return graph;
 }
 
-export async function selectActiveGraphs(database: PostgresJsDatabase): Promise<ActiveGraph[]> {
-  return selectGraphWithRevisionQuery(database)
-    .where(isNull(graphs.deletedAt))
-    .orderBy(asc(graphs.slug));
+export async function selectActiveGraphBySlugForUpdate(
+  database: PostgresJsExecutor,
+  slug: string,
+): Promise<ActiveGraph | undefined> {
+  const [graph] = await selectActiveGraphBySlugQuery(database, slug).for("update", {
+    of: graphs,
+  });
+
+  return graph;
 }

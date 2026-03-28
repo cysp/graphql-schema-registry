@@ -1,27 +1,15 @@
 import { and, eq, isNull } from "drizzle-orm";
 
-import { graphs, graphRevisions, subgraphs } from "../../drizzle/schema.ts";
-import type { PostgresJsTransaction } from "../../drizzle/types.ts";
-import type { ActiveGraph } from "./graph-records.ts";
-
-const initialRevision = 1;
-
-const graphRowSelection = {
-  id: graphs.id,
-  slug: graphs.slug,
-  createdAt: graphs.createdAt,
-  updatedAt: graphs.updatedAt,
-};
-
-const graphIdSelection = {
-  id: graphs.id,
-};
+import { graphRevisions, graphs, subgraphs } from "../../../drizzle/schema.ts";
+import type { PostgresJsTransaction } from "../../../drizzle/types.ts";
+import type { ActiveGraph } from "../types.ts";
+import { graphIdSelection, graphRowSelection, initialRevision } from "./selections.ts";
 
 async function insertGraphRow(
   transaction: PostgresJsTransaction,
   slug: string,
   now: Date,
-): Promise<Pick<ActiveGraph, "createdAt" | "id" | "slug" | "updatedAt">> {
+): Promise<Pick<ActiveGraph, "id" | "slug" | "createdAt" | "updatedAt">> {
   const [insertedGraph] = await transaction
     .insert(graphs)
     .values({
@@ -82,31 +70,32 @@ export async function insertGraphWithInitialRevision(
   federationVersion: string,
   now: Date,
 ): Promise<ActiveGraph> {
-  const insertedGraph = await insertGraphRow(transaction, slug, now);
-  await insertGraphRevision(transaction, insertedGraph.id, initialRevision, federationVersion, now);
+  const graph = await insertGraphRow(transaction, slug, now);
+
+  await insertGraphRevision(transaction, graph.id, initialRevision, federationVersion, now);
 
   return {
-    ...insertedGraph,
-    federationVersion,
+    ...graph,
     revision: initialRevision,
+    federationVersion,
   };
 }
 
-export async function advanceGraphRevision(
+export async function insertGraphRevisionAndSetCurrent(
   transaction: PostgresJsTransaction,
-  graph: ActiveGraph,
+  graphId: string,
+  revision: number,
   federationVersion: string,
   now: Date,
 ): Promise<ActiveGraph> {
-  const revision = graph.revision + 1;
+  await insertGraphRevision(transaction, graphId, revision, federationVersion, now);
 
-  await insertGraphRevision(transaction, graph.id, revision, federationVersion, now);
+  const graph = await setGraphRevision(transaction, graphId, revision, now);
 
-  const updatedGraph = await setGraphRevision(transaction, graph.id, revision, now);
   return {
-    ...updatedGraph,
-    federationVersion,
+    ...graph,
     revision,
+    federationVersion,
   };
 }
 

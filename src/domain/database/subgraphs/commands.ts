@@ -1,22 +1,9 @@
 import { and, eq, isNull } from "drizzle-orm";
 
-import { subgraphRevisions, subgraphs } from "../../drizzle/schema.ts";
-import type { PostgresJsTransaction } from "../../drizzle/types.ts";
-import type { ActiveSubgraph } from "./subgraph-records.ts";
-
-const initialRevision = 1;
-
-const subgraphRowSelection = {
-  id: subgraphs.id,
-  graphId: subgraphs.graphId,
-  slug: subgraphs.slug,
-  createdAt: subgraphs.createdAt,
-  updatedAt: subgraphs.updatedAt,
-};
-
-const subgraphIdSelection = {
-  id: subgraphs.id,
-};
+import { subgraphRevisions, subgraphs } from "../../../drizzle/schema.ts";
+import type { PostgresJsTransaction } from "../../../drizzle/types.ts";
+import type { ActiveSubgraph } from "../types.ts";
+import { initialRevision, subgraphIdSelection, subgraphRowSelection } from "./selections.ts";
 
 async function insertSubgraphRow(
   transaction: PostgresJsTransaction,
@@ -86,27 +73,27 @@ export async function insertSubgraphWithInitialRevision(
   routingUrl: string,
   now: Date,
 ): Promise<ActiveSubgraph> {
-  const insertedSubgraph = await insertSubgraphRow(transaction, graphId, slug, now);
-  await insertSubgraphRevision(transaction, insertedSubgraph.id, initialRevision, routingUrl, now);
+  const subgraph = await insertSubgraphRow(transaction, graphId, slug, now);
+
+  await insertSubgraphRevision(transaction, subgraph.id, initialRevision, routingUrl, now);
 
   return {
-    ...insertedSubgraph,
+    ...subgraph,
     revision: initialRevision,
     routingUrl,
   };
 }
 
-export async function advanceSubgraphRevision(
+export async function insertSubgraphRevisionAndSetCurrent(
   transaction: PostgresJsTransaction,
-  subgraph: ActiveSubgraph,
+  subgraphId: string,
+  revision: number,
   routingUrl: string,
   now: Date,
 ): Promise<ActiveSubgraph> {
-  const revision = subgraph.revision + 1;
+  await insertSubgraphRevision(transaction, subgraphId, revision, routingUrl, now);
 
-  await insertSubgraphRevision(transaction, subgraph.id, revision, routingUrl, now);
-
-  const updatedSubgraph = await setSubgraphRevision(transaction, subgraph.id, revision, now);
+  const updatedSubgraph = await setSubgraphRevision(transaction, subgraphId, revision, now);
 
   return {
     ...updatedSubgraph,

@@ -4,7 +4,7 @@ import type { DependencyInjectedHandler } from "../../lib/fastify/handler-with-d
 import type { operationRouteDefinitions } from "../../lib/fastify/openapi/generated/operations/index.ts";
 import type { OpenApiOperationHandlers } from "../../lib/fastify/openapi/plugin.ts";
 import { requireDatabase } from "../../lib/fastify/require-database.ts";
-import { selectActiveSubgraphByGraphSlugAndSlug } from "../database/subgraph-records.ts";
+import { selectActiveSubgraphByGraphSlugAndSlug } from "../database/subgraphs/repository.ts";
 import { formatStrongETag } from "../etag.ts";
 import { toSubgraphPayload } from "./payloads.ts";
 

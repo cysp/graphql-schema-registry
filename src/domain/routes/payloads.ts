@@ -1,5 +1,4 @@
-import type { ActiveGraph } from "../database/graph-records.ts";
-import type { ActiveSubgraph } from "../database/subgraph-records.ts";
+import type { ActiveGraph, ActiveSubgraph } from "../database/types.ts";
 
 export type GraphPayload = {
   id: string;

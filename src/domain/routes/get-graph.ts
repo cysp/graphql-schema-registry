@@ -4,7 +4,7 @@ import type { DependencyInjectedHandler } from "../../lib/fastify/handler-with-d
 import type { operationRouteDefinitions } from "../../lib/fastify/openapi/generated/operations/index.ts";
 import type { OpenApiOperationHandlers } from "../../lib/fastify/openapi/plugin.ts";
 import { requireDatabase } from "../../lib/fastify/require-database.ts";
-import { selectActiveGraphBySlug } from "../database/graph-records.ts";
+import { selectActiveGraphBySlug } from "../database/graphs/repository.ts";
 import { formatStrongETag } from "../etag.ts";
 import { toGraphPayload } from "./payloads.ts";
 
