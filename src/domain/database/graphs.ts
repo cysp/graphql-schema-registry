@@ -1,5 +1,5 @@
 import type { PostgresJsDatabase } from "../../drizzle/types.ts";
-import { etagSatisfiesIfMatch, type IfMatchCondition } from "../etag.ts";
+import { etagSatisfiesIfMatch, type EntityTagCondition } from "../etag.ts";
 import { lockActiveGraphBySlug, type ActiveGraph } from "./graph-records.ts";
 import {
   checkGraphIfMatch,
@@ -26,7 +26,7 @@ export type CreateGraphResult =
 
 export type UpdateGraphInput = {
   slug: string;
-  ifMatch: IfMatchCondition | undefined;
+  ifMatch: EntityTagCondition | undefined;
   federationVersion: string;
   now: Date;
 };
@@ -45,7 +45,7 @@ export type UpdateGraphResult =
 
 export type DeleteGraphInput = {
   slug: string;
-  ifMatch: IfMatchCondition | undefined;
+  ifMatch: EntityTagCondition | undefined;
   now: Date;
 };
 

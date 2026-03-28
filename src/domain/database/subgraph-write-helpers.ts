@@ -2,7 +2,7 @@ import { and, eq, isNull } from "drizzle-orm";
 
 import { subgraphRevisions, subgraphs } from "../../drizzle/schema.ts";
 import type { PostgresJsTransaction } from "../../drizzle/types.ts";
-import type { IfMatchCondition } from "../etag.ts";
+import type { EntityTagCondition } from "../etag.ts";
 import { etagSatisfiesIfMatch, formatStrongETag } from "../etag.ts";
 import type { ActiveSubgraph } from "./subgraph-records.ts";
 
@@ -100,7 +100,7 @@ export async function insertSubgraphWithInitialRevision(
 
 export function checkSubgraphIfMatch(
   subgraph: ActiveSubgraph,
-  ifMatch: IfMatchCondition | undefined,
+  ifMatch: EntityTagCondition | undefined,
 ): { kind: "precondition_failed" } | undefined {
   if (etagSatisfiesIfMatch(ifMatch, formatStrongETag(subgraph.id, subgraph.revision))) {
     return undefined;

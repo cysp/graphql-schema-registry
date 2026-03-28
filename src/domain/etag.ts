@@ -1,4 +1,4 @@
-export type IfMatchCondition =
+export type EntityTagCondition =
   | {
       kind: "any";
     }
@@ -28,9 +28,9 @@ export function formatStrongETag(resourceId: string, revision: number): string {
   return `"${resourceId}:${String(revision)}"`;
 }
 
-export function parseIfMatchHeader(
+function parseEntityTagHeader(
   headerValue: string | string[] | undefined,
-): IfMatchCondition | undefined {
+): EntityTagCondition | undefined {
   if (headerValue === undefined) {
     return undefined;
   }
@@ -54,8 +54,20 @@ export function parseIfMatchHeader(
   };
 }
 
+export function parseIfMatchHeader(
+  headerValue: string | string[] | undefined,
+): EntityTagCondition | undefined {
+  return parseEntityTagHeader(headerValue);
+}
+
+export function parseIfNoneMatchHeader(
+  headerValue: string | string[] | undefined,
+): EntityTagCondition | undefined {
+  return parseEntityTagHeader(headerValue);
+}
+
 export function etagSatisfiesIfMatch(
-  condition: IfMatchCondition | undefined,
+  condition: EntityTagCondition | undefined,
   currentEtag: string | undefined,
 ): boolean {
   if (condition === undefined) {
@@ -73,4 +85,23 @@ export function etagSatisfiesIfMatch(
   return condition.tags.some(
     (candidate) => !candidate.startsWith("W/") && candidate === currentEtag,
   );
+}
+
+function normalizeEntityTag(tag: string): string {
+  return tag.startsWith("W/") ? tag.slice(2) : tag;
+}
+
+export function etagSatisfiesIfNoneMatch(
+  condition: EntityTagCondition | undefined,
+  currentEtag: string | undefined,
+): boolean {
+  if (condition === undefined || currentEtag === undefined) {
+    return false;
+  }
+
+  if (condition.kind === "any") {
+    return true;
+  }
+
+  return condition.tags.some((candidate) => normalizeEntityTag(candidate) === currentEtag);
 }

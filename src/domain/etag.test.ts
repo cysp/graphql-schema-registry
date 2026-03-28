@@ -1,7 +1,13 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 
-import { etagSatisfiesIfMatch, formatStrongETag, parseIfMatchHeader } from "./etag.ts";
+import {
+  etagSatisfiesIfMatch,
+  etagSatisfiesIfNoneMatch,
+  formatStrongETag,
+  parseIfMatchHeader,
+  parseIfNoneMatchHeader,
+} from "./etag.ts";
 
 await test("etag helpers", async (t) => {
   await t.test("formats strong etags from resource ids and revision ids", () => {
@@ -42,5 +48,22 @@ await test("etag helpers", async (t) => {
     assert.equal(etagSatisfiesIfMatch(parseIfMatchHeader("*"), undefined), false);
     assert.equal(etagSatisfiesIfMatch(parseIfMatchHeader('"graph-1:2"'), undefined), false);
     assert.equal(etagSatisfiesIfMatch(undefined, undefined), true);
+  });
+
+  await t.test("parses wildcard if-none-match values", () => {
+    assert.deepEqual(parseIfNoneMatchHeader("*"), {
+      kind: "any",
+    });
+  });
+
+  await t.test("matches weak if-none-match tags against strong current etags", () => {
+    const condition = parseIfNoneMatchHeader('W/"graph-1:2"');
+
+    assert.equal(etagSatisfiesIfNoneMatch(condition, '"graph-1:2"'), true);
+  });
+
+  await t.test("does not match if-none-match when the current resource is missing", () => {
+    assert.equal(etagSatisfiesIfNoneMatch(parseIfNoneMatchHeader("*"), undefined), false);
+    assert.equal(etagSatisfiesIfNoneMatch(undefined, '"graph-1:2"'), false);
   });
 });
