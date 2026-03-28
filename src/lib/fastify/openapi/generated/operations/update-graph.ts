@@ -38,7 +38,7 @@ export const updateGraphRouteDefinition = {
       "properties": {
         "federationVersion": {
           "type": "string",
-          "minLength": 1
+          "pattern": "^v[0-9]+\\.[0-9]+$"
         }
       }
     },
@@ -68,7 +68,8 @@ export const updateGraphRouteDefinition = {
             "pattern": "^[1-9][0-9]*$"
           },
           "federationVersion": {
-            "type": "string"
+            "type": "string",
+            "pattern": "^v[0-9]+\\.[0-9]+$"
           },
           "createdAt": {
             "type": "string",

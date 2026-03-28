@@ -35,7 +35,7 @@ async function createGraphThroughApi(
   server: IntegrationServerFixture["server"],
   adminToken: string,
   slug = "catalog",
-  federationVersion = "2.9",
+  federationVersion = "v2.9",
 ) {
   const response = await server.inject({
     headers: adminHeaders(adminToken),
@@ -117,7 +117,7 @@ await test("route handler concurrency and rollback integration with postgres", a
           await sql.unsafe(
             `
             INSERT INTO graph_revisions (graph_id, revision, federation_version, created_at)
-            VALUES ($1, 2, '2.10', $2)
+            VALUES ($1, 2, 'v2.10', $2)
           `,
             [createdGraph.id, now.toISOString()],
           );
@@ -139,7 +139,7 @@ await test("route handler concurrency and rollback integration with postgres", a
           headers: adminIfMatchHeaders(adminToken, formatStrongETag(createdGraph.id, 1)),
           method: "PUT",
           payload: {
-            federationVersion: "2.11",
+            federationVersion: "v2.11",
           },
           url: "/v1/graphs/catalog",
         });
@@ -167,7 +167,7 @@ await test("route handler concurrency and rollback integration with postgres", a
           WHERE g.id = ${createdGraph.id}
         `;
         assert.deepEqual(graphRow, {
-          federationVersion: "2.10",
+          federationVersion: "v2.10",
           revision: "2",
         });
       },
@@ -519,7 +519,7 @@ await test("route handler concurrency and rollback integration with postgres", a
           headers: adminHeaders(adminToken),
           method: "POST",
           payload: {
-            federationVersion: "2.9",
+            federationVersion: "v2.9",
             slug: "catalog",
           },
           url: "/v1/graphs",
@@ -550,7 +550,7 @@ await test("route handler concurrency and rollback integration with postgres", a
             headers: adminHeaders(adminToken),
             method: "POST",
             payload: {
-              federationVersion: "2.9",
+              federationVersion: "v2.9",
               slug: "catalog",
             },
             url: "/v1/graphs",
@@ -589,7 +589,7 @@ await test("route handler concurrency and rollback integration with postgres", a
           headers: adminHeaders(adminToken),
           method: "PUT",
           payload: {
-            federationVersion: "2.10",
+            federationVersion: "v2.10",
           },
           url: "/v1/graphs/catalog",
         });
@@ -609,7 +609,7 @@ await test("route handler concurrency and rollback integration with postgres", a
           WHERE g.id = ${createdGraph.id}
         `;
         assert.deepEqual(graphRow, {
-          federationVersion: "2.9",
+          federationVersion: "v2.9",
           revision: "1",
         });
         assert.equal(
