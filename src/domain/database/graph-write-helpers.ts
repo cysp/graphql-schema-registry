@@ -2,8 +2,6 @@ import { and, eq, isNull } from "drizzle-orm";
 
 import { graphs, graphRevisions, subgraphs } from "../../drizzle/schema.ts";
 import type { PostgresJsTransaction } from "../../drizzle/types.ts";
-import type { IfMatchCondition } from "../etag.ts";
-import { etagSatisfiesIfMatch, formatStrongETag } from "../etag.ts";
 import type { ActiveGraph } from "./graph-records.ts";
 
 const initialRevision = 1;
@@ -91,19 +89,6 @@ export async function insertGraphWithInitialRevision(
     ...insertedGraph,
     federationVersion,
     revision: initialRevision,
-  };
-}
-
-export function checkGraphIfMatch(
-  graph: ActiveGraph,
-  ifMatch: IfMatchCondition | undefined,
-): { kind: "precondition_failed" } | undefined {
-  if (etagSatisfiesIfMatch(ifMatch, formatStrongETag(graph.id, graph.revision))) {
-    return undefined;
-  }
-
-  return {
-    kind: "precondition_failed",
   };
 }
 

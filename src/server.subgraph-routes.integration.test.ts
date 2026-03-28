@@ -199,6 +199,13 @@ await test("subgraph routes integration with postgres", async (t) => {
           url: "/v1/graphs/catalog/subgraphs/inventory",
         });
         assert.equal(staleRecreatedUpdateResponse.statusCode, 412);
+
+        const staleRecreatedDeleteResponse = await server.inject({
+          headers: adminIfMatchHeaders(adminToken, formatStrongETag(createdSubgraph.id, 1)),
+          method: "DELETE",
+          url: "/v1/graphs/catalog/subgraphs/inventory",
+        });
+        assert.equal(staleRecreatedDeleteResponse.statusCode, 412);
       },
     );
   });

@@ -4,7 +4,8 @@ import type { DependencyInjectedHandler } from "../../lib/fastify/handler-with-d
 import type { operationRouteDefinitions } from "../../lib/fastify/openapi/generated/operations/index.ts";
 import type { OpenApiOperationHandlers } from "../../lib/fastify/openapi/plugin.ts";
 import { requireDatabase } from "../../lib/fastify/require-database.ts";
-import { selectActiveSubgraphsByGraphSlug } from "../database/subgraph-records.ts";
+import { selectActiveGraphBySlugForShare } from "../database/graph-records.ts";
+import { selectActiveSubgraphsByGraphId } from "../database/subgraph-records.ts";
 import { toSubgraphPayload } from "./payloads.ts";
 
 type OperationHandlers = OpenApiOperationHandlers<
@@ -15,6 +16,15 @@ type OperationHandlers = OpenApiOperationHandlers<
 type RouteDependencies = {
   database: PostgresJsDatabase | undefined;
 };
+
+type ListSubgraphsTransactionResult =
+  | {
+      kind: "not_found";
+    }
+  | {
+      kind: "ok";
+      subgraphs: Awaited<ReturnType<typeof selectActiveSubgraphsByGraphId>>;
+    };
 
 export const listSubgraphsHandler: DependencyInjectedHandler<
   OperationHandlers["listSubgraphs"],
@@ -28,10 +38,21 @@ export const listSubgraphsHandler: DependencyInjectedHandler<
     return;
   }
 
-  const subgraphs = await selectActiveSubgraphsByGraphSlug(database, request.params.graphSlug);
-  if (subgraphs === undefined) {
+  const result: ListSubgraphsTransactionResult = await database.transaction(async (transaction) => {
+    const graph = await selectActiveGraphBySlugForShare(transaction, request.params.graphSlug);
+    if (!graph) {
+      return { kind: "not_found" };
+    }
+
+    return {
+      kind: "ok",
+      subgraphs: await selectActiveSubgraphsByGraphId(transaction, graph.id),
+    };
+  });
+
+  if (result.kind === "not_found") {
     return reply.problemDetails({ status: 404 });
   }
 
-  return reply.code(200).send(subgraphs.map((subgraph) => toSubgraphPayload(subgraph)));
+  return reply.code(200).send(result.subgraphs.map((subgraph) => toSubgraphPayload(subgraph)));
 };

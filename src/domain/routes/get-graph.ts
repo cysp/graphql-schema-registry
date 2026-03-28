@@ -5,7 +5,8 @@ import type { operationRouteDefinitions } from "../../lib/fastify/openapi/genera
 import type { OpenApiOperationHandlers } from "../../lib/fastify/openapi/plugin.ts";
 import { requireDatabase } from "../../lib/fastify/require-database.ts";
 import { selectActiveGraphBySlug } from "../database/graph-records.ts";
-import { sendGraphResponse } from "./payloads.ts";
+import { formatStrongETag } from "../etag.ts";
+import { toGraphPayload } from "./payloads.ts";
 
 type OperationHandlers = OpenApiOperationHandlers<
   keyof typeof operationRouteDefinitions,
@@ -33,5 +34,6 @@ export const getGraphHandler: DependencyInjectedHandler<
     return reply.problemDetails({ status: 404 });
   }
 
-  return sendGraphResponse(reply, graph);
+  reply.header("ETag", formatStrongETag(graph.id, graph.revision));
+  return reply.code(200).send(toGraphPayload(graph));
 };

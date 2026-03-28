@@ -207,6 +207,13 @@ await test("graph routes integration with postgres", async (t) => {
         });
         assert.equal(staleRecreatedUpdateResponse.statusCode, 412);
 
+        const staleRecreatedDeleteResponse = await server.inject({
+          headers: adminIfMatchHeaders(adminToken, formatStrongETag(createdGraph.id, 1)),
+          method: "DELETE",
+          url: "/v1/graphs/catalog",
+        });
+        assert.equal(staleRecreatedDeleteResponse.statusCode, 412);
+
         const staleRecreatedSubgraphCreateResponse = await server.inject({
           headers: adminIfMatchHeaders(adminToken, formatStrongETag(createdGraph.id, 1)),
           method: "POST",
