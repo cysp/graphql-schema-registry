@@ -28,7 +28,7 @@ await test("subgraph routes integration with postgres", async (t) => {
         headers: adminHeaders(adminToken),
         method: "POST",
         payload: {
-          federationVersion: "2.9",
+          federationVersion: "v2.9",
           slug: "catalog",
         },
         url: "/v1/graphs",
@@ -277,7 +277,7 @@ await test("subgraph routes integration with postgres", async (t) => {
         headers: adminHeaders(adminToken),
         method: "POST",
         payload: {
-          federationVersion: "2.9",
+          federationVersion: "v2.9",
           slug: "catalog",
         },
         url: "/v1/graphs",
@@ -312,7 +312,7 @@ await test("subgraph routes integration with postgres", async (t) => {
         headers: adminHeaders(adminToken),
         method: "POST",
         payload: {
-          federationVersion: "2.9",
+          federationVersion: "v2.9",
           slug: "catalog",
         },
         url: "/v1/graphs",

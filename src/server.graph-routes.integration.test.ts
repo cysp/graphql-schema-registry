@@ -36,7 +36,7 @@ await test("graph routes integration with postgres", async (t) => {
         headers: adminHeaders(adminToken),
         method: "POST",
         payload: {
-          federationVersion: "2.9",
+          federationVersion: "v2.9",
           slug: "catalog",
         },
         url: "/v1/graphs",
@@ -46,7 +46,7 @@ await test("graph routes integration with postgres", async (t) => {
 
       const createdGraph = requireGraphPayload(parseJson(createGraphResponse));
       assert.equal(createdGraph.slug, "catalog");
-      assert.equal(createdGraph.federationVersion, "2.9");
+      assert.equal(createdGraph.federationVersion, "v2.9");
       assert.equal(createdGraph.revision, "1");
       assert.equal(createGraphResponse.headers.etag, formatStrongETag(createdGraph.id, 1));
 
@@ -54,7 +54,7 @@ await test("graph routes integration with postgres", async (t) => {
         headers: adminHeaders(adminToken),
         method: "POST",
         payload: {
-          federationVersion: "2.10",
+          federationVersion: "v2.10",
           slug: "catalog",
         },
         url: "/v1/graphs",
@@ -74,7 +74,7 @@ await test("graph routes integration with postgres", async (t) => {
         headers: adminHeaders(adminToken),
         method: "PUT",
         payload: {
-          federationVersion: "2.10",
+          federationVersion: "v2.10",
         },
         url: "/v1/graphs/catalog",
       });
@@ -83,7 +83,7 @@ await test("graph routes integration with postgres", async (t) => {
       const updatedGraph = requireGraphPayload(parseJson(updateGraphResponse));
       assert.equal(updatedGraph.id, createdGraph.id);
       assert.equal(updatedGraph.slug, createdGraph.slug);
-      assert.equal(updatedGraph.federationVersion, "2.10");
+      assert.equal(updatedGraph.federationVersion, "v2.10");
       assert.equal(updatedGraph.revision, "2");
       assert.equal(updateGraphResponse.headers.etag, formatStrongETag(updatedGraph.id, 2));
 
@@ -91,7 +91,7 @@ await test("graph routes integration with postgres", async (t) => {
         headers: adminIfMatchHeaders(adminToken, formatStrongETag(updatedGraph.id, 2)),
         method: "PUT",
         payload: {
-          federationVersion: "2.10",
+          federationVersion: "v2.10",
         },
         url: "/v1/graphs/catalog",
       });
@@ -103,7 +103,7 @@ await test("graph routes integration with postgres", async (t) => {
         headers: adminIfMatchHeaders(adminToken, formatStrongETag(createdGraph.id, 1)),
         method: "PUT",
         payload: {
-          federationVersion: "2.11",
+          federationVersion: "v2.11",
         },
         url: "/v1/graphs/catalog",
       });
@@ -174,7 +174,7 @@ await test("graph routes integration with postgres", async (t) => {
         headers: adminHeaders(adminToken),
         method: "POST",
         payload: {
-          federationVersion: "2.12",
+          federationVersion: "v2.12",
           slug: "catalog",
         },
         url: "/v1/graphs",
@@ -189,7 +189,7 @@ await test("graph routes integration with postgres", async (t) => {
         headers: adminIfMatchHeaders(adminToken, formatStrongETag(createdGraph.id, 1)),
         method: "PUT",
         payload: {
-          federationVersion: "2.13",
+          federationVersion: "v2.13",
         },
         url: "/v1/graphs/catalog",
       });
@@ -239,7 +239,7 @@ await test("graph routes integration with postgres", async (t) => {
         headers: adminHeaders(adminToken),
         method: "PUT",
         payload: {
-          federationVersion: "2.10",
+          federationVersion: "v2.10",
         },
         url: "/v1/graphs/missing",
       });
@@ -249,7 +249,7 @@ await test("graph routes integration with postgres", async (t) => {
         headers: adminIfMatchHeaders(adminToken, formatStrongETag("graph-1", 1)),
         method: "PUT",
         payload: {
-          federationVersion: "2.10",
+          federationVersion: "v2.10",
         },
         url: "/v1/graphs/missing",
       });
@@ -277,7 +277,7 @@ await test("graph routes integration with postgres", async (t) => {
         headers: adminHeaders(adminToken),
         method: "POST",
         payload: {
-          federationVersion: "2.9",
+          federationVersion: "v2.9",
           slug: "catalog",
         },
         url: "/v1/graphs",
@@ -288,7 +288,7 @@ await test("graph routes integration with postgres", async (t) => {
         headers: adminIfMatchHeaders(adminToken, "invalid-etag"),
         method: "PUT",
         payload: {
-          federationVersion: "2.10",
+          federationVersion: "v2.10",
         },
         url: "/v1/graphs/catalog",
       });
