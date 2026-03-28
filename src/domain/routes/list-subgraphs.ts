@@ -44,9 +44,11 @@ export const listSubgraphsHandler: DependencyInjectedHandler<
       return { kind: "not_found" };
     }
 
+    const subgraphs = await selectActiveSubgraphsByGraphId(transaction, graph.id);
+
     return {
       kind: "ok",
-      subgraphs: await selectActiveSubgraphsByGraphId(transaction, graph.id),
+      subgraphs,
     };
   });
 
