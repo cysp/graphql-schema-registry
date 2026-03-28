@@ -4,9 +4,11 @@ import type { DependencyInjectedHandler } from "../../lib/fastify/handler-with-d
 import type { operationRouteDefinitions } from "../../lib/fastify/openapi/generated/operations/index.ts";
 import type { OpenApiOperationHandlers } from "../../lib/fastify/openapi/plugin.ts";
 import { requireDatabase } from "../../lib/fastify/require-database.ts";
-import { selectActiveGraphBySlugForUpdate } from "../database/graph-records.ts";
-import { selectActiveSubgraphByGraphIdAndSlugForUpdate } from "../database/subgraph-records.ts";
-import { softDeleteSubgraphById } from "../database/subgraph-write-helpers.ts";
+import { selectActiveGraphBySlugForUpdate } from "../database/graphs/repository.ts";
+import {
+  selectActiveSubgraphByGraphIdAndSlugForUpdate,
+  softDeleteSubgraphById,
+} from "../database/subgraphs/repository.ts";
 import { etagSatisfiesIfMatch, formatStrongETag, parseIfMatchHeader } from "../etag.ts";
 
 type OperationHandlers = OpenApiOperationHandlers<
