@@ -1,5 +1,5 @@
 import type { PostgresJsDatabase } from "../../drizzle/types.ts";
-import { requireAdminUser } from "../../lib/fastify/authorization/guards.ts";
+import { requireAdminGrant } from "../../lib/fastify/authorization/guards.ts";
 import type { DependencyInjectedHandler } from "../../lib/fastify/handler-with-dependencies.ts";
 import type { operationRouteDefinitions } from "../../lib/fastify/openapi/generated/operations/index.ts";
 import type { OpenApiOperationHandlers } from "../../lib/fastify/openapi/plugin.ts";
@@ -20,7 +20,7 @@ export const listGraphsHandler: DependencyInjectedHandler<
   OperationHandlers["listGraphs"],
   RouteDependencies
 > = async ({ dependencies: { database }, request, reply }) => {
-  if (!requireAdminUser(request, reply)) {
+  if (!requireAdminGrant(request, reply)) {
     return;
   }
 
