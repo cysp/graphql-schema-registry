@@ -1,6 +1,7 @@
 // oxlint-disable eslint-plugin-node/no-process-env,eslint-plugin-promise/prefer-await-to-callbacks,typescript-eslint/no-unsafe-assignment,typescript-eslint/no-unsafe-call,typescript-eslint/no-unsafe-member-access,typescript-eslint/no-unsafe-return
 
 import assert from "node:assert/strict";
+import { randomUUID } from "node:crypto";
 import test from "node:test";
 import { setTimeout as delay } from "node:timers/promises";
 
@@ -583,7 +584,26 @@ await test("route handler concurrency and rollback integration with postgres", a
         jwtVerification,
       },
       async (fixture) => {
-        const createdGraph = await createGraphThroughApi(fixture.server, adminToken);
+        const createdGraph = {
+          id: randomUUID(),
+        };
+        const now = new Date().toISOString();
+        await fixture.sql.begin(async (sql) => {
+          await sql.unsafe(
+            `
+              INSERT INTO graphs (id, slug, revision, created_at, updated_at)
+              VALUES ($1, 'catalog', 1, $2, $2)
+            `,
+            [createdGraph.id, now],
+          );
+          await sql.unsafe(
+            `
+              INSERT INTO graph_revisions (graph_id, revision, federation_version, created_at)
+              VALUES ($1, 1, 'v2.9', $2)
+            `,
+            [createdGraph.id, now],
+          );
+        });
 
         const response = await fixture.server.inject({
           headers: adminHeaders(adminToken),

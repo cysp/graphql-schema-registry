@@ -45,3 +45,9 @@ export function toSubgraphPayload(subgraph: ActiveSubgraph): SubgraphPayload {
     updatedAt: subgraph.updatedAt.toISOString(),
   };
 }
+
+export function toPublishSubgraphSchemaPayload(revision: number): PublishSubgraphSchemaPayload {
+  return {
+    revision: String(revision),
+  };
+}

@@ -2,12 +2,10 @@ import assert from "node:assert/strict";
 import type { OutgoingHttpHeader, OutgoingHttpHeaders } from "node:http";
 import type { TestContext } from "node:test";
 
-import type { FastifyInstance } from "fastify";
+import type { FastifyInstance, InjectOptions } from "fastify";
 
-export type RouteRequest = {
-  headers?: Record<string, string>;
+export type RouteRequest = Pick<InjectOptions, "headers" | "payload"> & {
   method: "DELETE" | "GET" | "POST" | "PUT";
-  payload?: Record<string, string>;
   url: string;
 };
 
@@ -73,6 +71,8 @@ export async function assertProtectedRouteBehavior(
     adminExpectedTitle = "Not Implemented",
     createAdminToken,
     forbiddenDescription,
+    forbiddenExpectedStatus = 403,
+    forbiddenExpectedTitle = "Forbidden",
     forbiddenToken,
     request,
     server,
@@ -81,6 +81,8 @@ export async function assertProtectedRouteBehavior(
     adminExpectedTitle?: string;
     createAdminToken: () => string;
     forbiddenDescription: string;
+    forbiddenExpectedStatus?: number;
+    forbiddenExpectedTitle?: string;
     forbiddenToken: string;
     request: RouteRequest;
     server: FastifyInstance;
@@ -93,12 +95,15 @@ export async function assertProtectedRouteBehavior(
     assert.equal(response.headers["www-authenticate"], "Bearer");
   });
 
-  await t.test(`returns 403 for ${forbiddenDescription}`, async () => {
-    const response = await server.inject(createAuthorizedRequest(request, forbiddenToken));
+  await t.test(
+    `returns ${String(forbiddenExpectedStatus)} for ${forbiddenDescription}`,
+    async () => {
+      const response = await server.inject(createAuthorizedRequest(request, forbiddenToken));
 
-    assertProblemResponse(response, 403, "Forbidden");
-    assert.equal(response.headers["www-authenticate"], undefined);
-  });
+      assertProblemResponse(response, forbiddenExpectedStatus, forbiddenExpectedTitle);
+      assert.equal(response.headers["www-authenticate"], undefined);
+    },
+  );
 
   await t.test(`returns ${String(adminExpectedStatus)} for admin users`, async () => {
     const response = await server.inject(createAuthorizedRequest(request, createAdminToken()));

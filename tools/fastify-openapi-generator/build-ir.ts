@@ -204,7 +204,7 @@ function buildParameterSchema(
   };
 }
 
-function readJsonContentSchema(value: unknown, context: string): JsonSchema {
+function readSupportedContentSchema(value: unknown, context: string): JsonSchema {
   const content = readRecord(value, context);
   const contentTypes = Object.keys(content).toSorted();
   const preferredJsonContentType = contentTypes.includes("application/json")
@@ -213,26 +213,30 @@ function readJsonContentSchema(value: unknown, context: string): JsonSchema {
   const fallbackJsonContentTypes = contentTypes.filter((contentType) =>
     contentType.endsWith("+json"),
   );
-  const jsonContentType =
+  const plainTextContentType = contentTypes.includes("text/plain") ? "text/plain" : undefined;
+  const supportedContentType =
     preferredJsonContentType ??
-    (fallbackJsonContentTypes.length === 1 ? fallbackJsonContentTypes[0] : undefined);
-  if (jsonContentType === undefined) {
+    (fallbackJsonContentTypes.length === 1 ? fallbackJsonContentTypes[0] : undefined) ??
+    plainTextContentType;
+  if (supportedContentType === undefined) {
     throw new GeneratorError(
-      `${context} must include exactly one supported JSON content type (application/json or a single application/*+json variant).`,
+      `${context} must include a supported content type (application/json, a single application/*+json variant, or text/plain).`,
     );
   }
 
   const jsonMediaType = readRecord(
-    content[jsonContentType],
-    `${context}[${JSON.stringify(jsonContentType)}]`,
+    content[supportedContentType],
+    `${context}[${JSON.stringify(supportedContentType)}]`,
   );
   if (jsonMediaType["schema"] === undefined) {
-    throw new GeneratorError(`${context}[${JSON.stringify(jsonContentType)}].schema is required.`);
+    throw new GeneratorError(
+      `${context}[${JSON.stringify(supportedContentType)}].schema is required.`,
+    );
   }
 
   return readJsonSchema(
     jsonMediaType["schema"],
-    `${context}[${JSON.stringify(jsonContentType)}].schema`,
+    `${context}[${JSON.stringify(supportedContentType)}].schema`,
   );
 }
 
@@ -255,7 +259,7 @@ function readRequestBody(
     );
   }
 
-  const requestBodySchema = readJsonContentSchema(
+  const requestBodySchema = readSupportedContentSchema(
     content,
     `${operationContext}.requestBody.content`,
   );
@@ -300,7 +304,7 @@ function readResponseSchemas(
         schema:
           content === undefined
             ? undefined
-            : readJsonContentSchema(
+            : readSupportedContentSchema(
                 content,
                 `${operationContext}.responses["${statusCode}"].content`,
               ),
