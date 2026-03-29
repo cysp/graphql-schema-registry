@@ -4,6 +4,7 @@ import type { DependencyInjectedHandler } from "../../lib/fastify/handler-with-d
 import type { operationRouteDefinitions } from "../../lib/fastify/openapi/generated/operations/index.ts";
 import type { OpenApiOperationHandlers } from "../../lib/fastify/openapi/plugin.ts";
 import { requireDatabase } from "../../lib/fastify/require-database.ts";
+import { attemptGraphComposition } from "../composition/attempt-graph-composition.ts";
 import { selectActiveGraphBySlugForUpdate } from "../database/graphs/repository.ts";
 import { isUniqueViolation } from "../database/postgres-errors.ts";
 import { insertSubgraphWithInitialRevision } from "../database/subgraphs/repository.ts";
@@ -54,6 +55,8 @@ export const createSubgraphHandler: DependencyInjectedHandler<
         request.body.routingUrl,
         now,
       );
+
+      await attemptGraphComposition(transaction, graph.id, now);
 
       return {
         kind: "created",

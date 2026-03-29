@@ -1,15 +1,19 @@
+import type { FastifyReply } from "fastify";
+
 import type { PostgresJsDatabase } from "../../drizzle/types.ts";
 import { requireAdminUser } from "../../lib/fastify/authorization/guards.ts";
 import type { DependencyInjectedHandler } from "../../lib/fastify/handler-with-dependencies.ts";
 import type { operationRouteDefinitions } from "../../lib/fastify/openapi/generated/operations/index.ts";
 import type { OpenApiOperationHandlers } from "../../lib/fastify/openapi/plugin.ts";
 import { requireDatabase } from "../../lib/fastify/require-database.ts";
+import { attemptGraphComposition } from "../composition/attempt-graph-composition.ts";
 import {
   insertGraphRevisionAndSetCurrent,
   selectActiveGraphBySlugForUpdate,
 } from "../database/graphs/repository.ts";
 import type { ActiveGraph } from "../database/types.ts";
 import { etagSatisfiesIfMatch, formatStrongETag, parseIfMatchHeader } from "../etag.ts";
+import { isSupportedFederationVersion } from "../federation.ts";
 import { toGraphPayload } from "./payloads.ts";
 
 type OperationHandlers = OpenApiOperationHandlers<
@@ -33,11 +37,27 @@ type UpdateGraphTransactionResult =
       graph: ActiveGraph;
     };
 
+function requireSupportedFederationVersion(
+  federationVersion: string,
+  reply: FastifyReply,
+): boolean {
+  if (!isSupportedFederationVersion(federationVersion)) {
+    reply.problemDetails({ status: 422 });
+    return false;
+  }
+
+  return true;
+}
+
 export const updateGraphHandler: DependencyInjectedHandler<
   OperationHandlers["updateGraph"],
   RouteDependencies
 > = async ({ dependencies: { database }, request, reply }) => {
   if (!requireAdminUser(request, reply)) {
+    return;
+  }
+
+  if (!requireSupportedFederationVersion(request.body.federationVersion, reply)) {
     return;
   }
 
@@ -68,6 +88,8 @@ export const updateGraphHandler: DependencyInjectedHandler<
         request.body.federationVersion,
         now,
       );
+
+      await attemptGraphComposition(transaction, graph.id, now);
     }
 
     return {

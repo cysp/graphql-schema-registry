@@ -2,9 +2,9 @@
 
 import type { FastifyRouteDefinition } from "../../route-types.ts";
 
-export const getGraphRouteDefinition = {
+export const getSupergraphSdlRouteDefinition = {
   method: "GET",
-  url: "/v1/graphs/:graphSlug",
+  url: "/v1/graphs/:graphSlug/supergraph.graphqls",
   schema: {
     params: {
       "additionalProperties": false,
@@ -19,70 +19,21 @@ export const getGraphRouteDefinition = {
       ],
       "type": "object"
     },
+    headers: {
+      "additionalProperties": true,
+      "properties": {
+        "if-none-match": {
+          "type": "string"
+        }
+      },
+      "type": "object"
+    },
     response: {
       200: {
-        "type": "object",
-        "additionalProperties": false,
-        "required": [
-          "id",
-          "slug",
-          "revision",
-          "federationVersion",
-          "createdAt",
-          "updatedAt"
-        ],
-        "properties": {
-          "id": {
-            "type": "string",
-            "format": "uuid"
-          },
-          "slug": {
-            "type": "string",
-            "minLength": 1
-          },
-          "revision": {
-            "type": "string",
-            "pattern": "^[1-9][0-9]*$"
-          },
-          "federationVersion": {
-            "type": "string",
-            "pattern": "^v[0-9]+\\.[0-9]+$"
-          },
-          "createdAt": {
-            "type": "string",
-            "format": "date-time"
-          },
-          "updatedAt": {
-            "type": "string",
-            "format": "date-time"
-          }
-        }
+        "type": "string"
       },
+      304: {},
       401: {
-        "type": "object",
-        "additionalProperties": false,
-        "required": [
-          "type",
-          "title",
-          "status"
-        ],
-        "properties": {
-          "type": {
-            "type": "string",
-            "format": "uri-reference"
-          },
-          "title": {
-            "type": "string"
-          },
-          "status": {
-            "type": "integer",
-            "format": "int32",
-            "minimum": 100,
-            "maximum": 599
-          }
-        }
-      },
-      403: {
         "type": "object",
         "additionalProperties": false,
         "required": [

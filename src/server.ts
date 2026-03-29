@@ -11,8 +11,10 @@ import { deleteGraphHandler } from "./domain/routes/delete-graph.ts";
 import { deleteSubgraphHandler } from "./domain/routes/delete-subgraph.ts";
 import { getGraphHandler } from "./domain/routes/get-graph.ts";
 import { getSubgraphHandler } from "./domain/routes/get-subgraph.ts";
+import { getSupergraphSdlHandler } from "./domain/routes/get-supergraph-sdl.ts";
 import { listGraphsHandler } from "./domain/routes/list-graphs.ts";
 import { listSubgraphsHandler } from "./domain/routes/list-subgraphs.ts";
+import { publishSubgraphSchemaHandler } from "./domain/routes/publish-subgraph-schema.ts";
 import { updateGraphHandler } from "./domain/routes/update-graph.ts";
 import { updateSubgraphHandler } from "./domain/routes/update-subgraph.ts";
 import type { PostgresJsDatabase } from "./drizzle/types.ts";
@@ -122,9 +124,17 @@ export function createFastifyServer({
         deleteGraph: fastifyHandlerWithDependencies(deleteGraphHandler, routeDependencies),
         deleteSubgraph: fastifyHandlerWithDependencies(deleteSubgraphHandler, routeDependencies),
         getGraph: fastifyHandlerWithDependencies(getGraphHandler, routeDependencies),
+        getSupergraphSdl: fastifyHandlerWithDependencies(
+          getSupergraphSdlHandler,
+          routeDependencies,
+        ),
         getSubgraph: fastifyHandlerWithDependencies(getSubgraphHandler, routeDependencies),
         listGraphs: fastifyHandlerWithDependencies(listGraphsHandler, routeDependencies),
         listSubgraphs: fastifyHandlerWithDependencies(listSubgraphsHandler, routeDependencies),
+        publishSubgraphSchema: fastifyHandlerWithDependencies(
+          publishSubgraphSchemaHandler,
+          routeDependencies,
+        ),
         updateGraph: fastifyHandlerWithDependencies(updateGraphHandler, routeDependencies),
         updateSubgraph: fastifyHandlerWithDependencies(updateSubgraphHandler, routeDependencies),
       },

@@ -1,6 +1,7 @@
 // oxlint-disable eslint-plugin-node/no-process-env,eslint-plugin-promise/prefer-await-to-callbacks,typescript-eslint/no-unsafe-assignment,typescript-eslint/no-unsafe-call,typescript-eslint/no-unsafe-member-access,typescript-eslint/no-unsafe-return
 
 import assert from "node:assert/strict";
+import { randomUUID } from "node:crypto";
 import test from "node:test";
 import { setTimeout as delay } from "node:timers/promises";
 
@@ -35,7 +36,7 @@ async function createGraphThroughApi(
   server: IntegrationServerFixture["server"],
   adminToken: string,
   slug = "catalog",
-  federationVersion = "2.9",
+  federationVersion = "v2.9",
 ) {
   const response = await server.inject({
     headers: adminHeaders(adminToken),
@@ -139,7 +140,7 @@ await test("route handler concurrency and rollback integration with postgres", a
           headers: adminIfMatchHeaders(adminToken, formatStrongETag(createdGraph.id, 1)),
           method: "PUT",
           payload: {
-            federationVersion: "2.11",
+            federationVersion: "v2.11",
           },
           url: "/v1/graphs/catalog",
         });
@@ -519,7 +520,7 @@ await test("route handler concurrency and rollback integration with postgres", a
           headers: adminHeaders(adminToken),
           method: "POST",
           payload: {
-            federationVersion: "2.9",
+            federationVersion: "v2.9",
             slug: "catalog",
           },
           url: "/v1/graphs",
@@ -550,7 +551,7 @@ await test("route handler concurrency and rollback integration with postgres", a
             headers: adminHeaders(adminToken),
             method: "POST",
             payload: {
-              federationVersion: "2.9",
+              federationVersion: "v2.9",
               slug: "catalog",
             },
             url: "/v1/graphs",
@@ -583,13 +584,32 @@ await test("route handler concurrency and rollback integration with postgres", a
         jwtVerification,
       },
       async (fixture) => {
-        const createdGraph = await createGraphThroughApi(fixture.server, adminToken);
+        const createdGraph = {
+          id: randomUUID(),
+        };
+        const now = new Date().toISOString();
+        await fixture.sql.begin(async (sql) => {
+          await sql.unsafe(
+            `
+              INSERT INTO graphs (id, slug, revision, created_at, updated_at)
+              VALUES ($1, 'catalog', 1, $2, $2)
+            `,
+            [createdGraph.id, now],
+          );
+          await sql.unsafe(
+            `
+              INSERT INTO graph_revisions (graph_id, revision, federation_version, created_at)
+              VALUES ($1, 1, 'v2.9', $2)
+            `,
+            [createdGraph.id, now],
+          );
+        });
 
         const response = await fixture.server.inject({
           headers: adminHeaders(adminToken),
           method: "PUT",
           payload: {
-            federationVersion: "2.10",
+            federationVersion: "v2.10",
           },
           url: "/v1/graphs/catalog",
         });
@@ -609,7 +629,7 @@ await test("route handler concurrency and rollback integration with postgres", a
           WHERE g.id = ${createdGraph.id}
         `;
         assert.deepEqual(graphRow, {
-          federationVersion: "2.9",
+          federationVersion: "v2.9",
           revision: "1",
         });
         assert.equal(

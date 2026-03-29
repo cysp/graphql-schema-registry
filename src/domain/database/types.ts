@@ -3,6 +3,7 @@ export type ActiveGraph = {
   slug: string;
   revision: number;
   federationVersion: string;
+  currentCompositionRevision: number | null;
   createdAt: Date;
   updatedAt: Date;
 };

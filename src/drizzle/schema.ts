@@ -19,6 +19,7 @@ export const graphs = pgTable(
       .$defaultFn(() => randomUUID()),
     slug: text("slug").notNull(),
     revision: bigint("revision", { mode: "number" }).notNull(),
+    currentCompositionRevision: bigint("current_composition_revision", { mode: "number" }),
     createdAt: timestamp("created_at", { withTimezone: true }).notNull(),
     updatedAt: timestamp("updated_at", { withTimezone: true }).notNull(),
     deletedAt: timestamp("deleted_at", { withTimezone: true }),
@@ -91,5 +92,66 @@ export const subgraphRevisions = pgTable(
       name: "subgraph_revisions_pkey",
     }),
     index("subgraph_revisions_subgraph_idx").on(table.subgraphId),
+  ],
+);
+
+export const subgraphSchemaRevisions = pgTable(
+  "subgraph_schema_revisions",
+  {
+    subgraphId: uuid("subgraph_id")
+      .notNull()
+      .references(() => subgraphs.id),
+    revision: bigint("revision", { mode: "number" }).notNull(),
+    normalizedSdl: text("normalized_sdl").notNull(),
+    normalizedHash: text("normalized_hash").notNull(),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull(),
+  },
+  (table) => [
+    primaryKey({
+      columns: [table.subgraphId, table.revision],
+      name: "subgraph_schema_revisions_pkey",
+    }),
+    index("subgraph_schema_revisions_subgraph_idx").on(table.subgraphId),
+  ],
+);
+
+export const graphCompositions = pgTable(
+  "graph_compositions",
+  {
+    graphId: uuid("graph_id")
+      .notNull()
+      .references(() => graphs.id),
+    revision: bigint("revision", { mode: "number" }).notNull(),
+    graphRevision: bigint("graph_revision", { mode: "number" }).notNull(),
+    supergraphSdl: text("supergraph_sdl").notNull(),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull(),
+  },
+  (table) => [
+    primaryKey({
+      columns: [table.graphId, table.revision],
+      name: "graph_compositions_pkey",
+    }),
+    index("graph_compositions_graph_idx").on(table.graphId),
+  ],
+);
+
+export const graphCompositionSubgraphs = pgTable(
+  "graph_composition_subgraphs",
+  {
+    graphId: uuid("graph_id").notNull(),
+    compositionRevision: bigint("composition_revision", { mode: "number" }).notNull(),
+    subgraphId: uuid("subgraph_id")
+      .notNull()
+      .references(() => subgraphs.id),
+    subgraphRevision: bigint("subgraph_revision", { mode: "number" }).notNull(),
+    subgraphSchemaRevision: bigint("subgraph_schema_revision", { mode: "number" }).notNull(),
+  },
+  (table) => [
+    primaryKey({
+      columns: [table.graphId, table.compositionRevision, table.subgraphId],
+      name: "graph_composition_subgraphs_pkey",
+    }),
+    index("graph_composition_subgraphs_graph_idx").on(table.graphId, table.compositionRevision),
+    index("graph_composition_subgraphs_subgraph_idx").on(table.subgraphId),
   ],
 );

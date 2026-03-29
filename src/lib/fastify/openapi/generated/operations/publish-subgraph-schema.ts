@@ -2,88 +2,55 @@
 
 import type { FastifyRouteDefinition } from "../../route-types.ts";
 
-export const createGraphRouteDefinition = {
+export const publishSubgraphSchemaRouteDefinition = {
   method: "POST",
-  url: "/v1/graphs",
+  url: "/v1/graphs/:graphSlug/subgraphs/:subgraphSlug/schema.graphqls",
   schema: {
-    body: {
-      "type": "object",
+    params: {
       "additionalProperties": false,
-      "required": [
-        "slug",
-        "federationVersion"
-      ],
       "properties": {
-        "slug": {
+        "graphSlug": {
           "type": "string",
           "minLength": 1
         },
-        "federationVersion": {
+        "subgraphSlug": {
           "type": "string",
-          "pattern": "^v[0-9]+\\.[0-9]+$"
+          "minLength": 1
         }
-      }
+      },
+      "required": [
+        "graphSlug",
+        "subgraphSlug"
+      ],
+      "type": "object"
+    },
+    body: {
+      "type": "string"
     },
     response: {
+      200: {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "revision"
+        ],
+        "properties": {
+          "revision": {
+            "type": "string",
+            "pattern": "^[1-9][0-9]*$"
+          }
+        }
+      },
       201: {
         "type": "object",
         "additionalProperties": false,
         "required": [
-          "id",
-          "slug",
-          "revision",
-          "federationVersion",
-          "createdAt",
-          "updatedAt"
+          "revision"
         ],
         "properties": {
-          "id": {
-            "type": "string",
-            "format": "uuid"
-          },
-          "slug": {
-            "type": "string",
-            "minLength": 1
-          },
           "revision": {
             "type": "string",
             "pattern": "^[1-9][0-9]*$"
-          },
-          "federationVersion": {
-            "type": "string",
-            "pattern": "^v[0-9]+\\.[0-9]+$"
-          },
-          "createdAt": {
-            "type": "string",
-            "format": "date-time"
-          },
-          "updatedAt": {
-            "type": "string",
-            "format": "date-time"
-          }
-        }
-      },
-      400: {
-        "type": "object",
-        "additionalProperties": false,
-        "required": [
-          "type",
-          "title",
-          "status"
-        ],
-        "properties": {
-          "type": {
-            "type": "string",
-            "format": "uri-reference"
-          },
-          "title": {
-            "type": "string"
-          },
-          "status": {
-            "type": "integer",
-            "format": "int32",
-            "minimum": 100,
-            "maximum": 599
           }
         }
       },
@@ -111,31 +78,7 @@ export const createGraphRouteDefinition = {
           }
         }
       },
-      403: {
-        "type": "object",
-        "additionalProperties": false,
-        "required": [
-          "type",
-          "title",
-          "status"
-        ],
-        "properties": {
-          "type": {
-            "type": "string",
-            "format": "uri-reference"
-          },
-          "title": {
-            "type": "string"
-          },
-          "status": {
-            "type": "integer",
-            "format": "int32",
-            "minimum": 100,
-            "maximum": 599
-          }
-        }
-      },
-      409: {
+      404: {
         "type": "object",
         "additionalProperties": false,
         "required": [

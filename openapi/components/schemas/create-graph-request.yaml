@@ -9,4 +9,4 @@ properties:
     minLength: 1
   federationVersion:
     type: string
-    minLength: 1
+    pattern: "^v[0-9]+\\.[0-9]+$"

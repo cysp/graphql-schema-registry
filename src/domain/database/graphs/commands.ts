@@ -9,7 +9,9 @@ async function insertGraphRow(
   transaction: PostgresJsTransaction,
   slug: string,
   now: Date,
-): Promise<Pick<ActiveGraph, "id" | "slug" | "createdAt" | "updatedAt">> {
+): Promise<
+  Pick<ActiveGraph, "id" | "slug" | "currentCompositionRevision" | "createdAt" | "updatedAt">
+> {
   const [insertedGraph] = await transaction
     .insert(graphs)
     .values({
@@ -47,7 +49,9 @@ async function setGraphRevision(
   graphId: string,
   revision: number,
   now: Date,
-): Promise<Pick<ActiveGraph, "createdAt" | "id" | "slug" | "updatedAt">> {
+): Promise<
+  Pick<ActiveGraph, "id" | "slug" | "currentCompositionRevision" | "createdAt" | "updatedAt">
+> {
   const [updatedGraph] = await transaction
     .update(graphs)
     .set({

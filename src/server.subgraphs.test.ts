@@ -154,4 +154,27 @@ await test("server: subgraph routes", async (t) => {
       server,
     });
   });
+
+  await t.test("POST /v1/graphs/:graphSlug/subgraphs/:subgraphSlug/schema.graphqls", async (t) => {
+    const request = {
+      method: "POST",
+      url: "/v1/graphs/graph-1/subgraphs/products/schema.graphqls",
+      headers: {
+        "content-type": "text/plain",
+      },
+      payload: "type Query { products: String! }",
+    } as const satisfies RouteRequest;
+
+    await assertProtectedRouteBehavior(t, {
+      adminExpectedStatus: 503,
+      adminExpectedTitle: "Service Unavailable",
+      createAdminToken,
+      forbiddenDescription: "graph:read users",
+      forbiddenExpectedStatus: 503,
+      forbiddenExpectedTitle: "Service Unavailable",
+      forbiddenToken: createGraphReadToken(),
+      request,
+      server,
+    });
+  });
 });

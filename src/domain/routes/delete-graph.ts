@@ -4,6 +4,7 @@ import type { DependencyInjectedHandler } from "../../lib/fastify/handler-with-d
 import type { operationRouteDefinitions } from "../../lib/fastify/openapi/generated/operations/index.ts";
 import type { OpenApiOperationHandlers } from "../../lib/fastify/openapi/plugin.ts";
 import { requireDatabase } from "../../lib/fastify/require-database.ts";
+import { attemptGraphComposition } from "../composition/attempt-graph-composition.ts";
 import {
   selectActiveGraphBySlugForUpdate,
   softDeleteGraphAndSubgraphsById,
@@ -47,6 +48,8 @@ export const deleteGraphHandler: DependencyInjectedHandler<
     }
 
     await softDeleteGraphAndSubgraphsById(transaction, graph.id, now);
+
+    await attemptGraphComposition(transaction, graph.id, now);
 
     return { kind: "no_content" } as const;
   });
