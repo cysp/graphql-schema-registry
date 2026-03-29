@@ -38,6 +38,6 @@ export const getSubgraphHandler: DependencyInjectedHandler<
     return reply.problemDetails({ status: 404 });
   }
 
-  reply.header("ETag", formatStrongETag(subgraph.id, subgraph.revision));
+  reply.header("ETag", formatStrongETag(subgraph.id, subgraph.currentRevision));
   return reply.code(200).send(toSubgraphPayload(subgraph));
 };

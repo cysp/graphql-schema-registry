@@ -42,7 +42,7 @@ export const createGraphHandler: DependencyInjectedHandler<
       );
     });
 
-    reply.header("ETag", formatStrongETag(graph.id, graph.revision));
+    reply.header("ETag", formatStrongETag(graph.id, graph.currentRevision));
     reply.header("Location", `/v1/graphs/${encodeURIComponent(graph.slug)}`);
     return await reply.code(201).send(toGraphPayload(graph));
   } catch (error) {

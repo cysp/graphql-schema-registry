@@ -18,7 +18,7 @@ export const graphs = pgTable(
       .primaryKey()
       .$defaultFn(() => randomUUID()),
     slug: text("slug").notNull(),
-    revision: bigint("revision", { mode: "number" }).notNull(),
+    currentRevision: bigint("current_revision", { mode: "number" }).notNull(),
     createdAt: timestamp("created_at", { withTimezone: true }).notNull(),
     updatedAt: timestamp("updated_at", { withTimezone: true }).notNull(),
     deletedAt: timestamp("deleted_at", { withTimezone: true }),
@@ -59,7 +59,7 @@ export const subgraphs = pgTable(
       .notNull()
       .references(() => graphs.id),
     slug: text("slug").notNull(),
-    revision: bigint("revision", { mode: "number" }).notNull(),
+    currentRevision: bigint("current_revision", { mode: "number" }).notNull(),
     createdAt: timestamp("created_at", { withTimezone: true }).notNull(),
     updatedAt: timestamp("updated_at", { withTimezone: true }).notNull(),
     deletedAt: timestamp("deleted_at", { withTimezone: true }),

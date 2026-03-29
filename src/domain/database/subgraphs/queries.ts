@@ -10,7 +10,7 @@ function selectSubgraphWithRevisionQuery(database: PostgresJsExecutor) {
       graphId: subgraphs.graphId,
       id: subgraphs.id,
       slug: subgraphs.slug,
-      revision: subgraphRevisions.revision,
+      currentRevision: subgraphRevisions.revision,
       routingUrl: subgraphRevisions.routingUrl,
       createdAt: subgraphs.createdAt,
       updatedAt: subgraphs.updatedAt,
@@ -20,7 +20,7 @@ function selectSubgraphWithRevisionQuery(database: PostgresJsExecutor) {
       subgraphRevisions,
       and(
         eq(subgraphRevisions.subgraphId, subgraphs.id),
-        eq(subgraphRevisions.revision, subgraphs.revision),
+        eq(subgraphRevisions.revision, subgraphs.currentRevision),
       ),
     );
 }

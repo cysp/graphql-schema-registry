@@ -34,6 +34,6 @@ export const getGraphHandler: DependencyInjectedHandler<
     return reply.problemDetails({ status: 404 });
   }
 
-  reply.header("ETag", formatStrongETag(graph.id, graph.revision));
+  reply.header("ETag", formatStrongETag(graph.id, graph.currentRevision));
   return reply.code(200).send(toGraphPayload(graph));
 };

@@ -61,7 +61,7 @@ await test("subgraph routes integration with postgres", async (t) => {
 
       const createdSubgraph = requireSubgraphPayload(parseJson(createSubgraphResponse));
       assert.equal(createdSubgraph.graphId, createdGraph.id);
-      assert.equal(createdSubgraph.revision, "1");
+      assert.equal(createdSubgraph.currentRevision, "1");
       assert.equal(createdSubgraph.routingUrl, "https://inventory-v1.example.com/graphql");
       assert.equal(createSubgraphResponse.headers.etag, formatStrongETag(createdSubgraph.id, 1));
 
@@ -98,7 +98,7 @@ await test("subgraph routes integration with postgres", async (t) => {
       const updatedSubgraph = requireSubgraphPayload(parseJson(updateSubgraphResponse));
       assert.equal(updatedSubgraph.id, createdSubgraph.id);
       assert.equal(updatedSubgraph.graphId, createdSubgraph.graphId);
-      assert.equal(updatedSubgraph.revision, "2");
+      assert.equal(updatedSubgraph.currentRevision, "2");
       assert.equal(updatedSubgraph.routingUrl, "https://inventory-v2.example.com/graphql");
       assert.equal(updateSubgraphResponse.headers.etag, formatStrongETag(updatedSubgraph.id, 2));
 
@@ -172,7 +172,7 @@ await test("subgraph routes integration with postgres", async (t) => {
       assert.equal(recreateSubgraphResponse.statusCode, 201);
       const recreatedSubgraph = requireSubgraphPayload(parseJson(recreateSubgraphResponse));
       assert.notEqual(recreatedSubgraph.id, createdSubgraph.id);
-      assert.equal(recreatedSubgraph.revision, "1");
+      assert.equal(recreatedSubgraph.currentRevision, "1");
       assert.equal(
         recreateSubgraphResponse.headers.etag,
         formatStrongETag(recreatedSubgraph.id, 1),
