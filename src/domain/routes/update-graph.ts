@@ -4,6 +4,7 @@ import type { DependencyInjectedHandler } from "../../lib/fastify/handler-with-d
 import type { operationRouteDefinitions } from "../../lib/fastify/openapi/generated/operations/index.ts";
 import type { OpenApiOperationHandlers } from "../../lib/fastify/openapi/plugin.ts";
 import { requireDatabase } from "../../lib/fastify/require-database.ts";
+import { attemptRecomposeGraph } from "../composition.ts";
 import {
   insertGraphRevisionAndSetCurrent,
   selectActiveGraphBySlugForUpdate,
@@ -62,6 +63,7 @@ export const updateGraphHandler: DependencyInjectedHandler<
       return { kind: "not_found" };
     }
 
+    let graphChanged = false;
     if (graph.federationVersion !== request.body.federationVersion) {
       graph = await insertGraphRevisionAndSetCurrent(
         transaction,
@@ -70,6 +72,11 @@ export const updateGraphHandler: DependencyInjectedHandler<
         request.body.federationVersion,
         now,
       );
+      graphChanged = true;
+    }
+
+    if (graphChanged) {
+      await attemptRecomposeGraph(transaction, graph, now);
     }
 
     return {

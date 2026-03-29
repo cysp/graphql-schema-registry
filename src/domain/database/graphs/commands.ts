@@ -47,7 +47,9 @@ async function setGraphRevision(
   graphId: string,
   revision: number,
   now: Date,
-): Promise<Pick<ActiveGraph, "createdAt" | "id" | "slug" | "updatedAt">> {
+): Promise<
+  Pick<ActiveGraph, "createdAt" | "currentGraphCompositionRevision" | "id" | "slug" | "updatedAt">
+> {
   const [updatedGraph] = await transaction
     .update(graphs)
     .set({
@@ -77,6 +79,7 @@ export async function insertGraphWithInitialRevision(
   return {
     ...graph,
     currentRevision: initialRevision,
+    currentGraphCompositionRevision: null,
     federationVersion,
   };
 }
@@ -95,6 +98,7 @@ export async function insertGraphRevisionAndSetCurrent(
   return {
     ...graph,
     currentRevision: revision,
+    currentGraphCompositionRevision: graph.currentGraphCompositionRevision,
     federationVersion,
   };
 }

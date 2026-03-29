@@ -141,4 +141,21 @@ await test("server: graph routes", async (t) => {
       server,
     });
   });
+
+  await t.test("GET /v1/graphs/:graphSlug/supergraph.graphqls", async (t) => {
+    const request = {
+      method: "GET",
+      url: "/v1/graphs/graph-1/supergraph.graphqls",
+    } as const satisfies RouteRequest;
+
+    await assertProtectedRouteBehavior(t, {
+      adminExpectedStatus: 503,
+      adminExpectedTitle: "Service Unavailable",
+      createAdminToken,
+      forbiddenDescription: "graph:read users",
+      forbiddenToken: createGraphReadToken(),
+      request,
+      server,
+    });
+  });
 });

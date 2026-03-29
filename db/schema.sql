@@ -10,6 +10,7 @@ CREATE TABLE "graphs" (
 	"id" uuid PRIMARY KEY,
 	"slug" text NOT NULL,
 	"current_revision" bigint NOT NULL,
+	"current_graph_composition_revision" bigint,
 	"created_at" timestamp with time zone NOT NULL,
 	"updated_at" timestamp with time zone NOT NULL,
 	"deleted_at" timestamp with time zone
@@ -43,6 +44,38 @@ CREATE TABLE "subgraphs" (
 	"deleted_at" timestamp with time zone
 );
 
+CREATE TABLE "graph_composition_graph_revisions" (
+	"graph_id" uuid,
+	"supergraph_revision" bigint,
+	"graph_revision" bigint NOT NULL,
+	CONSTRAINT "graph_composition_graph_revisions_pkey" PRIMARY KEY("graph_id","supergraph_revision")
+);
+
+CREATE TABLE "graph_composition_subgraph_revisions" (
+	"graph_id" uuid,
+	"supergraph_revision" bigint,
+	"subgraph_id" uuid,
+	"subgraph_revision" bigint NOT NULL,
+	CONSTRAINT "graph_composition_subgraph_revisions_pkey" PRIMARY KEY("graph_id","supergraph_revision","subgraph_id")
+);
+
+CREATE TABLE "graph_composition_subgraph_schema_revisions" (
+	"graph_id" uuid,
+	"supergraph_revision" bigint,
+	"subgraph_id" uuid,
+	"subgraph_schema_revision" bigint NOT NULL,
+	CONSTRAINT "graph_composition_subgraph_schema_revisions_pkey" PRIMARY KEY("graph_id","supergraph_revision","subgraph_id")
+);
+
+CREATE TABLE "graph_compositions" (
+	"graph_id" uuid,
+	"revision" bigint,
+	"supergraph_sdl" text NOT NULL,
+	"composition_hash" text,
+	"created_at" timestamp with time zone NOT NULL,
+	CONSTRAINT "graph_compositions_pkey" PRIMARY KEY("graph_id","revision")
+);
+
 CREATE INDEX "graph_revisions_graph_idx" ON "graph_revisions" ("graph_id");
 CREATE UNIQUE INDEX "graphs_active_slug_uniq" ON "graphs" ("slug") WHERE "deleted_at" is null;
 CREATE INDEX "graphs_active_slug_idx" ON "graphs" ("slug") WHERE "deleted_at" is null;
@@ -52,7 +85,11 @@ CREATE INDEX "subgraph_schema_revisions_subgraph_hash_idx" ON "subgraph_schema_r
 CREATE UNIQUE INDEX "subgraphs_graph_active_slug_uniq" ON "subgraphs" ("graph_id","slug") WHERE "deleted_at" is null;
 CREATE INDEX "subgraphs_graph_active_slug_idx" ON "subgraphs" ("graph_id","slug") WHERE "deleted_at" is null;
 CREATE INDEX "subgraphs_graph_idx" ON "subgraphs" ("graph_id");
+CREATE INDEX "graph_composition_subgraph_revisions_subgraph_idx" ON "graph_composition_subgraph_revisions" ("subgraph_id");
+CREATE INDEX "graph_composition_subgraph_schema_revisions_subgraph_idx" ON "graph_composition_subgraph_schema_revisions" ("subgraph_id");
+CREATE INDEX "graph_compositions_graph_idx" ON "graph_compositions" ("graph_id");
 ALTER TABLE "graph_revisions" ADD CONSTRAINT "graph_revisions_graph_id_graphs_id_fkey" FOREIGN KEY ("graph_id") REFERENCES "graphs"("id");
 ALTER TABLE "subgraph_revisions" ADD CONSTRAINT "subgraph_revisions_subgraph_id_subgraphs_id_fkey" FOREIGN KEY ("subgraph_id") REFERENCES "subgraphs"("id");
 ALTER TABLE "subgraph_schema_revisions" ADD CONSTRAINT "subgraph_schema_revisions_subgraph_id_subgraphs_id_fkey" FOREIGN KEY ("subgraph_id") REFERENCES "subgraphs"("id");
 ALTER TABLE "subgraphs" ADD CONSTRAINT "subgraphs_graph_id_graphs_id_fkey" FOREIGN KEY ("graph_id") REFERENCES "graphs"("id");
+ALTER TABLE "graph_compositions" ADD CONSTRAINT "graph_compositions_graph_id_graphs_id_fkey" FOREIGN KEY ("graph_id") REFERENCES "graphs"("id");

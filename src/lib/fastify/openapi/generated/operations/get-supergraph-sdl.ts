@@ -2,9 +2,9 @@
 
 import type { FastifyRouteDefinition } from "../../route-types.ts";
 
-export const publishSubgraphSchemaRouteDefinition = {
-  method: "POST",
-  url: "/v1/graphs/:graphSlug/subgraphs/:subgraphSlug/schema.graphqls",
+export const getSupergraphSdlRouteDefinition = {
+  method: "GET",
+  url: "/v1/graphs/:graphSlug/supergraph.graphqls",
   schema: {
     params: {
       "additionalProperties": false,
@@ -12,82 +12,28 @@ export const publishSubgraphSchemaRouteDefinition = {
         "graphSlug": {
           "type": "string",
           "minLength": 1
-        },
-        "subgraphSlug": {
-          "type": "string",
-          "minLength": 1
         }
       },
       "required": [
-        "graphSlug",
-        "subgraphSlug"
+        "graphSlug"
       ],
       "type": "object"
     },
     headers: {
       "additionalProperties": true,
       "properties": {
-        "if-match": {
-          "type": "string",
-          "pattern": "^(?:[*]|(?:W/)?\"[\\u0021\\u0023-\\u007E\\u0080-\\u00FF]*\"(?:[ \\t]*,[ \\t]*(?:W/)?\"[\\u0021\\u0023-\\u007E\\u0080-\\u00FF]*\")*)$"
+        "if-none-match": {
+          "type": "string"
         }
       },
       "type": "object"
     },
-    body: {
-      "type": "string"
-    },
     response: {
-      204: {},
-      400: {
-        "type": "object",
-        "additionalProperties": false,
-        "required": [
-          "type",
-          "title",
-          "status"
-        ],
-        "properties": {
-          "type": {
-            "type": "string",
-            "format": "uri-reference"
-          },
-          "title": {
-            "type": "string"
-          },
-          "status": {
-            "type": "integer",
-            "format": "int32",
-            "minimum": 100,
-            "maximum": 599
-          }
-        }
+      200: {
+        "type": "string"
       },
+      304: {},
       401: {
-        "type": "object",
-        "additionalProperties": false,
-        "required": [
-          "type",
-          "title",
-          "status"
-        ],
-        "properties": {
-          "type": {
-            "type": "string",
-            "format": "uri-reference"
-          },
-          "title": {
-            "type": "string"
-          },
-          "status": {
-            "type": "integer",
-            "format": "int32",
-            "minimum": 100,
-            "maximum": 599
-          }
-        }
-      },
-      403: {
         "type": "object",
         "additionalProperties": false,
         "required": [
@@ -135,7 +81,7 @@ export const publishSubgraphSchemaRouteDefinition = {
           }
         }
       },
-      412: {
+      500: {
         "type": "object",
         "additionalProperties": false,
         "required": [
@@ -159,7 +105,7 @@ export const publishSubgraphSchemaRouteDefinition = {
           }
         }
       },
-      422: {
+      503: {
         "type": "object",
         "additionalProperties": false,
         "required": [

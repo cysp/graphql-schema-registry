@@ -234,6 +234,75 @@ await test("buildOpenApiOperations", async (t) => {
     assert.deepEqual(result[0]?.schema.response["200"], { type: "string" });
   });
 
+  await t.test("allows multiple content types when a supported one can be selected", () => {
+    const document = createBaseDocument();
+    document.paths = {
+      "/widgets": {
+        post: {
+          operationId: "createWidget",
+          requestBody: {
+            content: {
+              "application/json": {
+                schema: {
+                  type: "string",
+                },
+              },
+              "application/xml": {
+                schema: {
+                  type: "string",
+                },
+              },
+            },
+            required: true,
+          },
+          responses: {
+            "204": {},
+          },
+        },
+      },
+    };
+
+    const [operation] = buildOpenApiOperations(document);
+    assert.equal(operation?.operationId, "createWidget");
+  });
+
+  await t.test(
+    "prefers text/plain when it is the only supported content type among multiple entries",
+    () => {
+      const document = createBaseDocument();
+      document.paths = {
+        "/widgets": {
+          post: {
+            operationId: "createWidget",
+            requestBody: {
+              content: {
+                "application/xml": {
+                  schema: {
+                    type: "string",
+                  },
+                },
+                "text/plain": {
+                  schema: {
+                    type: "string",
+                  },
+                },
+              },
+              required: true,
+            },
+            responses: {
+              "204": {},
+            },
+          },
+        },
+      };
+
+      const [operation] = buildOpenApiOperations(document);
+      assert.deepEqual(operation?.schema.body, {
+        type: "string",
+      });
+    },
+  );
+
   await t.test("supports array-valued type for nullable OpenAPI 3.1 schemas", () => {
     const document = createBaseDocument();
     document.paths = {

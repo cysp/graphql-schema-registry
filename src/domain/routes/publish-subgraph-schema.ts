@@ -1,4 +1,5 @@
 import type { PostgresJsDatabase } from "../../drizzle/types.ts";
+import { attemptRecomposeGraph } from "../composition.ts";
 import {
   hasSubgraphSchemaWriteGrant,
   requireAuthenticatedUser,
@@ -24,7 +25,6 @@ type OperationHandlers = OpenApiOperationHandlers<
 type RouteDependencies = {
   database: PostgresJsDatabase | undefined;
 };
-
 type PublishTransactionResult =
   | { kind: "forbidden" }
   | { kind: "not_found" }
@@ -56,6 +56,7 @@ export const publishSubgraphSchemaHandler: DependencyInjectedHandler<
   const normalizedHash = hashNormalizedSchemaSdl(normalizedSdl);
 
   const result: PublishTransactionResult = await database.transaction(async (transaction) => {
+    const now = new Date();
     const graph = await selectActiveGraphBySlugForUpdate(transaction, request.params.graphSlug);
     if (!graph) {
       if (!etagSatisfiesIfMatch(ifMatch, undefined)) {
@@ -103,12 +104,14 @@ export const publishSubgraphSchemaHandler: DependencyInjectedHandler<
 
     const nextRevision = (currentSchemaRevision?.revision ?? 0) + 1;
     const storedRevision = await insertSubgraphSchemaRevisionAndSetCurrent(transaction, {
-      createdAt: new Date(),
+      subgraphId: subgraph.id,
+      revision: nextRevision,
       normalizedHash,
       normalizedSdl,
-      revision: nextRevision,
-      subgraphId: subgraph.id,
+      createdAt: now,
     });
+
+    await attemptRecomposeGraph(transaction, graph, now);
 
     return {
       kind: "ok",

@@ -4,6 +4,7 @@ import type { DependencyInjectedHandler } from "../../lib/fastify/handler-with-d
 import type { operationRouteDefinitions } from "../../lib/fastify/openapi/generated/operations/index.ts";
 import type { OpenApiOperationHandlers } from "../../lib/fastify/openapi/plugin.ts";
 import { requireDatabase } from "../../lib/fastify/require-database.ts";
+import { attemptRecomposeGraph } from "../composition.ts";
 import { selectActiveGraphBySlugForUpdate } from "../database/graphs/repository.ts";
 import {
   insertSubgraphRevisionAndSetCurrent,
@@ -80,6 +81,7 @@ export const updateSubgraphHandler: DependencyInjectedHandler<
         return { kind: "not_found" };
       }
 
+      let subgraphChanged = false;
       if (subgraph.routingUrl !== request.body.routingUrl) {
         subgraph = await insertSubgraphRevisionAndSetCurrent(
           transaction,
@@ -88,6 +90,11 @@ export const updateSubgraphHandler: DependencyInjectedHandler<
           request.body.routingUrl,
           now,
         );
+        subgraphChanged = true;
+      }
+
+      if (subgraphChanged) {
+        await attemptRecomposeGraph(transaction, graph, now);
       }
 
       return {

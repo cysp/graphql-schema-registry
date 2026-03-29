@@ -154,4 +154,25 @@ await test("server: subgraph routes", async (t) => {
       server,
     });
   });
+
+  await t.test("POST /v1/graphs/:graphSlug/subgraphs/:subgraphSlug/validate-schema", async (t) => {
+    const request = {
+      method: "POST",
+      url: "/v1/graphs/graph-1/subgraphs/products/validate-schema",
+      headers: {
+        "content-type": "text/plain",
+      },
+      payload: "type Query { products: [String!]! }",
+    } as const satisfies RouteRequest;
+
+    await assertProtectedRouteBehavior(t, {
+      adminExpectedStatus: 503,
+      adminExpectedTitle: "Service Unavailable",
+      createAdminToken,
+      forbiddenDescription: "subgraph:write users",
+      forbiddenToken: createSubgraphWriteToken(),
+      request,
+      server,
+    });
+  });
 });

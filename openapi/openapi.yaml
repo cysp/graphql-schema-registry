@@ -154,6 +154,49 @@ paths:
         "503":
           $ref: "#/components/responses/ServiceUnavailable"
 
+  /v1/graphs/{graphSlug}/supergraph.graphqls:
+    get:
+      operationId: getSupergraphSdl
+      summary: Get the current supergraph SDL
+      parameters:
+        - $ref: "#/components/parameters/GraphSlug"
+        - name: If-None-Match
+          in: header
+          required: false
+          schema:
+            type: string
+      responses:
+        "200":
+          description: OK
+          headers:
+            Cache-Control:
+              $ref: "#/components/headers/CacheControl"
+            ETag:
+              $ref: "#/components/headers/ETag"
+            Last-Modified:
+              $ref: "#/components/headers/LastModified"
+          content:
+            text/plain:
+              schema:
+                type: string
+        "304":
+          description: Not Modified
+          headers:
+            Cache-Control:
+              $ref: "#/components/headers/CacheControl"
+            ETag:
+              $ref: "#/components/headers/ETag"
+            Last-Modified:
+              $ref: "#/components/headers/LastModified"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "500":
+          $ref: "#/components/responses/InternalServerError"
+        "503":
+          $ref: "#/components/responses/ServiceUnavailable"
+
   /v1/graphs/{graphSlug}/subgraphs:
     get:
       operationId: listSubgraphs
@@ -369,6 +412,65 @@ paths:
           $ref: "#/components/responses/PreconditionFailed"
         "422":
           $ref: "#/components/responses/UnprocessableEntity"
+
+  /v1/graphs/{graphSlug}/subgraphs/{subgraphSlug}/validate-schema:
+    post:
+      operationId: validateSubgraphSchema
+      summary: Validate a subgraph schema SDL
+      parameters:
+        - $ref: "#/components/parameters/GraphSlug"
+        - $ref: "#/components/parameters/SubgraphSlug"
+      requestBody:
+        required: true
+        content:
+          text/plain:
+            schema:
+              type: string
+      responses:
+        "200":
+          description: Valid
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties: false
+                required:
+                  - diagnostics
+                properties:
+                  diagnostics:
+                    type: array
+                    items:
+                      type: string
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "422":
+          description: Invalid schema
+          content:
+            application/problem+json:
+              schema:
+                type: object
+                additionalProperties: false
+                required:
+                  - type
+                  - title
+                  - status
+                properties:
+                  type:
+                    type: string
+                    format: uri-reference
+                  title:
+                    type: string
+                  status:
+                    type: integer
+                    format: int32
+                    minimum: 100
+                    maximum: 599
+                  diagnostics:
+                    type: array
+                    items:
+                      type: string
         "500":
           $ref: "#/components/responses/InternalServerError"
         "503":
@@ -379,8 +481,12 @@ components:
     bearerAuth:
       $ref: "./components/security-schemes/bearer-auth.yaml"
   headers:
+    CacheControl:
+      $ref: "./components/headers/cache-control.yaml"
     ETag:
       $ref: "./components/headers/etag.yaml"
+    LastModified:
+      $ref: "./components/headers/last-modified.yaml"
     Location:
       $ref: "./components/headers/location.yaml"
     WWWAuthenticate:

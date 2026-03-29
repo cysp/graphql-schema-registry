@@ -2,9 +2,9 @@
 
 import type { FastifyRouteDefinition } from "../../route-types.ts";
 
-export const publishSubgraphSchemaRouteDefinition = {
+export const validateSubgraphSchemaRouteDefinition = {
   method: "POST",
-  url: "/v1/graphs/:graphSlug/subgraphs/:subgraphSlug/schema.graphqls",
+  url: "/v1/graphs/:graphSlug/subgraphs/:subgraphSlug/validate-schema",
   schema: {
     params: {
       "additionalProperties": false,
@@ -24,70 +24,26 @@ export const publishSubgraphSchemaRouteDefinition = {
       ],
       "type": "object"
     },
-    headers: {
-      "additionalProperties": true,
-      "properties": {
-        "if-match": {
-          "type": "string",
-          "pattern": "^(?:[*]|(?:W/)?\"[\\u0021\\u0023-\\u007E\\u0080-\\u00FF]*\"(?:[ \\t]*,[ \\t]*(?:W/)?\"[\\u0021\\u0023-\\u007E\\u0080-\\u00FF]*\")*)$"
-        }
-      },
-      "type": "object"
-    },
     body: {
       "type": "string"
     },
     response: {
-      204: {},
-      400: {
+      200: {
         "type": "object",
         "additionalProperties": false,
         "required": [
-          "type",
-          "title",
-          "status"
+          "diagnostics"
         ],
         "properties": {
-          "type": {
-            "type": "string",
-            "format": "uri-reference"
-          },
-          "title": {
-            "type": "string"
-          },
-          "status": {
-            "type": "integer",
-            "format": "int32",
-            "minimum": 100,
-            "maximum": 599
+          "diagnostics": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
           }
         }
       },
       401: {
-        "type": "object",
-        "additionalProperties": false,
-        "required": [
-          "type",
-          "title",
-          "status"
-        ],
-        "properties": {
-          "type": {
-            "type": "string",
-            "format": "uri-reference"
-          },
-          "title": {
-            "type": "string"
-          },
-          "status": {
-            "type": "integer",
-            "format": "int32",
-            "minimum": 100,
-            "maximum": 599
-          }
-        }
-      },
-      403: {
         "type": "object",
         "additionalProperties": false,
         "required": [
@@ -135,7 +91,37 @@ export const publishSubgraphSchemaRouteDefinition = {
           }
         }
       },
-      412: {
+      422: {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "type",
+          "title",
+          "status"
+        ],
+        "properties": {
+          "type": {
+            "type": "string",
+            "format": "uri-reference"
+          },
+          "title": {
+            "type": "string"
+          },
+          "status": {
+            "type": "integer",
+            "format": "int32",
+            "minimum": 100,
+            "maximum": 599
+          },
+          "diagnostics": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          }
+        }
+      },
+      500: {
         "type": "object",
         "additionalProperties": false,
         "required": [
@@ -159,7 +145,7 @@ export const publishSubgraphSchemaRouteDefinition = {
           }
         }
       },
-      422: {
+      503: {
         "type": "object",
         "additionalProperties": false,
         "required": [

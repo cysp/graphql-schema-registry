@@ -20,7 +20,11 @@ export type SubgraphPayload = {
 };
 
 export type PublishSubgraphSchemaPayload = {
-  currentRevision: string;
+  revision: string;
+};
+
+export type ValidateSubgraphSchemaPayload = {
+  diagnostics: string[];
 };
 
 export function toGraphPayload(graph: ActiveGraph): GraphPayload {

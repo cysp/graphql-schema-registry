@@ -204,7 +204,7 @@ function buildParameterSchema(
   };
 }
 
-function readContentSchema(value: unknown, context: string): JsonSchema {
+function readSupportedContentSchema(value: unknown, context: string): JsonSchema {
   const content = readRecord(value, context);
   const contentTypes = Object.keys(content).toSorted();
   const preferredJsonContentType = contentTypes.includes("application/json")
@@ -214,23 +214,30 @@ function readContentSchema(value: unknown, context: string): JsonSchema {
     contentType.endsWith("+json"),
   );
   const plainTextContentType = contentTypes.includes("text/plain") ? "text/plain" : undefined;
-  const contentType =
+  const supportedContentType =
     preferredJsonContentType ??
     (fallbackJsonContentTypes.length === 1 ? fallbackJsonContentTypes[0] : undefined) ??
-    (contentTypes.length === 1 ? plainTextContentType : undefined);
-
-  if (contentType === undefined) {
+    plainTextContentType;
+  if (supportedContentType === undefined) {
     throw new GeneratorError(
-      `${context} must include application/json, a single application/*+json variant, or exactly one text/plain content type.`,
+      `${context} must include a supported content type (application/json, a single application/*+json variant, or text/plain).`,
     );
   }
 
-  const mediaType = readRecord(content[contentType], `${context}[${JSON.stringify(contentType)}]`);
-  if (mediaType["schema"] === undefined) {
-    throw new GeneratorError(`${context}[${JSON.stringify(contentType)}].schema is required.`);
+  const jsonMediaType = readRecord(
+    content[supportedContentType],
+    `${context}[${JSON.stringify(supportedContentType)}]`,
+  );
+  if (jsonMediaType["schema"] === undefined) {
+    throw new GeneratorError(
+      `${context}[${JSON.stringify(supportedContentType)}].schema is required.`,
+    );
   }
 
-  return readJsonSchema(mediaType["schema"], `${context}[${JSON.stringify(contentType)}].schema`);
+  return readJsonSchema(
+    jsonMediaType["schema"],
+    `${context}[${JSON.stringify(supportedContentType)}].schema`,
+  );
 }
 
 function readRequestBody(
@@ -252,7 +259,10 @@ function readRequestBody(
     );
   }
 
-  const requestBodySchema = readContentSchema(content, `${operationContext}.requestBody.content`);
+  const requestBodySchema = readSupportedContentSchema(
+    content,
+    `${operationContext}.requestBody.content`,
+  );
   const isRequired = readOptionalBoolean(
     requestBody["required"],
     `${operationContext}.requestBody.required`,
@@ -294,7 +304,10 @@ function readResponseSchemas(
         schema:
           content === undefined
             ? undefined
-            : readContentSchema(content, `${operationContext}.responses["${statusCode}"].content`),
+            : readSupportedContentSchema(
+                content,
+                `${operationContext}.responses["${statusCode}"].content`,
+              ),
         statusCode,
       };
     })

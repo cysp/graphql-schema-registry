@@ -19,11 +19,13 @@ import { deleteSubgraphHandler } from "./domain/routes/delete-subgraph.ts";
 import { getGraphHandler } from "./domain/routes/get-graph.ts";
 import { getSubgraphSchemaHandler } from "./domain/routes/get-subgraph-schema.ts";
 import { getSubgraphHandler } from "./domain/routes/get-subgraph.ts";
+import { getSupergraphSdlHandler } from "./domain/routes/get-supergraph-sdl.ts";
 import { listGraphsHandler } from "./domain/routes/list-graphs.ts";
 import { listSubgraphsHandler } from "./domain/routes/list-subgraphs.ts";
 import { publishSubgraphSchemaHandler } from "./domain/routes/publish-subgraph-schema.ts";
 import { updateGraphHandler } from "./domain/routes/update-graph.ts";
 import { updateSubgraphHandler } from "./domain/routes/update-subgraph.ts";
+import { validateSubgraphSchemaHandler } from "./domain/routes/validate-subgraph-schema.ts";
 import type { PostgresJsDatabase } from "./drizzle/types.ts";
 import { bearerAuthenticateHeaders } from "./lib/fastify/authorization/bearer-authenticate-headers.ts";
 import { fastifyHandlerWithDependencies } from "./lib/fastify/handler-with-dependencies.ts";
@@ -141,6 +143,10 @@ export function createFastifyServer({
           getSubgraphSchemaHandler,
           routeDependencies,
         ),
+        getSupergraphSdl: fastifyHandlerWithDependencies(
+          getSupergraphSdlHandler,
+          routeDependencies,
+        ),
         getSubgraph: fastifyHandlerWithDependencies(getSubgraphHandler, routeDependencies),
         listGraphs: fastifyHandlerWithDependencies(listGraphsHandler, routeDependencies),
         listSubgraphs: fastifyHandlerWithDependencies(listSubgraphsHandler, routeDependencies),
@@ -150,6 +156,10 @@ export function createFastifyServer({
         ),
         updateGraph: fastifyHandlerWithDependencies(updateGraphHandler, routeDependencies),
         updateSubgraph: fastifyHandlerWithDependencies(updateSubgraphHandler, routeDependencies),
+        validateSubgraphSchema: fastifyHandlerWithDependencies(
+          validateSubgraphSchemaHandler,
+          routeDependencies,
+        ),
       },
     });
   });
