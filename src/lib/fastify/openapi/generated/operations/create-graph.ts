@@ -31,7 +31,7 @@ export const createGraphRouteDefinition = {
         "required": [
           "id",
           "slug",
-          "revision",
+          "currentRevision",
           "federationVersion",
           "createdAt",
           "updatedAt"
@@ -45,7 +45,7 @@ export const createGraphRouteDefinition = {
             "type": "string",
             "minLength": 1
           },
-          "revision": {
+          "currentRevision": {
             "type": "string",
             "pattern": "^[1-9][0-9]*$"
           },

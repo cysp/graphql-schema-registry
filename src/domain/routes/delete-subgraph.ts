@@ -53,7 +53,10 @@ export const deleteSubgraphHandler: DependencyInjectedHandler<
     );
 
     if (
-      !etagSatisfiesIfMatch(ifMatch, subgraph && formatStrongETag(subgraph.id, subgraph.revision))
+      !etagSatisfiesIfMatch(
+        ifMatch,
+        subgraph && formatStrongETag(subgraph.id, subgraph.currentRevision),
+      )
     ) {
       return { kind: "precondition_failed" } as const;
     }

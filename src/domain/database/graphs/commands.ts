@@ -14,7 +14,7 @@ async function insertGraphRow(
     .insert(graphs)
     .values({
       slug,
-      revision: initialRevision,
+      currentRevision: initialRevision,
       createdAt: now,
       updatedAt: now,
     })
@@ -51,7 +51,7 @@ async function setGraphRevision(
   const [updatedGraph] = await transaction
     .update(graphs)
     .set({
-      revision,
+      currentRevision: revision,
       updatedAt: now,
     })
     .where(and(eq(graphs.id, graphId), isNull(graphs.deletedAt)))
@@ -76,7 +76,7 @@ export async function insertGraphWithInitialRevision(
 
   return {
     ...graph,
-    revision: initialRevision,
+    currentRevision: initialRevision,
     federationVersion,
   };
 }
@@ -94,7 +94,7 @@ export async function insertGraphRevisionAndSetCurrent(
 
   return {
     ...graph,
-    revision,
+    currentRevision: revision,
     federationVersion,
   };
 }

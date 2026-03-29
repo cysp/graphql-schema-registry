@@ -52,7 +52,9 @@ export const updateGraphHandler: DependencyInjectedHandler<
 
     let graph = await selectActiveGraphBySlugForUpdate(transaction, request.params.graphSlug);
 
-    if (!etagSatisfiesIfMatch(ifMatch, graph && formatStrongETag(graph.id, graph.revision))) {
+    if (
+      !etagSatisfiesIfMatch(ifMatch, graph && formatStrongETag(graph.id, graph.currentRevision))
+    ) {
       return { kind: "precondition_failed" };
     }
 
@@ -64,7 +66,7 @@ export const updateGraphHandler: DependencyInjectedHandler<
       graph = await insertGraphRevisionAndSetCurrent(
         transaction,
         graph.id,
-        graph.revision + 1,
+        graph.currentRevision + 1,
         request.body.federationVersion,
         now,
       );
@@ -84,6 +86,6 @@ export const updateGraphHandler: DependencyInjectedHandler<
     return reply.problemDetails({ status: 404 });
   }
 
-  reply.header("ETag", formatStrongETag(result.graph.id, result.graph.revision));
+  reply.header("ETag", formatStrongETag(result.graph.id, result.graph.currentRevision));
   return reply.code(200).send(toGraphPayload(result.graph));
 };

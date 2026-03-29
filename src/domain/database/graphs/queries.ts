@@ -9,7 +9,7 @@ function selectGraphWithRevisionQuery(database: PostgresJsExecutor) {
     .select({
       id: graphs.id,
       slug: graphs.slug,
-      revision: graphRevisions.revision,
+      currentRevision: graphRevisions.revision,
       federationVersion: graphRevisions.federationVersion,
       createdAt: graphs.createdAt,
       updatedAt: graphs.updatedAt,
@@ -17,7 +17,10 @@ function selectGraphWithRevisionQuery(database: PostgresJsExecutor) {
     .from(graphs)
     .innerJoin(
       graphRevisions,
-      and(eq(graphRevisions.graphId, graphs.id), eq(graphRevisions.revision, graphs.revision)),
+      and(
+        eq(graphRevisions.graphId, graphs.id),
+        eq(graphRevisions.revision, graphs.currentRevision),
+      ),
     );
 }
 

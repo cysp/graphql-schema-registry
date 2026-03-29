@@ -124,7 +124,7 @@ await test("route handler concurrency and rollback integration with postgres", a
           await sql.unsafe(
             `
             UPDATE graphs
-            SET revision = 2, updated_at = $1
+            SET current_revision = 2, updated_at = $1
             WHERE id = $2
           `,
             [now.toISOString(), createdGraph.id],
@@ -157,18 +157,18 @@ await test("route handler concurrency and rollback integration with postgres", a
         const [graphRow] = await fixture.sql<
           Array<{
             federationVersion: string;
-            revision: string;
+            currentRevision: string;
           }>
         >`
-          SELECT gr.federation_version AS "federationVersion", g.revision
+          SELECT gr.federation_version AS "federationVersion", g.current_revision AS "currentRevision"
           FROM graphs AS g
           JOIN graph_revisions AS gr
-            ON gr.graph_id = g.id AND gr.revision = g.revision
+            ON gr.graph_id = g.id AND gr.revision = g.current_revision
           WHERE g.id = ${createdGraph.id}
         `;
         assert.deepEqual(graphRow, {
+          currentRevision: "2",
           federationVersion: "v2.10",
-          revision: "2",
         });
       },
     );
@@ -334,7 +334,7 @@ await test("route handler concurrency and rollback integration with postgres", a
             await sql.unsafe(
               `
               UPDATE graphs
-              SET revision = 2, updated_at = $1
+              SET current_revision = 2, updated_at = $1
               WHERE id = $2
             `,
               [now.toISOString(), createdGraph.id],
@@ -399,7 +399,7 @@ await test("route handler concurrency and rollback integration with postgres", a
             await sql.unsafe(
               `
               UPDATE subgraphs
-              SET revision = 2, updated_at = $1
+              SET current_revision = 2, updated_at = $1
               WHERE id = $2
             `,
               [now.toISOString(), createdSubgraph.id],
@@ -431,18 +431,18 @@ await test("route handler concurrency and rollback integration with postgres", a
 
           const [subgraphRow] = await fixture.sql<
             Array<{
-              revision: string;
+              currentRevision: string;
               routingUrl: string;
             }>
           >`
-          SELECT sr.routing_url AS "routingUrl", s.revision
+          SELECT sr.routing_url AS "routingUrl", s.current_revision AS "currentRevision"
           FROM subgraphs AS s
           JOIN subgraph_revisions AS sr
-            ON sr.subgraph_id = s.id AND sr.revision = s.revision
+            ON sr.subgraph_id = s.id AND sr.revision = s.current_revision
           WHERE s.id = ${createdSubgraph.id}
         `;
           assert.deepEqual(subgraphRow, {
-            revision: "2",
+            currentRevision: "2",
             routingUrl: "https://inventory-v2.example.com/graphql",
           });
         },
@@ -599,18 +599,18 @@ await test("route handler concurrency and rollback integration with postgres", a
         const [graphRow] = await fixture.sql<
           Array<{
             federationVersion: string;
-            revision: string;
+            currentRevision: string;
           }>
         >`
-          SELECT gr.federation_version AS "federationVersion", g.revision
+          SELECT gr.federation_version AS "federationVersion", g.current_revision AS "currentRevision"
           FROM graphs AS g
           JOIN graph_revisions AS gr
-            ON gr.graph_id = g.id AND gr.revision = g.revision
+            ON gr.graph_id = g.id AND gr.revision = g.current_revision
           WHERE g.id = ${createdGraph.id}
         `;
         assert.deepEqual(graphRow, {
+          currentRevision: "1",
           federationVersion: "v2.9",
-          revision: "1",
         });
         assert.equal(
           await queryCount(
@@ -741,18 +741,18 @@ await test("route handler concurrency and rollback integration with postgres", a
 
         const [subgraphRow] = await fixture.sql<
           Array<{
-            revision: string;
+            currentRevision: string;
             routingUrl: string;
           }>
         >`
-          SELECT sr.routing_url AS "routingUrl", s.revision
+          SELECT sr.routing_url AS "routingUrl", s.current_revision AS "currentRevision"
           FROM subgraphs AS s
           JOIN subgraph_revisions AS sr
-            ON sr.subgraph_id = s.id AND sr.revision = s.revision
+            ON sr.subgraph_id = s.id AND sr.revision = s.current_revision
           WHERE s.id = ${createdSubgraph.id}
         `;
         assert.deepEqual(subgraphRow, {
-          revision: "1",
+          currentRevision: "1",
           routingUrl: "https://inventory-v1.example.com/graphql",
         });
         assert.equal(

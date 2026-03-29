@@ -9,7 +9,7 @@ CREATE TABLE "graph_revisions" (
 CREATE TABLE "graphs" (
 	"id" uuid PRIMARY KEY,
 	"slug" text NOT NULL,
-	"revision" bigint NOT NULL,
+	"current_revision" bigint NOT NULL,
 	"created_at" timestamp with time zone NOT NULL,
 	"updated_at" timestamp with time zone NOT NULL,
 	"deleted_at" timestamp with time zone
@@ -27,7 +27,7 @@ CREATE TABLE "subgraphs" (
 	"id" uuid PRIMARY KEY,
 	"graph_id" uuid NOT NULL,
 	"slug" text NOT NULL,
-	"revision" bigint NOT NULL,
+	"current_revision" bigint NOT NULL,
 	"created_at" timestamp with time zone NOT NULL,
 	"updated_at" timestamp with time zone NOT NULL,
 	"deleted_at" timestamp with time zone

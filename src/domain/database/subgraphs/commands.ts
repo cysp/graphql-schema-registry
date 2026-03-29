@@ -16,7 +16,7 @@ async function insertSubgraphRow(
     .values({
       graphId,
       slug,
-      revision: initialRevision,
+      currentRevision: initialRevision,
       createdAt: now,
       updatedAt: now,
     })
@@ -53,7 +53,7 @@ async function setSubgraphRevision(
   const [updatedSubgraph] = await transaction
     .update(subgraphs)
     .set({
-      revision,
+      currentRevision: revision,
       updatedAt: now,
     })
     .where(and(eq(subgraphs.id, subgraphId), isNull(subgraphs.deletedAt)))
@@ -79,7 +79,7 @@ export async function insertSubgraphWithInitialRevision(
 
   return {
     ...subgraph,
-    revision: initialRevision,
+    currentRevision: initialRevision,
     routingUrl,
   };
 }
@@ -97,7 +97,7 @@ export async function insertSubgraphRevisionAndSetCurrent(
 
   return {
     ...updatedSubgraph,
-    revision,
+    currentRevision: revision,
     routingUrl,
   };
 }

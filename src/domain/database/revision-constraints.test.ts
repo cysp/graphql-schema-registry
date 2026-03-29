@@ -22,7 +22,7 @@ await test("revision foreign keys", async (t) => {
 
       await integrationDatabase.database.sql.begin(async (sql) => {
         await sql.unsafe(`
-          INSERT INTO graphs (id, slug, revision, created_at, updated_at)
+          INSERT INTO graphs (id, slug, current_revision, created_at, updated_at)
           VALUES ('${graphId}', 'catalog', 1, '${now}', '${now}')
         `);
         await sql.unsafe(`
@@ -34,7 +34,7 @@ await test("revision foreign keys", async (t) => {
       await assert.rejects(
         integrationDatabase.database.sql`
           UPDATE graphs
-          SET revision = 2
+          SET current_revision = 2
           WHERE id = ${graphId}
         `,
         /graphs_revision_fkey/,
@@ -54,7 +54,7 @@ await test("revision foreign keys", async (t) => {
 
       await integrationDatabase.database.sql.begin(async (sql) => {
         await sql.unsafe(`
-          INSERT INTO graphs (id, slug, revision, created_at, updated_at)
+          INSERT INTO graphs (id, slug, current_revision, created_at, updated_at)
           VALUES ('${graphId}', 'catalog', 1, '${now}', '${now}')
         `);
         await sql.unsafe(`
@@ -65,7 +65,7 @@ await test("revision foreign keys", async (t) => {
 
       await integrationDatabase.database.sql.begin(async (sql) => {
         await sql.unsafe(`
-          INSERT INTO subgraphs (id, graph_id, slug, revision, created_at, updated_at)
+          INSERT INTO subgraphs (id, graph_id, slug, current_revision, created_at, updated_at)
           VALUES ('${subgraphId}', '${graphId}', 'inventory', 1, '${now}', '${now}')
         `);
         await sql.unsafe(`
@@ -77,7 +77,7 @@ await test("revision foreign keys", async (t) => {
       await assert.rejects(
         integrationDatabase.database.sql`
           UPDATE subgraphs
-          SET revision = 2
+          SET current_revision = 2
           WHERE id = ${subgraphId}
         `,
         /subgraphs_revision_fkey/,

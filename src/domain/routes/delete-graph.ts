@@ -38,7 +38,9 @@ export const deleteGraphHandler: DependencyInjectedHandler<
 
     const graph = await selectActiveGraphBySlugForUpdate(transaction, request.params.graphSlug);
 
-    if (!etagSatisfiesIfMatch(ifMatch, graph && formatStrongETag(graph.id, graph.revision))) {
+    if (
+      !etagSatisfiesIfMatch(ifMatch, graph && formatStrongETag(graph.id, graph.currentRevision))
+    ) {
       return { kind: "precondition_failed" } as const;
     }
 

@@ -47,7 +47,7 @@ await test("graph routes integration with postgres", async (t) => {
       const createdGraph = requireGraphPayload(parseJson(createGraphResponse));
       assert.equal(createdGraph.slug, "catalog");
       assert.equal(createdGraph.federationVersion, "v2.9");
-      assert.equal(createdGraph.revision, "1");
+      assert.equal(createdGraph.currentRevision, "1");
       assert.equal(createGraphResponse.headers.etag, formatStrongETag(createdGraph.id, 1));
 
       const duplicateCreateResponse = await server.inject({
@@ -84,7 +84,7 @@ await test("graph routes integration with postgres", async (t) => {
       assert.equal(updatedGraph.id, createdGraph.id);
       assert.equal(updatedGraph.slug, createdGraph.slug);
       assert.equal(updatedGraph.federationVersion, "v2.10");
-      assert.equal(updatedGraph.revision, "2");
+      assert.equal(updatedGraph.currentRevision, "2");
       assert.equal(updateGraphResponse.headers.etag, formatStrongETag(updatedGraph.id, 2));
 
       const noOpUpdateResponse = await server.inject({
@@ -182,7 +182,7 @@ await test("graph routes integration with postgres", async (t) => {
       assert.equal(recreateGraphResponse.statusCode, 201);
       const recreatedGraph = requireGraphPayload(parseJson(recreateGraphResponse));
       assert.notEqual(recreatedGraph.id, createdGraph.id);
-      assert.equal(recreatedGraph.revision, "1");
+      assert.equal(recreatedGraph.currentRevision, "1");
       assert.equal(recreateGraphResponse.headers.etag, formatStrongETag(recreatedGraph.id, 1));
 
       const staleRecreatedUpdateResponse = await server.inject({

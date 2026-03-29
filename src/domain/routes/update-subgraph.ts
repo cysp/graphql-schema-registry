@@ -68,7 +68,10 @@ export const updateSubgraphHandler: DependencyInjectedHandler<
       );
 
       if (
-        !etagSatisfiesIfMatch(ifMatch, subgraph && formatStrongETag(subgraph.id, subgraph.revision))
+        !etagSatisfiesIfMatch(
+          ifMatch,
+          subgraph && formatStrongETag(subgraph.id, subgraph.currentRevision),
+        )
       ) {
         return { kind: "precondition_failed" };
       }
@@ -81,7 +84,7 @@ export const updateSubgraphHandler: DependencyInjectedHandler<
         subgraph = await insertSubgraphRevisionAndSetCurrent(
           transaction,
           subgraph.id,
-          subgraph.revision + 1,
+          subgraph.currentRevision + 1,
           request.body.routingUrl,
           now,
         );
@@ -102,6 +105,6 @@ export const updateSubgraphHandler: DependencyInjectedHandler<
     return reply.problemDetails({ status: 404 });
   }
 
-  reply.header("ETag", formatStrongETag(result.subgraph.id, result.subgraph.revision));
+  reply.header("ETag", formatStrongETag(result.subgraph.id, result.subgraph.currentRevision));
   return reply.code(200).send(toSubgraphPayload(result.subgraph));
 };

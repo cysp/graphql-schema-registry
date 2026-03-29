@@ -39,7 +39,9 @@ export const createSubgraphHandler: DependencyInjectedHandler<
 
       const graph = await selectActiveGraphBySlugForUpdate(transaction, request.params.graphSlug);
 
-      if (!etagSatisfiesIfMatch(ifMatch, graph && formatStrongETag(graph.id, graph.revision))) {
+      if (
+        !etagSatisfiesIfMatch(ifMatch, graph && formatStrongETag(graph.id, graph.currentRevision))
+      ) {
         return { kind: "precondition_failed" } as const;
       }
 
@@ -69,7 +71,7 @@ export const createSubgraphHandler: DependencyInjectedHandler<
       return await reply.problemDetails({ status: 404 });
     }
 
-    reply.header("ETag", formatStrongETag(result.subgraph.id, result.subgraph.revision));
+    reply.header("ETag", formatStrongETag(result.subgraph.id, result.subgraph.currentRevision));
     reply.header(
       "Location",
       `/v1/graphs/${encodeURIComponent(request.params.graphSlug)}/subgraphs/${encodeURIComponent(result.subgraph.slug)}`,

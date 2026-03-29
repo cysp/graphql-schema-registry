@@ -27,9 +27,9 @@ export function requireGraphPayload(value: unknown): GraphPayload {
 
   return {
     createdAt: requireStringProperty(value, "createdAt"),
+    currentRevision: requireStringProperty(value, "currentRevision"),
     federationVersion: requireStringProperty(value, "federationVersion"),
     id: requireStringProperty(value, "id"),
-    revision: requireStringProperty(value, "revision"),
     slug: requireStringProperty(value, "slug"),
     updatedAt: requireStringProperty(value, "updatedAt"),
   };
@@ -40,9 +40,9 @@ export function requireSubgraphPayload(value: unknown): SubgraphPayload {
 
   return {
     createdAt: requireStringProperty(value, "createdAt"),
+    currentRevision: requireStringProperty(value, "currentRevision"),
     graphId: requireStringProperty(value, "graphId"),
     id: requireStringProperty(value, "id"),
-    revision: requireStringProperty(value, "revision"),
     routingUrl: requireStringProperty(value, "routingUrl"),
     slug: requireStringProperty(value, "slug"),
     updatedAt: requireStringProperty(value, "updatedAt"),
