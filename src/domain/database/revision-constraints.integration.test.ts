@@ -37,7 +37,7 @@ await test("revision foreign keys", async (t) => {
           SET current_revision = 2
           WHERE id = ${graphId}
         `,
-        /graphs_revision_fkey/,
+        /graphs_current_revision_fkey/,
       );
     } finally {
       await integrationDatabase.close();
@@ -80,7 +80,7 @@ await test("revision foreign keys", async (t) => {
           SET current_revision = 2
           WHERE id = ${subgraphId}
         `,
-        /subgraphs_revision_fkey/,
+        /subgraphs_current_revision_fkey/,
       );
     } finally {
       await integrationDatabase.close();
