@@ -31,7 +31,13 @@ function isEntityTagCharacter(char: string | undefined): boolean {
     return false;
   }
 
-  return codePoint === 0x21 || (codePoint >= 0x23 && codePoint <= 0x7e) || codePoint >= 0x80;
+  // RFC 9110 Section 8.8.3 defines `etagc` as %x21 / %x23-7E / obs-text.
+  // RFC 9110 Section 5.5 defines `obs-text` as %x80-FF.
+  return (
+    codePoint === 0x21 ||
+    (codePoint >= 0x23 && codePoint <= 0x7e) ||
+    (codePoint >= 0x80 && codePoint <= 0xff)
+  );
 }
 
 function parseEntityTag(
@@ -44,6 +50,7 @@ function parseEntityTag(
     nextIndex += 2;
   }
 
+  // RFC 9110 Section 8.8.3: entity-tag = [ weak ] opaque-tag.
   if (value[nextIndex] !== '"') {
     return undefined;
   }
@@ -100,7 +107,7 @@ function parseEntityTagList(headerValue: string): string[] {
 
   nextIndex = skipOptionalWhitespace(headerValue, nextIndex);
 
-  if (entityTags.length === 0 || nextIndex !== headerValue.length) {
+  if (nextIndex !== headerValue.length) {
     throw new Error("Invalid entity-tag list.");
   }
 
@@ -108,9 +115,10 @@ function parseEntityTagList(headerValue: string): string[] {
 }
 
 function encodeEntityTagComponent(value: string): string {
-  // RFC 9110 entity-tags are opaque quoted strings, not quoted-string values.
-  // Percent-encoding keeps arbitrary IDs within the allowed character set and
-  // avoids raw backslashes, which the RFC recommends servers avoid emitting.
+  // RFC 9110 Section 8.8.3 makes entity-tags opaque and constrains the quoted
+  // content to `etagc`, so resource IDs are percent-encoded before embedding.
+  // RFC 9110 Section 8.8.3 also notes that backslash is allowed by the grammar
+  // but servers ought to avoid it because some recipients still unescape it.
   return encodeURIComponent(value);
 }
 
@@ -127,7 +135,7 @@ function parseEntityTagHeader(
 
   const values = typeof headerValue === "string" ? [headerValue] : headerValue;
   const entityTags: string[] = [];
-  let hasWildcard = false;
+  let wildcardCount = 0;
 
   for (const value of values) {
     const normalizedValue = value.trim();
@@ -137,25 +145,23 @@ function parseEntityTagHeader(
     }
 
     if (normalizedValue === "*") {
-      hasWildcard = true;
+      wildcardCount += 1;
       continue;
     }
 
     entityTags.push(...parseEntityTagList(normalizedValue));
   }
 
-  if (hasWildcard) {
-    if (entityTags.length > 0) {
+  if (wildcardCount > 0) {
+    // RFC 9110 Sections 13.1.1 and 13.1.2 define these fields as `* / #entity-tag`,
+    // so `*` is only valid as the sole member of the combined field value.
+    if (wildcardCount > 1 || entityTags.length > 0) {
       throw new Error("Invalid entity-tag condition.");
     }
 
     return {
       kind: "wildcard",
     };
-  }
-
-  if (entityTags.length === 0) {
-    return undefined;
   }
 
   return {
@@ -189,9 +195,12 @@ export function etagSatisfiesIfMatch(
   }
 
   if (precondition.kind === "wildcard") {
+    // RFC 9110 Section 13.1.1: `If-Match: *` succeeds only if a current
+    // representation exists, which is equivalent to having a current entity-tag.
     return true;
   }
 
+  // RFC 9110 Section 13.1.1 requires strong comparison for `If-Match`.
   return precondition.entityTags.some(
     (candidateEntityTag) =>
       !candidateEntityTag.startsWith("W/") && candidateEntityTag === currentEntityTag,
@@ -211,6 +220,8 @@ export function etagSatisfiesIfNoneMatch(
   }
 
   if (precondition.kind === "wildcard") {
+    // RFC 9110 Section 13.1.2: `If-None-Match: *` fails only when a current
+    // representation exists, so the precondition passes iff the resource is absent.
     return currentEntityTag === undefined;
   }
 
@@ -220,6 +231,7 @@ export function etagSatisfiesIfNoneMatch(
 
   const normalizedCurrentEntityTag = normalizeEntityTag(currentEntityTag);
 
+  // RFC 9110 Section 13.1.2 requires weak comparison for `If-None-Match`.
   for (const candidateEntityTag of precondition.entityTags) {
     if (normalizeEntityTag(candidateEntityTag) === normalizedCurrentEntityTag) {
       return false;

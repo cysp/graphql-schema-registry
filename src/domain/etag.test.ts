@@ -2,6 +2,7 @@ import assert from "node:assert/strict";
 import test from "node:test";
 
 import {
+  type EntityTagCondition,
   etagSatisfiesIfMatch,
   etagSatisfiesIfNoneMatch,
   formatStrongETag,
@@ -9,32 +10,37 @@ import {
   parseIfNoneMatchHeader,
 } from "./etag.ts";
 
-type EntityTagCondition =
-  | {
-      kind: "wildcard";
-    }
-  | {
-      kind: "entity-tag-list";
-      entityTags: string[];
-    };
-
 type ParseHeader = (headerValue: string | string[] | undefined) => EntityTagCondition | undefined;
 
 const parserCases = [
   {
-    name: "returns undefined for missing and blank values",
+    name: "returns undefined when the header is missing",
     input: undefined,
     expected: undefined,
   },
   {
-    name: "returns undefined for empty strings",
+    name: "parses an empty string as an empty entity-tag list",
     input: "",
-    expected: undefined,
+    expected: {
+      kind: "entity-tag-list",
+      entityTags: [],
+    } satisfies EntityTagCondition,
   },
   {
-    name: "returns undefined for blank repeated values",
+    name: "parses blank repeated values as an empty entity-tag list",
     input: ["", "  "],
-    expected: undefined,
+    expected: {
+      kind: "entity-tag-list",
+      entityTags: [],
+    } satisfies EntityTagCondition,
+  },
+  {
+    name: "parses empty list elements as an empty entity-tag list",
+    input: " , \t, ",
+    expected: {
+      kind: "entity-tag-list",
+      entityTags: [],
+    } satisfies EntityTagCondition,
   },
   {
     name: "parses wildcard with surrounding whitespace",
@@ -90,6 +96,11 @@ const invalidParserInputs = [
     expectedError: "Invalid entity-tag condition.",
   },
   {
+    name: "rejects repeated wildcard values across repeated headers",
+    input: ["*", "*"],
+    expectedError: "Invalid entity-tag condition.",
+  },
+  {
     name: "rejects wildcard mixed with tags in one header value",
     input: '*, "graph-1:3"',
     expectedError: "Invalid entity-tag list.",
@@ -102,6 +113,11 @@ const invalidParserInputs = [
   {
     name: "rejects lowercase weak prefixes",
     input: 'w/"graph-1:3"',
+    expectedError: "Invalid entity-tag list.",
+  },
+  {
+    name: "rejects characters outside the RFC 9110 obs-text range",
+    input: '"graph-\u{1F680}:3"',
     expectedError: "Invalid entity-tag list.",
   },
 ];
@@ -176,6 +192,15 @@ await test("etagSatisfiesIfMatch()", async (t) => {
       precondition: undefined,
       currentEntityTag: undefined,
       expected: true,
+    },
+    {
+      name: "fails when the header is present but the entity-tag list is empty",
+      precondition: {
+        kind: "entity-tag-list",
+        entityTags: [],
+      } satisfies EntityTagCondition,
+      currentEntityTag: '"graph-1:2"',
+      expected: false,
     },
     {
       name: "fails when wildcard is present but the resource is missing",
@@ -260,6 +285,15 @@ await test("etagSatisfiesIfNoneMatch()", async (t) => {
     {
       name: "passes when the precondition is missing",
       precondition: undefined,
+      currentEntityTag: '"graph-1:2"',
+      expected: true,
+    },
+    {
+      name: "passes when the header is present but the entity-tag list is empty",
+      precondition: {
+        kind: "entity-tag-list",
+        entityTags: [],
+      } satisfies EntityTagCondition,
       currentEntityTag: '"graph-1:2"',
       expected: true,
     },
