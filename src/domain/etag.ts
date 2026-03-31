@@ -170,16 +170,29 @@ function parseEntityTagHeader(
   };
 }
 
+function wrapEntityTagHeaderError(headerName: string, error: unknown): Error {
+  const reason = error instanceof Error ? ` ${error.message}` : "";
+  return new Error(`Invalid ${headerName} header.${reason}`);
+}
+
 export function parseIfMatchHeader(
   headerValue: string | string[] | undefined,
 ): EntityTagCondition | undefined {
-  return parseEntityTagHeader(headerValue);
+  try {
+    return parseEntityTagHeader(headerValue);
+  } catch (error) {
+    throw wrapEntityTagHeaderError("If-Match", error);
+  }
 }
 
 export function parseIfNoneMatchHeader(
   headerValue: string | string[] | undefined,
 ): EntityTagCondition | undefined {
-  return parseEntityTagHeader(headerValue);
+  try {
+    return parseEntityTagHeader(headerValue);
+  } catch (error) {
+    throw wrapEntityTagHeaderError("If-None-Match", error);
+  }
 }
 
 export function etagSatisfiesIfMatch(

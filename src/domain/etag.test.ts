@@ -12,6 +12,20 @@ import {
 
 type ParseHeader = (headerValue: string | string[] | undefined) => EntityTagCondition | undefined;
 
+const invalidHeaderErrorMessages = {
+  "parseIfMatchHeader()": {
+    condition: "Invalid If-Match header. Invalid entity-tag condition.",
+    list: "Invalid If-Match header. Invalid entity-tag list.",
+  },
+  "parseIfNoneMatchHeader()": {
+    condition: "Invalid If-None-Match header. Invalid entity-tag condition.",
+    list: "Invalid If-None-Match header. Invalid entity-tag list.",
+  },
+} as const;
+
+type ParserName = keyof typeof invalidHeaderErrorMessages;
+type InvalidHeaderErrorKind = keyof (typeof invalidHeaderErrorMessages)[ParserName];
+
 const parserCases = [
   {
     name: "returns undefined when the header is missing",
@@ -93,36 +107,40 @@ const invalidParserInputs = [
   {
     name: "rejects wildcard mixed with tags across repeated values",
     input: ["*", '"graph-1:3"'],
-    expectedError: "Invalid entity-tag condition.",
+    expectedErrorKind: "condition",
   },
   {
     name: "rejects repeated wildcard values across repeated headers",
     input: ["*", "*"],
-    expectedError: "Invalid entity-tag condition.",
+    expectedErrorKind: "condition",
   },
   {
     name: "rejects wildcard mixed with tags in one header value",
     input: '*, "graph-1:3"',
-    expectedError: "Invalid entity-tag list.",
+    expectedErrorKind: "list",
   },
   {
     name: "rejects unquoted values",
     input: "graph-1:3",
-    expectedError: "Invalid entity-tag list.",
+    expectedErrorKind: "list",
   },
   {
     name: "rejects lowercase weak prefixes",
     input: 'w/"graph-1:3"',
-    expectedError: "Invalid entity-tag list.",
+    expectedErrorKind: "list",
   },
   {
     name: "rejects characters outside the RFC 9110 obs-text range",
     input: '"graph-\u{1F680}:3"',
-    expectedError: "Invalid entity-tag list.",
+    expectedErrorKind: "list",
   },
-];
+] satisfies ReadonlyArray<{
+  expectedErrorKind: InvalidHeaderErrorKind;
+  input: string | string[];
+  name: string;
+}>;
 
-async function runParserContractTests(parserName: string, parser: ParseHeader): Promise<void> {
+async function runParserContractTests(parserName: ParserName, parser: ParseHeader): Promise<void> {
   return test(parserName, async (t) => {
     for (const testCase of parserCases) {
       await t.test(testCase.name, () => {
@@ -131,12 +149,18 @@ async function runParserContractTests(parserName: string, parser: ParseHeader): 
     }
 
     await t.test("reports invalid entity-tag list syntax", () => {
-      assert.throws(() => parser("invalid-etag"), new Error("Invalid entity-tag list."));
+      assert.throws(
+        () => parser("invalid-etag"),
+        new Error(invalidHeaderErrorMessages[parserName].list),
+      );
     });
 
     for (const testCase of invalidParserInputs) {
       await t.test(testCase.name, () => {
-        assert.throws(() => parser(testCase.input), new Error(testCase.expectedError));
+        assert.throws(
+          () => parser(testCase.input),
+          new Error(invalidHeaderErrorMessages[parserName][testCase.expectedErrorKind]),
+        );
       });
     }
   });
