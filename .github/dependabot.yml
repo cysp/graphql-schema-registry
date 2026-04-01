@@ -1,33 +1,36 @@
 version: 2
-
 updates:
   - package-ecosystem: docker
     directory: /
     schedule:
-      interval: weekly
+      interval: daily
       day: monday
       time: "17:30"
-      timezone: "Australia/Sydney"
+      timezone: Australia/Sydney
     commit-message:
-      prefix: "chore(deps)"
-
+      prefix: chore(deps)
+    cooldown:
+      default-days: 2
   - package-ecosystem: github-actions
     directory: /
     schedule:
-      interval: weekly
+      interval: daily
       day: monday
       time: "18:00"
-      timezone: "Australia/Sydney"
+      timezone: Australia/Sydney
     commit-message:
-      prefix: "chore(github/workflows)"
-
+      prefix: chore(github/workflows)
+    cooldown:
+      default-days: 2
   - package-ecosystem: npm
     directory: /
     schedule:
       interval: daily
       time: "18:30"
-      timezone: "Australia/Sydney"
-    versioning-strategy: increase
+      timezone: Australia/Sydney
     commit-message:
-      prefix: "chore(deps)"
-      prefix-development: "chore(deps-dev)"
+      prefix: chore(deps)
+      prefix-development: chore(deps-dev)
+    versioning-strategy: increase
+    cooldown:
+      default-days: 2
