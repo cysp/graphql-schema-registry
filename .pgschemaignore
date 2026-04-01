@@ -1,0 +1,5 @@
+[default_privileges]
+patterns = ["cloud_admin", "neon_*"]
+
+[privileges]
+patterns = ["cloud_admin", "neon_*"]
