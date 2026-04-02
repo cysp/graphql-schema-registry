@@ -39,5 +39,5 @@ export const getSubgraphHandler: DependencyInjectedHandler<
   }
 
   reply.header("ETag", formatStrongETag(subgraph.id, subgraph.currentRevision));
-  return reply.code(200).send(toSubgraphPayload(subgraph));
+  return reply.code(200).type("application/json").send(toSubgraphPayload(subgraph));
 };

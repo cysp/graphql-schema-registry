@@ -87,5 +87,5 @@ export const updateGraphHandler: DependencyInjectedHandler<
   }
 
   reply.header("ETag", formatStrongETag(result.graph.id, result.graph.currentRevision));
-  return reply.code(200).send(toGraphPayload(result.graph));
+  return reply.code(200).type("application/json").send(toGraphPayload(result.graph));
 };

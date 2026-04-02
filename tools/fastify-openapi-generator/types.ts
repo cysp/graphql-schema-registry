@@ -2,12 +2,16 @@ import type { JSONSchema } from "json-schema-to-ts";
 
 export type JsonSchema = Exclude<JSONSchema, boolean>;
 
+export type NormalizedResponseSchema = {
+  content: Record<string, { schema: JsonSchema }>;
+};
+
 export type NormalizedRouteSchema = {
   body?: JsonSchema;
   headers?: JsonSchema;
   params?: JsonSchema;
   querystring?: JsonSchema;
-  response: Record<string, JsonSchema | undefined>;
+  response: Record<string, NormalizedResponseSchema | undefined>;
 };
 
 export type NormalizedOperation = {

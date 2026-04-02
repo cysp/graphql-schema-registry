@@ -44,7 +44,7 @@ export const createGraphHandler: DependencyInjectedHandler<
 
     reply.header("ETag", formatStrongETag(graph.id, graph.currentRevision));
     reply.header("Location", `/v1/graphs/${encodeURIComponent(graph.slug)}`);
-    return await reply.code(201).send(toGraphPayload(graph));
+    return await reply.code(201).type("application/json").send(toGraphPayload(graph));
   } catch (error) {
     if (isUniqueViolation(error)) {
       return reply.problemDetails({ status: 409 });

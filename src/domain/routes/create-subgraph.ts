@@ -76,7 +76,7 @@ export const createSubgraphHandler: DependencyInjectedHandler<
       "Location",
       `/v1/graphs/${encodeURIComponent(request.params.graphSlug)}/subgraphs/${encodeURIComponent(result.subgraph.slug)}`,
     );
-    return await reply.code(201).send(toSubgraphPayload(result.subgraph));
+    return await reply.code(201).type("application/json").send(toSubgraphPayload(result.subgraph));
   } catch (error) {
     if (isUniqueViolation(error)) {
       return reply.problemDetails({ status: 409 });

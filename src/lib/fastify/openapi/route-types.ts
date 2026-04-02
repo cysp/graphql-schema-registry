@@ -13,12 +13,16 @@ import type { FastifyJsonSchemaToTsTypeProvider } from "../fastify-json-schema-t
 
 type FastifyResponseStatusCode = number | `${number}`;
 
+type FastifyRouteResponseSchema = {
+  content?: Record<string, { schema: JSONSchema }>;
+};
+
 export type FastifyRouteSchema = {
   body?: JSONSchema;
   headers?: JSONSchema;
   params?: JSONSchema;
   querystring?: JSONSchema;
-  response: Partial<Record<FastifyResponseStatusCode, JSONSchema>>;
+  response: Partial<Record<FastifyResponseStatusCode, FastifyRouteResponseSchema>>;
 };
 
 export type FastifyRouteDefinition = Pick<RouteOptions, "method" | "url"> & {

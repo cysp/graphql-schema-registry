@@ -29,5 +29,8 @@ export const listGraphsHandler: DependencyInjectedHandler<
   }
 
   const graphs = await selectActiveGraphs(database);
-  return reply.code(200).send(graphs.map((graph) => toGraphPayload(graph)));
+  return reply
+    .code(200)
+    .type("application/json")
+    .send(graphs.map((graph) => toGraphPayload(graph)));
 };

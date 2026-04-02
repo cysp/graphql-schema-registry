@@ -21,160 +21,196 @@ export const getGraphRouteDefinition = {
     },
     response: {
       200: {
-        "type": "object",
-        "additionalProperties": false,
-        "required": [
-          "id",
-          "slug",
-          "currentRevision",
-          "federationVersion",
-          "createdAt",
-          "updatedAt"
-        ],
-        "properties": {
-          "id": {
-            "type": "string",
-            "format": "uuid"
-          },
-          "slug": {
-            "type": "string",
-            "minLength": 1
-          },
-          "currentRevision": {
-            "type": "string",
-            "pattern": "^[1-9][0-9]*$"
-          },
-          "federationVersion": {
-            "type": "string",
-            "pattern": "^v[0-9]+\\.[0-9]+$"
-          },
-          "createdAt": {
-            "type": "string",
-            "format": "date-time"
-          },
-          "updatedAt": {
-            "type": "string",
-            "format": "date-time"
+        "content": {
+          "application/json": {
+            "schema": {
+              "type": "object",
+              "additionalProperties": false,
+              "required": [
+                "id",
+                "slug",
+                "currentRevision",
+                "federationVersion",
+                "createdAt",
+                "updatedAt"
+              ],
+              "properties": {
+                "id": {
+                  "type": "string",
+                  "format": "uuid"
+                },
+                "slug": {
+                  "type": "string",
+                  "minLength": 1
+                },
+                "currentRevision": {
+                  "type": "string",
+                  "pattern": "^[1-9][0-9]*$"
+                },
+                "federationVersion": {
+                  "type": "string",
+                  "pattern": "^v[0-9]+\\.[0-9]+$"
+                },
+                "createdAt": {
+                  "type": "string",
+                  "format": "date-time"
+                },
+                "updatedAt": {
+                  "type": "string",
+                  "format": "date-time"
+                }
+              }
+            }
           }
         }
       },
       401: {
-        "type": "object",
-        "additionalProperties": false,
-        "required": [
-          "type",
-          "title",
-          "status"
-        ],
-        "properties": {
-          "type": {
-            "type": "string",
-            "format": "uri-reference"
-          },
-          "title": {
-            "type": "string"
-          },
-          "status": {
-            "type": "integer",
-            "format": "int32",
-            "minimum": 100,
-            "maximum": 599
+        "content": {
+          "application/problem+json": {
+            "schema": {
+              "type": "object",
+              "additionalProperties": false,
+              "required": [
+                "type",
+                "title",
+                "status"
+              ],
+              "properties": {
+                "type": {
+                  "type": "string",
+                  "format": "uri-reference"
+                },
+                "title": {
+                  "type": "string"
+                },
+                "status": {
+                  "type": "integer",
+                  "format": "int32",
+                  "minimum": 100,
+                  "maximum": 599
+                }
+              }
+            }
           }
         }
       },
       403: {
-        "type": "object",
-        "additionalProperties": false,
-        "required": [
-          "type",
-          "title",
-          "status"
-        ],
-        "properties": {
-          "type": {
-            "type": "string",
-            "format": "uri-reference"
-          },
-          "title": {
-            "type": "string"
-          },
-          "status": {
-            "type": "integer",
-            "format": "int32",
-            "minimum": 100,
-            "maximum": 599
+        "content": {
+          "application/problem+json": {
+            "schema": {
+              "type": "object",
+              "additionalProperties": false,
+              "required": [
+                "type",
+                "title",
+                "status"
+              ],
+              "properties": {
+                "type": {
+                  "type": "string",
+                  "format": "uri-reference"
+                },
+                "title": {
+                  "type": "string"
+                },
+                "status": {
+                  "type": "integer",
+                  "format": "int32",
+                  "minimum": 100,
+                  "maximum": 599
+                }
+              }
+            }
           }
         }
       },
       404: {
-        "type": "object",
-        "additionalProperties": false,
-        "required": [
-          "type",
-          "title",
-          "status"
-        ],
-        "properties": {
-          "type": {
-            "type": "string",
-            "format": "uri-reference"
-          },
-          "title": {
-            "type": "string"
-          },
-          "status": {
-            "type": "integer",
-            "format": "int32",
-            "minimum": 100,
-            "maximum": 599
+        "content": {
+          "application/problem+json": {
+            "schema": {
+              "type": "object",
+              "additionalProperties": false,
+              "required": [
+                "type",
+                "title",
+                "status"
+              ],
+              "properties": {
+                "type": {
+                  "type": "string",
+                  "format": "uri-reference"
+                },
+                "title": {
+                  "type": "string"
+                },
+                "status": {
+                  "type": "integer",
+                  "format": "int32",
+                  "minimum": 100,
+                  "maximum": 599
+                }
+              }
+            }
           }
         }
       },
       500: {
-        "type": "object",
-        "additionalProperties": false,
-        "required": [
-          "type",
-          "title",
-          "status"
-        ],
-        "properties": {
-          "type": {
-            "type": "string",
-            "format": "uri-reference"
-          },
-          "title": {
-            "type": "string"
-          },
-          "status": {
-            "type": "integer",
-            "format": "int32",
-            "minimum": 100,
-            "maximum": 599
+        "content": {
+          "application/problem+json": {
+            "schema": {
+              "type": "object",
+              "additionalProperties": false,
+              "required": [
+                "type",
+                "title",
+                "status"
+              ],
+              "properties": {
+                "type": {
+                  "type": "string",
+                  "format": "uri-reference"
+                },
+                "title": {
+                  "type": "string"
+                },
+                "status": {
+                  "type": "integer",
+                  "format": "int32",
+                  "minimum": 100,
+                  "maximum": 599
+                }
+              }
+            }
           }
         }
       },
       503: {
-        "type": "object",
-        "additionalProperties": false,
-        "required": [
-          "type",
-          "title",
-          "status"
-        ],
-        "properties": {
-          "type": {
-            "type": "string",
-            "format": "uri-reference"
-          },
-          "title": {
-            "type": "string"
-          },
-          "status": {
-            "type": "integer",
-            "format": "int32",
-            "minimum": 100,
-            "maximum": 599
+        "content": {
+          "application/problem+json": {
+            "schema": {
+              "type": "object",
+              "additionalProperties": false,
+              "required": [
+                "type",
+                "title",
+                "status"
+              ],
+              "properties": {
+                "type": {
+                  "type": "string",
+                  "format": "uri-reference"
+                },
+                "title": {
+                  "type": "string"
+                },
+                "status": {
+                  "type": "integer",
+                  "format": "int32",
+                  "minimum": 100,
+                  "maximum": 599
+                }
+              }
+            }
           }
         }
       },

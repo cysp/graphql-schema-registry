@@ -56,5 +56,8 @@ export const listSubgraphsHandler: DependencyInjectedHandler<
     return reply.problemDetails({ status: 404 });
   }
 
-  return reply.code(200).send(result.subgraphs.map((subgraph) => toSubgraphPayload(subgraph)));
+  return reply
+    .code(200)
+    .type("application/json")
+    .send(result.subgraphs.map((subgraph) => toSubgraphPayload(subgraph)));
 };

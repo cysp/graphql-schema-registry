@@ -3,16 +3,21 @@ import {
   generatedHeader,
   getOperationFilePath,
   operationSections,
-  renderJsonSchemaLiteral,
+  renderLiteral,
 } from "./emit-shared.ts";
-import type { GeneratedFile, JsonSchema, NormalizedOperation } from "./types.ts";
+import type {
+  GeneratedFile,
+  JsonSchema,
+  NormalizedOperation,
+  NormalizedResponseSchema,
+} from "./types.ts";
 
-function renderSchemaPropertyLines(
+function renderPropertyLines(
   propertyName: string,
-  schema: JsonSchema,
+  value: JsonSchema | NormalizedResponseSchema,
   indentation: number,
 ): string[] {
-  const renderedSchemaLines = renderJsonSchemaLiteral(schema).split("\n");
+  const renderedSchemaLines = renderLiteral(value).split("\n");
   const propertyPrefix = `${" ".repeat(indentation)}${propertyName}: `;
   const [firstLine, ...remainingLines] = renderedSchemaLines;
   const lines = [
@@ -38,12 +43,12 @@ function renderOperationRouteDefinitionSection(operation: NormalizedOperation): 
       continue;
     }
 
-    lines.push(...renderSchemaPropertyLines(section, operation.schema[section], 4));
+    lines.push(...renderPropertyLines(section, operation.schema[section], 4));
   }
 
   lines.push("    response: {");
   for (const [statusCode, schema] of Object.entries(operation.schema.response)) {
-    lines.push(...renderSchemaPropertyLines(statusCode, schema ?? {}, 6));
+    lines.push(...renderPropertyLines(statusCode, schema ?? {}, 6));
   }
   lines.push("    },");
   lines.push("  },");

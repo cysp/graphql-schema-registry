@@ -35,5 +35,5 @@ export const getGraphHandler: DependencyInjectedHandler<
   }
 
   reply.header("ETag", formatStrongETag(graph.id, graph.currentRevision));
-  return reply.code(200).send(toGraphPayload(graph));
+  return reply.code(200).type("application/json").send(toGraphPayload(graph));
 };
