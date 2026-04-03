@@ -1,6 +1,6 @@
+import type { JsonSchemaToTsProvider } from "@fastify/type-provider-json-schema-to-ts";
 import type { FastifyPluginAsync, RawServerDefault } from "fastify";
 
-import type { FastifyJsonSchemaToTsTypeProvider } from "../fastify-json-schema-to-ts-type-provider.ts";
 import type { FastifyRouteDefinition, FastifyRouteHandlerFromDefinition } from "./route-types.ts";
 
 export type OpenApiOperationHandlers<
@@ -20,7 +20,7 @@ export function openApiRoutesPlugin<
     operationHandlers: OpenApiOperationHandlers<OperationId, Routes>;
   },
   RawServerDefault,
-  FastifyJsonSchemaToTsTypeProvider
+  JsonSchemaToTsProvider
 > {
   return async (server, { operationHandlers }) => {
     for (const operationId in routeDefinitions) {

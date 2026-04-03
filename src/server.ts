@@ -1,7 +1,14 @@
 import fastifyJwt, { type FastifyJWTOptions } from "@fastify/jwt";
 import fastifySensible from "@fastify/sensible";
+import type { JsonSchemaToTsProvider } from "@fastify/type-provider-json-schema-to-ts";
 import { sql } from "drizzle-orm";
-import fastify, { type FastifyInstance } from "fastify";
+import fastify, {
+  type FastifyBaseLogger,
+  type FastifyInstance,
+  type RawReplyDefaultExpression,
+  type RawRequestDefaultExpression,
+  type RawServerDefault,
+} from "fastify";
 
 import { formatUser } from "./domain/authorization/user.ts";
 import type { JwtVerification } from "./domain/jwt.ts";
@@ -32,10 +39,16 @@ type CreateFastifyServerOptions = {
 export function createFastifyServer({
   database,
   jwtVerification,
-}: CreateFastifyServerOptions): FastifyInstance {
+}: CreateFastifyServerOptions): FastifyInstance<
+  RawServerDefault,
+  RawRequestDefaultExpression,
+  RawReplyDefaultExpression,
+  FastifyBaseLogger,
+  JsonSchemaToTsProvider
+> {
   const server = fastify({
     logger: true,
-  });
+  }).withTypeProvider<JsonSchemaToTsProvider>();
 
   server.register(fastifySensible);
   server.register(problemDetailsPlugin);
