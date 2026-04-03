@@ -13,7 +13,7 @@ await test("fastifyHandlerWithDependencies preserves the handler this binding", 
   type TestServer = typeof server;
   type TestHandler = (this: TestServer, request: TestRequest, reply: TestReply) => Promise<string>;
 
-  const wrappedHandler = fastifyHandlerWithDependencies<TestHandler, typeof dependencies>(
+  const wrappedHandler = fastifyHandlerWithDependencies<TestHandler>(
     async function handler(
       this: TestServer,
       {
