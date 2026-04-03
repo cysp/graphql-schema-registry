@@ -1,3 +1,4 @@
+import type { JsonSchemaToTsProvider } from "@fastify/type-provider-json-schema-to-ts";
 import type {
   ContextConfigDefault,
   RawReplyDefaultExpression,
@@ -8,8 +9,6 @@ import type {
   RouteOptions,
 } from "fastify";
 import type { JSONSchema } from "json-schema-to-ts";
-
-import type { FastifyJsonSchemaToTsTypeProvider } from "../fastify-json-schema-to-ts-type-provider.ts";
 
 type FastifyResponseStatusCode = number | `${number}`;
 
@@ -33,5 +32,5 @@ export type FastifyRouteHandlerFromDefinition<RouteDefinition extends FastifyRou
     RouteGenericInterface,
     ContextConfigDefault,
     RouteDefinition["schema"],
-    FastifyJsonSchemaToTsTypeProvider
+    JsonSchemaToTsProvider
   >;

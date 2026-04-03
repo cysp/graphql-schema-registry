@@ -36,6 +36,9 @@ importers:
       '@fastify/swagger':
         specifier: 9.7.0
         version: 9.7.0
+      '@fastify/type-provider-json-schema-to-ts':
+        specifier: 5.0.0
+        version: 5.0.0
       '@tsconfig/node24':
         specifier: 24.0.4
         version: 24.0.4
@@ -270,6 +273,9 @@ packages:
 
   '@fastify/swagger@9.7.0':
     resolution: {integrity: sha512-Vp1SC1GC2Hrkd3faFILv86BzUNyFz5N4/xdExqtCgkGASOzn/x+eMe4qXIGq7cdT6wif/P/oa6r1Ruqx19paZA==}
+
+  '@fastify/type-provider-json-schema-to-ts@5.0.0':
+    resolution: {integrity: sha512-erEJvxucxc09XLdHygdQua4QFyxBp+QParhXl3hrB6UvE2R6ZB9KG6TznUTz6I5HK7t5xm/vn4DG7EIOAPOO4w==}
 
   '@js-temporal/polyfill@0.5.1':
     resolution: {integrity: sha512-hloP58zRVCRSpgDxmqCWJNlizAlUgJFqG2ypq79DCvyv9tHjRYMDOcPFjzfl/A1/YxDvRCZz8wvZvmapQnKwFQ==}
@@ -1159,6 +1165,10 @@ snapshots:
       yaml: 2.8.3
     transitivePeerDependencies:
       - supports-color
+
+  '@fastify/type-provider-json-schema-to-ts@5.0.0':
+    dependencies:
+      json-schema-to-ts: 3.1.1
 
   '@js-temporal/polyfill@0.5.1':
     dependencies:

@@ -1,4 +1,5 @@
-import type { FastifyPluginCallback } from "fastify";
+import type { JsonSchemaToTsProvider } from "@fastify/type-provider-json-schema-to-ts";
+import type { FastifyPluginCallback, RawServerDefault } from "fastify";
 
 import { executeProbes } from "./probes.ts";
 import { responseJsonSchema } from "./schemas.ts";
@@ -9,11 +10,11 @@ export type HealthcheckPluginOptions = {
   probes: Readonly<Record<string, Probe>>;
 };
 
-export const healthcheckPlugin: FastifyPluginCallback<HealthcheckPluginOptions> = (
-  server,
-  options,
-  done,
-): void => {
+export const healthcheckPlugin: FastifyPluginCallback<
+  HealthcheckPluginOptions,
+  RawServerDefault,
+  JsonSchemaToTsProvider
+> = (server, options, done): void => {
   server.get(
     "/health",
     {
