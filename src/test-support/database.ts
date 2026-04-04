@@ -12,11 +12,11 @@ export type IntegrationDatabase = Readonly<{
 
 const integrationDatabaseLockKey = 32768012;
 const dropAllTablesSql =
-  "DROP TABLE IF EXISTS subgraph_revisions, subgraphs, graph_revisions, graphs CASCADE";
+  "DROP TABLE IF EXISTS subgraph_schema_revisions, subgraph_revisions, subgraphs, graph_revisions, graphs CASCADE";
 const schemaConstraintsSqlPath = new URL("../../db/schema-constraints.sql", import.meta.url);
 const schemaSqlPath = new URL("../../db/schema.sql", import.meta.url);
 const truncateAllDataSql =
-  "TRUNCATE TABLE subgraph_revisions, subgraphs, graph_revisions, graphs CASCADE";
+  "TRUNCATE TABLE subgraph_schema_revisions, subgraph_revisions, subgraphs, graph_revisions, graphs CASCADE";
 const defaultClientOptions: postgres.Options<Record<string, postgres.PostgresType>> = { max: 1 };
 
 function createIntegrationDatabaseClient(

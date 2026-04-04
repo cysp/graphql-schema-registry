@@ -73,6 +73,15 @@ export async function selectActiveSubgraphByGraphSlugAndSlug(
   return subgraph;
 }
 
+export async function selectActiveSubgraphByGraphIdAndSlug(
+  database: PostgresJsExecutor,
+  graphId: string,
+  slug: string,
+): Promise<ActiveSubgraph | undefined> {
+  const [subgraph] = await selectActiveSubgraphByGraphIdAndSlugQuery(database, graphId, slug);
+  return subgraph;
+}
+
 export async function selectActiveSubgraphByGraphIdAndSlugForUpdate(
   database: PostgresJsExecutor,
   graphId: string,

@@ -4,7 +4,9 @@ import assert from "node:assert/strict";
 import test from "node:test";
 import { setTimeout as delay } from "node:timers/promises";
 
+import { authorizationDetailsType } from "./domain/authorization/details.ts";
 import { formatStrongETag } from "./domain/etag.ts";
+import { createAuthJwtSigner } from "./domain/jwt-signer.ts";
 import { graphRevisions, graphs, subgraphRevisions, subgraphs } from "./drizzle/schema.ts";
 import type { PostgresJsDatabase, PostgresJsTransaction } from "./drizzle/types.ts";
 import { queryCount } from "./test-support/database.ts";
@@ -14,7 +16,6 @@ import type { IntegrationServerFixture } from "./test-support/integration-server
 import {
   adminHeaders,
   adminIfMatchHeaders,
-  createAdminIntegrationAuth,
   parseJson,
   withConcurrentIntegrationServer,
 } from "./test-support/integration-server.ts";
@@ -70,6 +71,24 @@ async function createSubgraphThroughApi(
   return requireSubgraphPayload(parseJson(response));
 }
 
+function createSubgraphSchemaGrantToken(
+  createToken: ReturnType<typeof createAuthJwtSigner>["createToken"],
+  scope: "subgraph-schema:write",
+  graphId: string,
+  subgraphId: string,
+) {
+  return createToken({
+    authorization_details: [
+      {
+        graph_id: graphId,
+        scope,
+        subgraph_id: subgraphId,
+        type: authorizationDetailsType,
+      },
+    ],
+  });
+}
+
 function createPostCallbackFailingDatabase(
   database: PostgresJsDatabase,
   error: Error,
@@ -97,7 +116,16 @@ await test("route handler concurrency and rollback integration with postgres", a
     return;
   }
 
-  const { adminToken, jwtVerification } = createAdminIntegrationAuth();
+  const jwtSigner = createAuthJwtSigner();
+  const adminToken = jwtSigner.createToken({
+    authorization_details: [
+      {
+        scope: "admin",
+        type: authorizationDetailsType,
+      },
+    ],
+  });
+  const { jwtVerification } = jwtSigner;
 
   await t.test("graph update waits for the lock and evaluates If-Match after commit", async () => {
     await withConcurrentIntegrationServer(
@@ -536,6 +564,95 @@ await test("route handler concurrency and rollback integration with postgres", a
   });
 
   await t.test(
+    "subgraph schema publish waits for the lock and evaluates If-Match after commit",
+    async () => {
+      await withConcurrentIntegrationServer(
+        {
+          databaseUrl: integrationDatabaseUrl,
+          jwtVerification,
+        },
+        async (fixture) => {
+          const createdGraph = await createGraphThroughApi(fixture.server, adminToken);
+          const createdSubgraph = await createSubgraphThroughApi(fixture.server, adminToken);
+          const schemaWriteToken = createSubgraphSchemaGrantToken(
+            jwtSigner.createToken,
+            "subgraph-schema:write",
+            createdGraph.id,
+            createdSubgraph.id,
+          );
+          const session = await fixture.openSession();
+          const release = deferred<undefined>();
+          const locked = deferred<undefined>();
+
+          const blocker = session.sql.begin(async (sql) => {
+            const now = new Date();
+            await sql.unsafe("SELECT id FROM subgraphs WHERE id = $1 FOR UPDATE", [
+              createdSubgraph.id,
+            ]);
+            await sql.unsafe(
+              `
+              INSERT INTO subgraph_schema_revisions (subgraph_id, revision, normalized_sdl, normalized_hash, created_at)
+              VALUES ($1, 1, $2, 'hash-1', $3)
+            `,
+              [createdSubgraph.id, "type Query {\n  products: [String!]!\n}\n", now.toISOString()],
+            );
+            await sql.unsafe(
+              `
+              UPDATE subgraphs
+              SET current_schema_revision = 1, updated_at = $1
+              WHERE id = $2
+            `,
+              [now.toISOString(), createdSubgraph.id],
+            );
+            locked.resolve(undefined);
+            await release.promise;
+          });
+
+          await locked.promise;
+
+          const responsePromise = fixture.server.inject({
+            headers: {
+              authorization: `Bearer ${schemaWriteToken}`,
+              "content-type": "text/plain",
+              "if-match": formatStrongETag(createdSubgraph.id, 0),
+            },
+            method: "POST",
+            payload: "type Query { products: [String!]!, product(id: ID!): String }",
+            url: "/v1/graphs/catalog/subgraphs/inventory/schema.graphqls",
+          });
+
+          try {
+            await assertPromiseStillPending(responsePromise);
+          } finally {
+            release.resolve(undefined);
+            await blocker;
+          }
+
+          const response = await responsePromise;
+          assert.equal(response.statusCode, 412);
+
+          const [schemaRow] = await fixture.sql<
+            Array<{
+              currentSchemaRevision: string;
+              normalizedSdl: string;
+            }>
+          >`
+            SELECT s.current_schema_revision AS "currentSchemaRevision", ssr.normalized_sdl AS "normalizedSdl"
+            FROM subgraphs AS s
+            JOIN subgraph_schema_revisions AS ssr
+              ON ssr.subgraph_id = s.id AND ssr.revision = s.current_schema_revision
+            WHERE s.id = ${createdSubgraph.id}
+          `;
+          assert.deepEqual(schemaRow, {
+            currentSchemaRevision: "1",
+            normalizedSdl: "type Query {\n  products: [String!]!\n}\n",
+          });
+        },
+      );
+    },
+  );
+
+  await t.test(
     "graph create returns 500 when the transaction callback fails after route work completes",
     async () => {
       await withConcurrentIntegrationServer(
@@ -766,6 +883,80 @@ await test("route handler concurrency and rollback integration with postgres", a
       },
     );
   });
+
+  await t.test(
+    "subgraph schema publish returns 500 when the transaction callback fails after route work completes",
+    async () => {
+      let transactionCount = 0;
+
+      await withConcurrentIntegrationServer(
+        {
+          databaseFactory: (database) =>
+            new Proxy(database, {
+              get(target, property, receiver) {
+                if (property === "transaction") {
+                  return async (
+                    callback: (transaction: PostgresJsTransaction) => Promise<unknown>,
+                  ) =>
+                    target.transaction(async (transaction) => {
+                      transactionCount += 1;
+                      const result = await callback(transaction);
+                      if (transactionCount >= 3) {
+                        throw new Error("forced post-callback failure");
+                      }
+                      return result;
+                    });
+                }
+
+                const value = Reflect.get(target, property, receiver);
+                return typeof value === "function" ? value.bind(target) : value;
+              },
+            }),
+          databaseUrl: integrationDatabaseUrl,
+          jwtVerification,
+        },
+        async (fixture) => {
+          const createdGraph = await createGraphThroughApi(fixture.server, adminToken);
+          const createdSubgraph = await createSubgraphThroughApi(fixture.server, adminToken);
+          const schemaWriteToken = createSubgraphSchemaGrantToken(
+            jwtSigner.createToken,
+            "subgraph-schema:write",
+            createdGraph.id,
+            createdSubgraph.id,
+          );
+
+          const response = await fixture.server.inject({
+            headers: {
+              authorization: `Bearer ${schemaWriteToken}`,
+              "content-type": "text/plain",
+            },
+            method: "POST",
+            payload: "type Query { products: [String!]! }",
+            url: "/v1/graphs/catalog/subgraphs/inventory/schema.graphqls",
+          });
+
+          assert.equal(response.statusCode, 500);
+          assert.equal(
+            await queryCount(
+              fixture.sql,
+              "SELECT count(*)::int AS count FROM subgraph_schema_revisions WHERE subgraph_id = $1",
+              [createdSubgraph.id],
+            ),
+            0,
+          );
+
+          const [subgraphRow] = await fixture.sql<Array<{ currentSchemaRevision: string | null }>>`
+            SELECT current_schema_revision AS "currentSchemaRevision"
+            FROM subgraphs
+            WHERE id = ${createdSubgraph.id}
+          `;
+          assert.deepEqual(subgraphRow, {
+            currentSchemaRevision: null,
+          });
+        },
+      );
+    },
+  );
 
   await t.test("subgraph delete rolls back when the delete update fails", async () => {
     await withConcurrentIntegrationServer(

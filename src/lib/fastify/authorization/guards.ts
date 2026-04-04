@@ -83,3 +83,40 @@ export function requireSubgraphWriteGrant(
 ): RequestUser | undefined {
   return requireGrant(request, reply, makeSubgraphWriteGrantPredicate(graphId, subgraphId));
 }
+
+function makeSubgraphSchemaReadGrantPredicate(
+  graphId: string,
+  subgraphId: string,
+): (grant: AuthorizationGrant) => boolean {
+  return (grant) =>
+    grant.scope === "subgraph-schema:read" &&
+    grant.graphId === graphId &&
+    grant.subgraphId === subgraphId;
+}
+
+export function requireSubgraphSchemaReadGrant(
+  request: GuardRequest,
+  reply: GuardReply,
+  graphId: string,
+  subgraphId: string,
+): RequestUser | undefined {
+  return requireGrant(request, reply, makeSubgraphSchemaReadGrantPredicate(graphId, subgraphId));
+}
+
+function makeSubgraphSchemaWriteGrantPredicate(
+  graphId: string,
+  subgraphId: string,
+): (grant: AuthorizationGrant) => boolean {
+  return (grant) =>
+    grant.scope === "subgraph-schema:write" &&
+    grant.graphId === graphId &&
+    grant.subgraphId === subgraphId;
+}
+
+export function hasSubgraphSchemaWriteGrant(
+  user: RequestUser,
+  graphId: string,
+  subgraphId: string,
+): boolean {
+  return user.grants.some(makeSubgraphSchemaWriteGrantPredicate(graphId, subgraphId));
+}

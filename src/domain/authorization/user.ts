@@ -17,10 +17,24 @@ export type SubgraphAuthorizationGrant = {
   subgraphId: string;
 };
 
+export type SubgraphSchemaReadAuthorizationGrant = {
+  scope: "subgraph-schema:read";
+  graphId: string;
+  subgraphId: string;
+};
+
+export type SubgraphSchemaWriteAuthorizationGrant = {
+  scope: "subgraph-schema:write";
+  graphId: string;
+  subgraphId: string;
+};
+
 export type AuthorizationGrant =
   | AdminAuthorizationGrant
   | GraphAuthorizationGrant
-  | SubgraphAuthorizationGrant;
+  | SubgraphAuthorizationGrant
+  | SubgraphSchemaReadAuthorizationGrant
+  | SubgraphSchemaWriteAuthorizationGrant;
 
 export type RequestUser = {
   grants: readonly AuthorizationGrant[];

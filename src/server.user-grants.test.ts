@@ -76,6 +76,18 @@ await test("server: /user/grants", async (t) => {
               subgraph_id: "subgraph-a",
               type: authorizationDetailsType,
             },
+            {
+              graph_id: "graph-3",
+              scope: "subgraph-schema:read",
+              subgraph_id: "subgraph-b",
+              type: authorizationDetailsType,
+            },
+            {
+              graph_id: "graph-4",
+              scope: "subgraph-schema:write",
+              subgraph_id: "subgraph-c",
+              type: authorizationDetailsType,
+            },
           ],
         })}`,
       },
@@ -94,6 +106,16 @@ await test("server: /user/grants", async (t) => {
         graphId: "graph-2",
         scope: "subgraph:write",
         subgraphId: "subgraph-a",
+      },
+      {
+        graphId: "graph-3",
+        scope: "subgraph-schema:read",
+        subgraphId: "subgraph-b",
+      },
+      {
+        graphId: "graph-4",
+        scope: "subgraph-schema:write",
+        subgraphId: "subgraph-c",
       },
     ]);
   });

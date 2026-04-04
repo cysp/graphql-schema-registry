@@ -186,6 +186,54 @@ await test("buildOpenApiOperations", async (t) => {
     );
   });
 
+  await t.test("supports text/plain request and response bodies", () => {
+    const document = createBaseDocument();
+    document.paths = {
+      "/widgets/schema.graphqls": {
+        get: {
+          operationId: "getWidgetSchema",
+          responses: {
+            "200": {
+              content: {
+                "text/plain": {
+                  schema: {
+                    type: "string",
+                  },
+                },
+              },
+            },
+          },
+        },
+        post: {
+          operationId: "publishWidgetSchema",
+          requestBody: {
+            content: {
+              "text/plain": {
+                schema: {
+                  type: "string",
+                },
+              },
+            },
+            required: true,
+          },
+          responses: {
+            "204": {},
+          },
+        },
+      },
+    };
+
+    const result = buildOpenApiOperations(document);
+    assert.deepEqual(
+      result.map((operation) => [operation.operationId, operation.schema.body]),
+      [
+        ["getWidgetSchema", undefined],
+        ["publishWidgetSchema", { type: "string" }],
+      ],
+    );
+    assert.deepEqual(result[0]?.schema.response["200"], { type: "string" });
+  });
+
   await t.test("supports array-valued type for nullable OpenAPI 3.1 schemas", () => {
     const document = createBaseDocument();
     document.paths = {
