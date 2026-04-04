@@ -4,9 +4,11 @@ import test from "node:test";
 import type { AuthorizationGrant, RequestUser } from "../../../domain/authorization/user.ts";
 import { bearerAuthenticateHeaders } from "./bearer-authenticate-headers.ts";
 import {
+  hasSubgraphSchemaWriteGrant,
   requireAdminGrant,
   requireAuthenticatedUser,
   requireGraphReadGrant,
+  requireSubgraphSchemaReadGrant,
   requireSubgraphWriteGrant,
 } from "./guards.ts";
 
@@ -80,6 +82,11 @@ await test("grant guards", async (t) => {
           requireSubgraphWriteGrant(request, reply, "alpha", "inventory"),
         name: "requireSubgraphWriteGrant",
       },
+      {
+        guard: (request: GuardRequest, reply: GuardReply) =>
+          requireSubgraphSchemaReadGrant(request, reply, "alpha", "inventory"),
+        name: "requireSubgraphSchemaReadGrant",
+      },
     ] as const;
 
     for (const { name, guard } of cases) {
@@ -125,6 +132,15 @@ await test("grant guards", async (t) => {
           { graphId: "alpha", scope: "subgraph:write", subgraphId: "inventory" },
         ),
       },
+      {
+        guard: (request: GuardRequest, reply: GuardReply) =>
+          requireSubgraphSchemaReadGrant(request, reply, "alpha", "inventory"),
+        name: "requireSubgraphSchemaReadGrant",
+        user: createUser(
+          { graphId: "alpha", scope: "subgraph-schema:read", subgraphId: "other" },
+          { graphId: "alpha", scope: "subgraph-schema:read", subgraphId: "inventory" },
+        ),
+      },
     ] as const;
 
     for (const { name, guard, user } of cases) {
@@ -162,6 +178,16 @@ await test("grant guards", async (t) => {
           { graphId: "beta", scope: "subgraph:write", subgraphId: "inventory" },
         ),
       },
+      {
+        guard: (request: GuardRequest, reply: GuardReply) =>
+          requireSubgraphSchemaReadGrant(request, reply, "alpha", "inventory"),
+        name: "requireSubgraphSchemaReadGrant",
+        user: createUser(
+          { graphId: "alpha", scope: "subgraph-schema:read", subgraphId: "other" },
+          { graphId: "beta", scope: "subgraph-schema:read", subgraphId: "inventory" },
+          { scope: "admin" },
+        ),
+      },
     ] as const;
 
     for (const { name, guard, user } of cases) {
@@ -175,5 +201,26 @@ await test("grant guards", async (t) => {
         assert.deepStrictEqual(reply.calls, [{ status: 403 }]);
       });
     }
+  });
+});
+
+await test("hasSubgraphSchemaWriteGrant", async (t) => {
+  await t.test("returns true when a matching grant is present", () => {
+    const user = createUser(
+      { graphId: "alpha", scope: "subgraph-schema:write", subgraphId: "other" },
+      { graphId: "alpha", scope: "subgraph-schema:write", subgraphId: "inventory" },
+    );
+
+    assert.equal(hasSubgraphSchemaWriteGrant(user, "alpha", "inventory"), true);
+  });
+
+  await t.test("returns false when no matching grant is present", () => {
+    const user = createUser(
+      { graphId: "alpha", scope: "subgraph-schema:write", subgraphId: "other" },
+      { graphId: "beta", scope: "subgraph-schema:write", subgraphId: "inventory" },
+      { scope: "admin" },
+    );
+
+    assert.equal(hasSubgraphSchemaWriteGrant(user, "alpha", "inventory"), false);
   });
 });

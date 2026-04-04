@@ -4,6 +4,7 @@ export {
   softDeleteSubgraphById,
 } from "./commands.ts";
 export {
+  selectActiveSubgraphByGraphIdAndSlug,
   selectActiveSubgraphByGraphIdAndSlugForUpdate,
   selectActiveSubgraphByGraphSlugAndSlug,
   selectActiveSubgraphsByGraphId,

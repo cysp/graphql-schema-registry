@@ -7,7 +7,7 @@ import type { FastifyInstance } from "fastify";
 export type RouteRequest = {
   headers?: Record<string, string>;
   method: "DELETE" | "GET" | "POST" | "PUT";
-  payload?: Record<string, string>;
+  payload?: Record<string, string> | string;
   url: string;
 };
 

@@ -42,12 +42,27 @@ const subgraphAuthorizationDetailSchema = z
     subgraphId: detail.subgraph_id,
   }));
 
+const subgraphSchemaAuthorizationDetailSchema = z
+  .object({
+    type: authorizationDetailsTypeSchema,
+    scope: z.enum(["subgraph-schema:read", "subgraph-schema:write"]),
+    graph_id: z.string(),
+    subgraph_id: z.string(),
+  })
+  .strict()
+  .transform((detail) => ({
+    scope: detail.scope,
+    graphId: detail.graph_id,
+    subgraphId: detail.subgraph_id,
+  }));
+
 const authorizationDetailsClaimSchema = z
   .array(
     z.union([
       adminAuthorizationDetailSchema,
       graphAuthorizationDetailSchema,
       subgraphAuthorizationDetailSchema,
+      subgraphSchemaAuthorizationDetailSchema,
     ]),
   )
   .optional()

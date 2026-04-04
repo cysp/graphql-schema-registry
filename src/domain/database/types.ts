@@ -16,3 +16,11 @@ export type ActiveSubgraph = {
   createdAt: Date;
   updatedAt: Date;
 };
+
+export type StoredSubgraphSchemaRevision = {
+  subgraphId: string;
+  revision: number;
+  normalizedHash: string;
+  normalizedSdl: string;
+  createdAt: Date;
+};

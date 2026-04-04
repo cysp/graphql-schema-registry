@@ -26,17 +26,25 @@ type CreateIntegrationServerFixtureOptions = Readonly<{
   jwtVerification: JwtVerification;
 }>;
 
-export function adminHeaders(token: string): Record<string, string> {
+export function authorizationHeaders(token: string): Record<string, string> {
   return {
     authorization: `Bearer ${token}`,
   };
 }
 
-export function adminIfMatchHeaders(token: string, etag: string): Record<string, string> {
+export function authorizationIfMatchHeaders(token: string, etag: string): Record<string, string> {
   return {
-    authorization: `Bearer ${token}`,
+    ...authorizationHeaders(token),
     "if-match": etag,
   };
+}
+
+export function adminHeaders(token: string): Record<string, string> {
+  return authorizationHeaders(token);
+}
+
+export function adminIfMatchHeaders(token: string, etag: string): Record<string, string> {
+  return authorizationIfMatchHeaders(token, etag);
 }
 
 export function parseJson(response: { json: () => unknown }): unknown {

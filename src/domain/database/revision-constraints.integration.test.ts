@@ -86,4 +86,51 @@ await test("revision foreign keys", async (t) => {
       await integrationDatabase.close();
     }
   });
+
+  await t.test("subgraph schema revision constraints are deferred and enforced", async () => {
+    const integrationDatabase = await connectIntegrationDatabase(integrationDatabaseUrl);
+
+    try {
+      const graphId = randomUUID();
+      const subgraphId = randomUUID();
+      const now = new Date().toISOString();
+
+      await integrationDatabase.database.sql.begin(async (sql) => {
+        await sql.unsafe(`
+          INSERT INTO graphs (id, slug, current_revision, created_at, updated_at)
+          VALUES ('${graphId}', 'catalog', 1, '${now}', '${now}')
+        `);
+        await sql.unsafe(`
+          INSERT INTO graph_revisions (graph_id, revision, federation_version, created_at)
+          VALUES ('${graphId}', 1, '2.9', '${now}')
+        `);
+      });
+
+      await integrationDatabase.database.sql.begin(async (sql) => {
+        await sql.unsafe(`
+          INSERT INTO subgraphs (id, graph_id, slug, current_revision, current_schema_revision, created_at, updated_at)
+          VALUES ('${subgraphId}', '${graphId}', 'inventory', 1, 1, '${now}', '${now}')
+        `);
+        await sql.unsafe(`
+          INSERT INTO subgraph_revisions (subgraph_id, revision, routing_url, created_at)
+          VALUES ('${subgraphId}', 1, 'https://inventory.example.com/graphql', '${now}')
+        `);
+        await sql.unsafe(`
+          INSERT INTO subgraph_schema_revisions (subgraph_id, revision, normalized_sdl, normalized_hash, created_at)
+          VALUES ('${subgraphId}', 1, 'type Query {\n  products: [String!]!\n}\n', 'hash-1', '${now}')
+        `);
+      });
+
+      await assert.rejects(
+        integrationDatabase.database.sql`
+          UPDATE subgraphs
+          SET current_schema_revision = 2
+          WHERE id = ${subgraphId}
+        `,
+        /subgraphs_current_schema_revision_fkey/,
+      );
+    } finally {
+      await integrationDatabase.close();
+    }
+  });
 });

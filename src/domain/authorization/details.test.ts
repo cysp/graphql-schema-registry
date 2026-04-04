@@ -61,6 +61,36 @@ await test("decodeAuthorizationDetailsClaim", async (t) => {
     ]);
   });
 
+  await t.test("decodes subgraph-schema grants", () => {
+    const grants = decodeAuthorizationDetailsClaim([
+      {
+        graph_id: "alpha",
+        scope: "subgraph-schema:read",
+        subgraph_id: "inventory",
+        type: authorizationDetailsType,
+      },
+      {
+        graph_id: "alpha",
+        scope: "subgraph-schema:write",
+        subgraph_id: "inventory",
+        type: authorizationDetailsType,
+      },
+    ]);
+
+    assert.deepStrictEqual(grants, [
+      {
+        graphId: "alpha",
+        scope: "subgraph-schema:read",
+        subgraphId: "inventory",
+      },
+      {
+        graphId: "alpha",
+        scope: "subgraph-schema:write",
+        subgraphId: "inventory",
+      },
+    ]);
+  });
+
   await t.test("accepts empty graph_id for graph:read grants", () => {
     const grants = decodeAuthorizationDetailsClaim([
       {
@@ -92,6 +122,25 @@ await test("decodeAuthorizationDetailsClaim", async (t) => {
       {
         graphId: "",
         scope: "subgraph:write",
+        subgraphId: "",
+      },
+    ]);
+  });
+
+  await t.test("accepts empty graph_id and subgraph_id for subgraph-schema grants", () => {
+    const grants = decodeAuthorizationDetailsClaim([
+      {
+        graph_id: "",
+        scope: "subgraph-schema:read",
+        subgraph_id: "",
+        type: authorizationDetailsType,
+      },
+    ]);
+
+    assert.deepStrictEqual(grants, [
+      {
+        graphId: "",
+        scope: "subgraph-schema:read",
         subgraphId: "",
       },
     ]);

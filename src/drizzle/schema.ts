@@ -60,6 +60,7 @@ export const subgraphs = pgTable(
       .references(() => graphs.id),
     slug: text("slug").notNull(),
     currentRevision: bigint("current_revision", { mode: "number" }).notNull(),
+    currentSchemaRevision: bigint("current_schema_revision", { mode: "number" }),
     createdAt: timestamp("created_at", { withTimezone: true }).notNull(),
     updatedAt: timestamp("updated_at", { withTimezone: true }).notNull(),
     deletedAt: timestamp("deleted_at", { withTimezone: true }),
@@ -91,5 +92,26 @@ export const subgraphRevisions = pgTable(
       name: "subgraph_revisions_pkey",
     }),
     index("subgraph_revisions_subgraph_idx").on(table.subgraphId),
+  ],
+);
+
+export const subgraphSchemaRevisions = pgTable(
+  "subgraph_schema_revisions",
+  {
+    subgraphId: uuid("subgraph_id")
+      .notNull()
+      .references(() => subgraphs.id),
+    revision: bigint("revision", { mode: "number" }).notNull(),
+    normalizedSdl: text("normalized_sdl").notNull(),
+    normalizedHash: text("normalized_hash").notNull(),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull(),
+  },
+  (table) => [
+    primaryKey({
+      columns: [table.subgraphId, table.revision],
+      name: "subgraph_schema_revisions_pkey",
+    }),
+    index("subgraph_schema_revisions_subgraph_idx").on(table.subgraphId),
+    index("subgraph_schema_revisions_subgraph_hash_idx").on(table.subgraphId, table.normalizedHash),
   ],
 );
