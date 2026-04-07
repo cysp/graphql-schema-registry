@@ -4,7 +4,6 @@ export type GraphPayload = {
   id: string;
   slug: string;
   currentRevision: string;
-  federationVersion: string;
   createdAt: string;
   updatedAt: string;
 };
@@ -28,7 +27,6 @@ export function toGraphPayload(graph: ActiveGraph): GraphPayload {
     id: graph.id,
     slug: graph.slug,
     currentRevision: String(graph.currentRevision),
-    federationVersion: graph.federationVersion,
     createdAt: graph.createdAt.toISOString(),
     updatedAt: graph.updatedAt.toISOString(),
   };

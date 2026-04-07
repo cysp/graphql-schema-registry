@@ -71,7 +71,6 @@ await test("server: graph routes", async (t) => {
       url: "/v1/graphs",
       headers: jsonHeaders,
       payload: {
-        federationVersion: "v2.9",
         slug: "graph-1",
       },
     } as const satisfies RouteRequest;
@@ -109,9 +108,7 @@ await test("server: graph routes", async (t) => {
       method: "PUT",
       url: "/v1/graphs/graph-1",
       headers: jsonHeaders,
-      payload: {
-        federationVersion: "v2.9",
-      },
+      payload: {},
     } as const satisfies RouteRequest;
 
     await assertProtectedRouteBehavior(t, {

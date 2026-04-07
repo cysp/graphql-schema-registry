@@ -7,7 +7,7 @@ import { setTimeout as delay } from "node:timers/promises";
 import { authorizationDetailsType } from "./domain/authorization/details.ts";
 import { formatStrongETag } from "./domain/etag.ts";
 import { createAuthJwtSigner } from "./domain/jwt-signer.ts";
-import { graphRevisions, graphs, subgraphRevisions, subgraphs } from "./drizzle/schema.ts";
+import { graphRevisions, subgraphRevisions, subgraphs } from "./drizzle/schema.ts";
 import type { PostgresJsDatabase, PostgresJsTransaction } from "./drizzle/types.ts";
 import { queryCount } from "./test-support/database.ts";
 import { deferred } from "./test-support/deferred.ts";
@@ -36,13 +36,11 @@ async function createGraphThroughApi(
   server: IntegrationServerFixture["server"],
   adminToken: string,
   slug = "catalog",
-  federationVersion = "v2.9",
 ) {
   const response = await server.inject({
     headers: adminHeaders(adminToken),
     method: "POST",
     payload: {
-      federationVersion,
       slug,
     },
     url: "/v1/graphs",
@@ -144,8 +142,8 @@ await test("route handler concurrency and rollback integration with postgres", a
           await sql.unsafe("SELECT id FROM graphs WHERE id = $1 FOR UPDATE", [createdGraph.id]);
           await sql.unsafe(
             `
-            INSERT INTO graph_revisions (graph_id, revision, federation_version, created_at)
-            VALUES ($1, 2, 'v2.10', $2)
+            INSERT INTO graph_revisions (graph_id, revision, created_at)
+            VALUES ($1, 2, $2)
           `,
             [createdGraph.id, now.toISOString()],
           );
@@ -166,9 +164,7 @@ await test("route handler concurrency and rollback integration with postgres", a
         const responsePromise = fixture.server.inject({
           headers: adminIfMatchHeaders(adminToken, formatStrongETag(createdGraph.id, 1)),
           method: "PUT",
-          payload: {
-            federationVersion: "v2.11",
-          },
+          payload: {},
           url: "/v1/graphs/catalog",
         });
 
@@ -184,19 +180,15 @@ await test("route handler concurrency and rollback integration with postgres", a
 
         const [graphRow] = await fixture.sql<
           Array<{
-            federationVersion: string;
             currentRevision: string;
           }>
         >`
-          SELECT gr.federation_version AS "federationVersion", g.current_revision AS "currentRevision"
+          SELECT g.current_revision AS "currentRevision"
           FROM graphs AS g
-          JOIN graph_revisions AS gr
-            ON gr.graph_id = g.id AND gr.revision = g.current_revision
           WHERE g.id = ${createdGraph.id}
         `;
         assert.deepEqual(graphRow, {
           currentRevision: "2",
-          federationVersion: "v2.10",
         });
       },
     );
@@ -354,8 +346,8 @@ await test("route handler concurrency and rollback integration with postgres", a
             await sql.unsafe("SELECT id FROM graphs WHERE id = $1 FOR UPDATE", [createdGraph.id]);
             await sql.unsafe(
               `
-              INSERT INTO graph_revisions (graph_id, revision, federation_version, created_at)
-              VALUES ($1, 2, '2.10', $2)
+              INSERT INTO graph_revisions (graph_id, revision, created_at)
+              VALUES ($1, 2, $2)
             `,
               [createdGraph.id, now.toISOString()],
             );
@@ -547,7 +539,6 @@ await test("route handler concurrency and rollback integration with postgres", a
           headers: adminHeaders(adminToken),
           method: "POST",
           payload: {
-            federationVersion: "v2.9",
             slug: "catalog",
           },
           url: "/v1/graphs",
@@ -667,7 +658,6 @@ await test("route handler concurrency and rollback integration with postgres", a
             headers: adminHeaders(adminToken),
             method: "POST",
             payload: {
-              federationVersion: "v2.9",
               slug: "catalog",
             },
             url: "/v1/graphs",
@@ -686,60 +676,6 @@ await test("route handler concurrency and rollback integration with postgres", a
       );
     },
   );
-
-  await t.test("graph update rolls back when advancing the graph pointer fails", async () => {
-    await withConcurrentIntegrationServer(
-      {
-        databaseFactory: (database) =>
-          createFailingDatabase(database, {
-            error: new Error("forced graph pointer update failure"),
-            kind: "update",
-            table: graphs,
-          }),
-        databaseUrl: integrationDatabaseUrl,
-        jwtVerification,
-      },
-      async (fixture) => {
-        const createdGraph = await createGraphThroughApi(fixture.server, adminToken);
-
-        const response = await fixture.server.inject({
-          headers: adminHeaders(adminToken),
-          method: "PUT",
-          payload: {
-            federationVersion: "v2.10",
-          },
-          url: "/v1/graphs/catalog",
-        });
-
-        assert.equal(response.statusCode, 500);
-
-        const [graphRow] = await fixture.sql<
-          Array<{
-            federationVersion: string;
-            currentRevision: string;
-          }>
-        >`
-          SELECT gr.federation_version AS "federationVersion", g.current_revision AS "currentRevision"
-          FROM graphs AS g
-          JOIN graph_revisions AS gr
-            ON gr.graph_id = g.id AND gr.revision = g.current_revision
-          WHERE g.id = ${createdGraph.id}
-        `;
-        assert.deepEqual(graphRow, {
-          currentRevision: "1",
-          federationVersion: "v2.9",
-        });
-        assert.equal(
-          await queryCount(
-            fixture.sql,
-            "SELECT count(*)::int AS count FROM graph_revisions WHERE graph_id = $1",
-            [createdGraph.id],
-          ),
-          1,
-        );
-      },
-    );
-  });
 
   await t.test("graph delete rolls back when subgraph deletion fails", async () => {
     await withConcurrentIntegrationServer(

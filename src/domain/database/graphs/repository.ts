@@ -1,8 +1,4 @@
-export {
-  insertGraphRevisionAndSetCurrent,
-  insertGraphWithInitialRevision,
-  softDeleteGraphAndSubgraphsById,
-} from "./commands.ts";
+export { insertGraphWithInitialRevision, softDeleteGraphAndSubgraphsById } from "./commands.ts";
 export {
   selectActiveGraphBySlug,
   selectActiveGraphBySlugForShare,

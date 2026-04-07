@@ -2,7 +2,6 @@ export type ActiveGraph = {
   id: string;
   slug: string;
   currentRevision: number;
-  federationVersion: string;
   createdAt: Date;
   updatedAt: Date;
 };

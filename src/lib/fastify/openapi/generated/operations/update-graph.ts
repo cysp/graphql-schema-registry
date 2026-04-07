@@ -31,16 +31,7 @@ export const updateGraphRouteDefinition = {
     },
     body: {
       "type": "object",
-      "additionalProperties": false,
-      "required": [
-        "federationVersion"
-      ],
-      "properties": {
-        "federationVersion": {
-          "type": "string",
-          "pattern": "^v[0-9]+\\.[0-9]+$"
-        }
-      }
+      "additionalProperties": false
     },
     response: {
       200: {
@@ -50,7 +41,6 @@ export const updateGraphRouteDefinition = {
           "id",
           "slug",
           "currentRevision",
-          "federationVersion",
           "createdAt",
           "updatedAt"
         ],
@@ -66,10 +56,6 @@ export const updateGraphRouteDefinition = {
           "currentRevision": {
             "type": "string",
             "pattern": "^[1-9][0-9]*$"
-          },
-          "federationVersion": {
-            "type": "string",
-            "pattern": "^v[0-9]+\\.[0-9]+$"
           },
           "createdAt": {
             "type": "string",
