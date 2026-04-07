@@ -59,14 +59,6 @@ function createDocumentWithNamedOperations(): Record<string, unknown> {
               "application/json": {
                 schema: {
                   additionalProperties: false,
-                  properties: {
-                    federationVersion: {
-                      minLength: 1,
-                      pattern: "^v[0-9]+\\.[0-9]+$",
-                      type: "string",
-                    },
-                  },
-                  required: ["federationVersion"],
                   type: "object",
                 },
               },
@@ -122,7 +114,8 @@ await test("generated output uses fastify-aligned operation naming", async (t) =
     assert.match(source, /schema: \{/);
     assert.match(source, /params: \{/);
     assert.match(source, /body: \{/);
-    assert.match(source, /"pattern": "\^v\[0-9\]\+\\\\\.\[0-9\]\+\$"/);
+    assert.match(source, /body: \{[\s\S]*"type": "object"/);
+    assert.match(source, /body: \{[\s\S]*"additionalProperties": false/);
     assert.match(source, /response: \{[\s\S]*200: \{[\s\S]*400: \{\},[\s\S]*401: \{\},/);
     assert.doesNotMatch(source, /const updateGraphParamsSchema = /);
     assert.doesNotMatch(source, /const updateGraphHeadersSchema = /);

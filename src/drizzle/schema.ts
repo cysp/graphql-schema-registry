@@ -40,7 +40,6 @@ export const graphRevisions = pgTable(
       .notNull()
       .references(() => graphs.id),
     revision: bigint("revision", { mode: "number" }).notNull(),
-    federationVersion: text("federation_version").notNull(),
     createdAt: timestamp("created_at", { withTimezone: true }).notNull(),
   },
   (table) => [

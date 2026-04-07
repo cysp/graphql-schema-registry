@@ -31,71 +31,27 @@ async function insertGraphRevision(
   transaction: PostgresJsTransaction,
   graphId: string,
   revision: number,
-  federationVersion: string,
   createdAt: Date,
 ): Promise<void> {
   await transaction.insert(graphRevisions).values({
     graphId,
     revision,
-    federationVersion,
     createdAt,
   });
-}
-
-async function setGraphRevision(
-  transaction: PostgresJsTransaction,
-  graphId: string,
-  revision: number,
-  now: Date,
-): Promise<Pick<ActiveGraph, "createdAt" | "id" | "slug" | "updatedAt">> {
-  const [updatedGraph] = await transaction
-    .update(graphs)
-    .set({
-      currentRevision: revision,
-      updatedAt: now,
-    })
-    .where(and(eq(graphs.id, graphId), isNull(graphs.deletedAt)))
-    .returning(graphRowSelection);
-
-  if (!updatedGraph) {
-    throw new Error("Graph update did not return the locked row.");
-  }
-
-  return updatedGraph;
 }
 
 export async function insertGraphWithInitialRevision(
   transaction: PostgresJsTransaction,
   slug: string,
-  federationVersion: string,
   now: Date,
 ): Promise<ActiveGraph> {
   const graph = await insertGraphRow(transaction, slug, now);
 
-  await insertGraphRevision(transaction, graph.id, initialRevision, federationVersion, now);
+  await insertGraphRevision(transaction, graph.id, initialRevision, now);
 
   return {
     ...graph,
     currentRevision: initialRevision,
-    federationVersion,
-  };
-}
-
-export async function insertGraphRevisionAndSetCurrent(
-  transaction: PostgresJsTransaction,
-  graphId: string,
-  revision: number,
-  federationVersion: string,
-  now: Date,
-): Promise<ActiveGraph> {
-  await insertGraphRevision(transaction, graphId, revision, federationVersion, now);
-
-  const graph = await setGraphRevision(transaction, graphId, revision, now);
-
-  return {
-    ...graph,
-    currentRevision: revision,
-    federationVersion,
   };
 }
 

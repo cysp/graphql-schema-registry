@@ -34,12 +34,7 @@ export const createGraphHandler: DependencyInjectedHandler<
     const graph = await database.transaction(async (transaction) => {
       const now = new Date();
 
-      return insertGraphWithInitialRevision(
-        transaction,
-        request.body.slug,
-        request.body.federationVersion,
-        now,
-      );
+      return insertGraphWithInitialRevision(transaction, request.body.slug, now);
     });
 
     reply.header("ETag", formatStrongETag(graph.id, graph.currentRevision));

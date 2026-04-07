@@ -10,17 +10,12 @@ export const createGraphRouteDefinition = {
       "type": "object",
       "additionalProperties": false,
       "required": [
-        "slug",
-        "federationVersion"
+        "slug"
       ],
       "properties": {
         "slug": {
           "type": "string",
           "minLength": 1
-        },
-        "federationVersion": {
-          "type": "string",
-          "pattern": "^v[0-9]+\\.[0-9]+$"
         }
       }
     },
@@ -32,7 +27,6 @@ export const createGraphRouteDefinition = {
           "id",
           "slug",
           "currentRevision",
-          "federationVersion",
           "createdAt",
           "updatedAt"
         ],
@@ -48,10 +42,6 @@ export const createGraphRouteDefinition = {
           "currentRevision": {
             "type": "string",
             "pattern": "^[1-9][0-9]*$"
-          },
-          "federationVersion": {
-            "type": "string",
-            "pattern": "^v[0-9]+\\.[0-9]+$"
           },
           "createdAt": {
             "type": "string",

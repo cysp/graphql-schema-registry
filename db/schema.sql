@@ -1,7 +1,6 @@
 CREATE TABLE "graph_revisions" (
 	"graph_id" uuid,
 	"revision" bigint,
-	"federation_version" text NOT NULL,
 	"created_at" timestamp with time zone NOT NULL,
 	CONSTRAINT "graph_revisions_pkey" PRIMARY KEY("graph_id","revision")
 );

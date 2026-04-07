@@ -28,7 +28,6 @@ export function requireGraphPayload(value: unknown): GraphPayload {
   return {
     createdAt: requireStringProperty(value, "createdAt"),
     currentRevision: requireStringProperty(value, "currentRevision"),
-    federationVersion: requireStringProperty(value, "federationVersion"),
     id: requireStringProperty(value, "id"),
     slug: requireStringProperty(value, "slug"),
     updatedAt: requireStringProperty(value, "updatedAt"),

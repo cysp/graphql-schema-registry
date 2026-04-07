@@ -36,7 +36,6 @@ await test("graph routes integration with postgres", async (t) => {
         headers: adminHeaders(adminToken),
         method: "POST",
         payload: {
-          federationVersion: "v2.9",
           slug: "catalog",
         },
         url: "/v1/graphs",
@@ -46,7 +45,6 @@ await test("graph routes integration with postgres", async (t) => {
 
       const createdGraph = requireGraphPayload(parseJson(createGraphResponse));
       assert.equal(createdGraph.slug, "catalog");
-      assert.equal(createdGraph.federationVersion, "v2.9");
       assert.equal(createdGraph.currentRevision, "1");
       assert.equal(createGraphResponse.headers.etag, formatStrongETag(createdGraph.id, 1));
 
@@ -54,7 +52,6 @@ await test("graph routes integration with postgres", async (t) => {
         headers: adminHeaders(adminToken),
         method: "POST",
         payload: {
-          federationVersion: "v2.10",
           slug: "catalog",
         },
         url: "/v1/graphs",
@@ -73,9 +70,7 @@ await test("graph routes integration with postgres", async (t) => {
       const updateGraphResponse = await server.inject({
         headers: adminHeaders(adminToken),
         method: "PUT",
-        payload: {
-          federationVersion: "v2.10",
-        },
+        payload: {},
         url: "/v1/graphs/catalog",
       });
       assert.equal(updateGraphResponse.statusCode, 200);
@@ -83,28 +78,23 @@ await test("graph routes integration with postgres", async (t) => {
       const updatedGraph = requireGraphPayload(parseJson(updateGraphResponse));
       assert.equal(updatedGraph.id, createdGraph.id);
       assert.equal(updatedGraph.slug, createdGraph.slug);
-      assert.equal(updatedGraph.federationVersion, "v2.10");
-      assert.equal(updatedGraph.currentRevision, "2");
-      assert.equal(updateGraphResponse.headers.etag, formatStrongETag(updatedGraph.id, 2));
+      assert.equal(updatedGraph.currentRevision, "1");
+      assert.equal(updateGraphResponse.headers.etag, formatStrongETag(updatedGraph.id, 1));
 
       const noOpUpdateResponse = await server.inject({
-        headers: adminIfMatchHeaders(adminToken, formatStrongETag(updatedGraph.id, 2)),
+        headers: adminIfMatchHeaders(adminToken, formatStrongETag(updatedGraph.id, 1)),
         method: "PUT",
-        payload: {
-          federationVersion: "v2.10",
-        },
+        payload: {},
         url: "/v1/graphs/catalog",
       });
       assert.equal(noOpUpdateResponse.statusCode, 200);
-      assert.equal(noOpUpdateResponse.headers.etag, formatStrongETag(updatedGraph.id, 2));
+      assert.equal(noOpUpdateResponse.headers.etag, formatStrongETag(updatedGraph.id, 1));
       assert.deepEqual(parseJson(noOpUpdateResponse), updatedGraph);
 
       const staleUpdateResponse = await server.inject({
-        headers: adminIfMatchHeaders(adminToken, formatStrongETag(createdGraph.id, 1)),
+        headers: adminIfMatchHeaders(adminToken, formatStrongETag(createdGraph.id, 2)),
         method: "PUT",
-        payload: {
-          federationVersion: "v2.11",
-        },
+        payload: {},
         url: "/v1/graphs/catalog",
       });
       assert.equal(staleUpdateResponse.statusCode, 412);
@@ -121,7 +111,7 @@ await test("graph routes integration with postgres", async (t) => {
       assert.equal(createSubgraphResponse.statusCode, 201);
 
       const staleDeleteResponse = await server.inject({
-        headers: adminIfMatchHeaders(adminToken, formatStrongETag(createdGraph.id, 1)),
+        headers: adminIfMatchHeaders(adminToken, formatStrongETag(createdGraph.id, 2)),
         method: "DELETE",
         url: "/v1/graphs/catalog",
       });
@@ -174,7 +164,6 @@ await test("graph routes integration with postgres", async (t) => {
         headers: adminHeaders(adminToken),
         method: "POST",
         payload: {
-          federationVersion: "v2.12",
           slug: "catalog",
         },
         url: "/v1/graphs",
@@ -188,9 +177,7 @@ await test("graph routes integration with postgres", async (t) => {
       const staleRecreatedUpdateResponse = await server.inject({
         headers: adminIfMatchHeaders(adminToken, formatStrongETag(createdGraph.id, 1)),
         method: "PUT",
-        payload: {
-          federationVersion: "v2.13",
-        },
+        payload: {},
         url: "/v1/graphs/catalog",
       });
       assert.equal(staleRecreatedUpdateResponse.statusCode, 412);
@@ -238,9 +225,7 @@ await test("graph routes integration with postgres", async (t) => {
       const unconditionalUpdateResponse = await server.inject({
         headers: adminHeaders(adminToken),
         method: "PUT",
-        payload: {
-          federationVersion: "v2.10",
-        },
+        payload: {},
         url: "/v1/graphs/missing",
       });
       assert.equal(unconditionalUpdateResponse.statusCode, 404);
@@ -248,9 +233,7 @@ await test("graph routes integration with postgres", async (t) => {
       const updateResponse = await server.inject({
         headers: adminIfMatchHeaders(adminToken, formatStrongETag("graph-1", 1)),
         method: "PUT",
-        payload: {
-          federationVersion: "v2.10",
-        },
+        payload: {},
         url: "/v1/graphs/missing",
       });
       assert.equal(updateResponse.statusCode, 412);
@@ -277,7 +260,6 @@ await test("graph routes integration with postgres", async (t) => {
         headers: adminHeaders(adminToken),
         method: "POST",
         payload: {
-          federationVersion: "v2.9",
           slug: "catalog",
         },
         url: "/v1/graphs",
@@ -287,9 +269,7 @@ await test("graph routes integration with postgres", async (t) => {
       const invalidUpdateResponse = await server.inject({
         headers: adminIfMatchHeaders(adminToken, "invalid-etag"),
         method: "PUT",
-        payload: {
-          federationVersion: "v2.10",
-        },
+        payload: {},
         url: "/v1/graphs/catalog",
       });
       assert.equal(invalidUpdateResponse.statusCode, 400);

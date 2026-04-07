@@ -4,10 +4,7 @@ import type { DependencyInjectedHandler } from "../../lib/fastify/handler-with-d
 import type { operationRouteDefinitions } from "../../lib/fastify/openapi/generated/operations/index.ts";
 import type { OpenApiOperationHandlers } from "../../lib/fastify/openapi/plugin.ts";
 import { requireDatabase } from "../../lib/fastify/require-database.ts";
-import {
-  insertGraphRevisionAndSetCurrent,
-  selectActiveGraphBySlugForUpdate,
-} from "../database/graphs/repository.ts";
+import { selectActiveGraphBySlugForUpdate } from "../database/graphs/repository.ts";
 import type { ActiveGraph } from "../database/types.ts";
 import { etagSatisfiesIfMatch, formatStrongETag, parseIfMatchHeader } from "../etag.ts";
 import { toGraphPayload } from "./payloads.ts";
@@ -48,8 +45,6 @@ export const updateGraphHandler: DependencyInjectedHandler<
   const ifMatch = parseIfMatchHeader(request.headers["if-match"]);
 
   const result: UpdateGraphTransactionResult = await database.transaction(async (transaction) => {
-    const now = new Date();
-
     let graph = await selectActiveGraphBySlugForUpdate(transaction, request.params.graphSlug);
 
     if (
@@ -60,16 +55,6 @@ export const updateGraphHandler: DependencyInjectedHandler<
 
     if (!graph) {
       return { kind: "not_found" };
-    }
-
-    if (graph.federationVersion !== request.body.federationVersion) {
-      graph = await insertGraphRevisionAndSetCurrent(
-        transaction,
-        graph.id,
-        graph.currentRevision + 1,
-        request.body.federationVersion,
-        now,
-      );
     }
 
     return {

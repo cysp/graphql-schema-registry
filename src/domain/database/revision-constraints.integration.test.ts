@@ -26,8 +26,8 @@ await test("revision foreign keys", async (t) => {
           VALUES ('${graphId}', 'catalog', 1, '${now}', '${now}')
         `);
         await sql.unsafe(`
-          INSERT INTO graph_revisions (graph_id, revision, federation_version, created_at)
-          VALUES ('${graphId}', 1, '2.9', '${now}')
+          INSERT INTO graph_revisions (graph_id, revision, created_at)
+          VALUES ('${graphId}', 1, '${now}')
         `);
       });
 
@@ -58,8 +58,8 @@ await test("revision foreign keys", async (t) => {
           VALUES ('${graphId}', 'catalog', 1, '${now}', '${now}')
         `);
         await sql.unsafe(`
-          INSERT INTO graph_revisions (graph_id, revision, federation_version, created_at)
-          VALUES ('${graphId}', 1, '2.9', '${now}')
+          INSERT INTO graph_revisions (graph_id, revision, created_at)
+          VALUES ('${graphId}', 1, '${now}')
         `);
       });
 
@@ -101,8 +101,8 @@ await test("revision foreign keys", async (t) => {
           VALUES ('${graphId}', 'catalog', 1, '${now}', '${now}')
         `);
         await sql.unsafe(`
-          INSERT INTO graph_revisions (graph_id, revision, federation_version, created_at)
-          VALUES ('${graphId}', 1, '2.9', '${now}')
+          INSERT INTO graph_revisions (graph_id, revision, created_at)
+          VALUES ('${graphId}', 1, '${now}')
         `);
       });
 

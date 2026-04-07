@@ -16,7 +16,6 @@ export const listGraphsRouteDefinition = {
             "id",
             "slug",
             "currentRevision",
-            "federationVersion",
             "createdAt",
             "updatedAt"
           ],
@@ -32,10 +31,6 @@ export const listGraphsRouteDefinition = {
             "currentRevision": {
               "type": "string",
               "pattern": "^[1-9][0-9]*$"
-            },
-            "federationVersion": {
-              "type": "string",
-              "pattern": "^v[0-9]+\\.[0-9]+$"
             },
             "createdAt": {
               "type": "string",
