@@ -7,6 +7,7 @@ import { setTimeout as delay } from "node:timers/promises";
 import { authorizationDetailsType } from "./domain/authorization/details.ts";
 import { formatStrongETag } from "./domain/etag.ts";
 import { createAuthJwtSigner } from "./domain/jwt-signer.ts";
+import { hashNormalizedSchemaSdl } from "./domain/subgraph-schema.ts";
 import { graphRevisions, subgraphRevisions, subgraphs } from "./drizzle/schema.ts";
 import type { PostgresJsDatabase, PostgresJsTransaction } from "./drizzle/types.ts";
 import { queryCount } from "./test-support/database.ts";
@@ -114,7 +115,9 @@ await test("route handler concurrency and rollback integration with postgres", a
     return;
   }
 
-  const jwtSigner = createAuthJwtSigner();
+  const jwtSigner = createAuthJwtSigner({
+    tokenLifetimeSeconds: 3600,
+  });
   const adminToken = jwtSigner.createToken({
     authorization_details: [
       {
@@ -565,6 +568,7 @@ await test("route handler concurrency and rollback integration with postgres", a
         async (fixture) => {
           const createdGraph = await createGraphThroughApi(fixture.server, adminToken);
           const createdSubgraph = await createSubgraphThroughApi(fixture.server, adminToken);
+          const normalizedSdl = "type Query {\n  products: [String!]!\n}\n";
           const schemaWriteToken = createSubgraphSchemaGrantToken(
             jwtSigner.createToken,
             "subgraph-schema:write",
@@ -583,9 +587,14 @@ await test("route handler concurrency and rollback integration with postgres", a
             await sql.unsafe(
               `
               INSERT INTO subgraph_schema_revisions (subgraph_id, revision, normalized_sdl, normalized_hash, created_at)
-              VALUES ($1, 1, $2, 'hash-1', $3)
+              VALUES ($1, 1, $2, $3, $4)
             `,
-              [createdSubgraph.id, "type Query {\n  products: [String!]!\n}\n", now.toISOString()],
+              [
+                createdSubgraph.id,
+                normalizedSdl,
+                hashNormalizedSchemaSdl(normalizedSdl),
+                now.toISOString(),
+              ],
             );
             await sql.unsafe(
               `

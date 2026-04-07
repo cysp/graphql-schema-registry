@@ -67,6 +67,7 @@ await test("createAuthJwtSigner", async (t) => {
     const signer = createAuthJwtSigner({
       audience: "custom-aud",
       issuer: "https://issuer.example.com",
+      tokenLifetimeSeconds: 900,
     });
     const token = signer.createToken({
       authorization_details: [{ scope: "admin", type: "graphql-schema-registry" }],
@@ -82,6 +83,12 @@ await test("createAuthJwtSigner", async (t) => {
     assert.strictEqual(claims["aud"], "custom-aud");
     assert.strictEqual(claims["iss"], "https://issuer.example.com");
     assert.strictEqual(claims["sub"], "user-123");
+    assert.strictEqual(typeof claims["exp"], "number");
+    assert.strictEqual(typeof claims["iat"], "number");
+    if (typeof claims["exp"] !== "number" || typeof claims["iat"] !== "number") {
+      throw new TypeError("Expected numeric exp and iat claims.");
+    }
+    assert.strictEqual(claims["exp"] - claims["iat"], 910);
     assert.deepStrictEqual(claims["authorization_details"], [
       { scope: "admin", type: "graphql-schema-registry" },
     ]);

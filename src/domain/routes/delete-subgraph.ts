@@ -10,6 +10,8 @@ import {
   softDeleteSubgraphById,
 } from "../database/subgraphs/repository.ts";
 import { etagSatisfiesIfMatch, formatStrongETag, parseIfMatchHeader } from "../etag.ts";
+import { composeGraphWithinTransaction } from "../supergraph-composition.ts";
+import { logCompositionFailure } from "./log-composition-failure.ts";
 
 type OperationHandlers = OpenApiOperationHandlers<
   keyof typeof operationRouteDefinitions,
@@ -67,11 +69,27 @@ export const deleteSubgraphHandler: DependencyInjectedHandler<
 
     await softDeleteSubgraphById(transaction, subgraph.id, now);
 
-    return { kind: "no_content" } as const;
+    const composition = await composeGraphWithinTransaction(transaction, graph, now);
+
+    return {
+      kind: "no_content",
+      composition,
+    } as const;
   });
 
   if (result.kind === "precondition_failed") {
     return reply.problemDetails({ status: 412 });
+  }
+
+  if ("composition" in result) {
+    logCompositionFailure(
+      request.log,
+      {
+        graphSlug: request.params.graphSlug,
+        subgraphSlug: request.params.subgraphSlug,
+      },
+      result.composition,
+    );
   }
 
   return reply.code(204).send();

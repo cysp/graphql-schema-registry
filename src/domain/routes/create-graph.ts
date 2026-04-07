@@ -7,6 +7,8 @@ import { requireDatabase } from "../../lib/fastify/require-database.ts";
 import { insertGraphWithInitialRevision } from "../database/graphs/repository.ts";
 import { isUniqueViolation } from "../database/postgres-errors.ts";
 import { formatStrongETag } from "../etag.ts";
+import { composeGraphWithinTransaction } from "../supergraph-composition.ts";
+import { logCompositionFailure } from "./log-composition-failure.ts";
 import { toGraphPayload } from "./payloads.ts";
 
 type OperationHandlers = OpenApiOperationHandlers<
@@ -31,15 +33,24 @@ export const createGraphHandler: DependencyInjectedHandler<
   }
 
   try {
-    const graph = await database.transaction(async (transaction) => {
+    const result = await database.transaction(async (transaction) => {
       const now = new Date();
 
-      return insertGraphWithInitialRevision(transaction, request.body.slug, now);
+      const graph = await insertGraphWithInitialRevision(transaction, request.body.slug, now);
+
+      const composition = await composeGraphWithinTransaction(transaction, graph, now);
+
+      return {
+        composition,
+        graph,
+      };
     });
 
-    reply.header("ETag", formatStrongETag(graph.id, graph.currentRevision));
-    reply.header("Location", `/v1/graphs/${encodeURIComponent(graph.slug)}`);
-    return await reply.code(201).send(toGraphPayload(graph));
+    logCompositionFailure(request.log, { graphId: result.graph.id }, result.composition);
+
+    reply.header("ETag", formatStrongETag(result.graph.id, result.graph.currentRevision));
+    reply.header("Location", `/v1/graphs/${encodeURIComponent(result.graph.slug)}`);
+    return await reply.code(201).send(toGraphPayload(result.graph));
   } catch (error) {
     if (isUniqueViolation(error)) {
       return reply.problemDetails({ status: 409 });

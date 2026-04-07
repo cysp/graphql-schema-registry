@@ -15,6 +15,8 @@ import {
 import { selectActiveSubgraphByGraphIdAndSlugForUpdate } from "../database/subgraphs/repository.ts";
 import { etagSatisfiesIfMatch, formatStrongETag, parseIfMatchHeader } from "../etag.ts";
 import { hashNormalizedSchemaSdl, normalizeSchemaSdl } from "../subgraph-schema.ts";
+import { composeGraphWithinTransaction } from "../supergraph-composition.ts";
+import { logCompositionFailure } from "./log-composition-failure.ts";
 
 type OperationHandlers = OpenApiOperationHandlers<
   keyof typeof operationRouteDefinitions,
@@ -29,7 +31,11 @@ type PublishTransactionResult =
   | { kind: "forbidden" }
   | { kind: "not_found" }
   | { kind: "precondition_failed" }
-  | { kind: "ok"; etag: string };
+  | {
+      composition?: Awaited<ReturnType<typeof composeGraphWithinTransaction>>;
+      kind: "ok";
+      etag: string;
+    };
 
 export const publishSubgraphSchemaHandler: DependencyInjectedHandler<
   OperationHandlers["publishSubgraphSchema"],
@@ -110,8 +116,15 @@ export const publishSubgraphSchemaHandler: DependencyInjectedHandler<
       subgraphId: subgraph.id,
     });
 
+    const composition = await composeGraphWithinTransaction(
+      transaction,
+      graph,
+      storedRevision.createdAt,
+    );
+
     return {
       kind: "ok",
+      composition,
       etag: formatStrongETag(subgraph.id, storedRevision.revision),
     };
   });
@@ -127,6 +140,15 @@ export const publishSubgraphSchemaHandler: DependencyInjectedHandler<
   if (result.kind === "not_found") {
     return reply.problemDetails({ status: 404 });
   }
+
+  logCompositionFailure(
+    request.log,
+    {
+      graphSlug: request.params.graphSlug,
+      subgraphSlug: request.params.subgraphSlug,
+    },
+    result.composition,
+  );
 
   reply.header("ETag", result.etag);
   return reply.code(204).send();

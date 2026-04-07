@@ -8,6 +8,8 @@ import { selectActiveGraphBySlugForUpdate } from "../database/graphs/repository.
 import { isUniqueViolation } from "../database/postgres-errors.ts";
 import { insertSubgraphWithInitialRevision } from "../database/subgraphs/repository.ts";
 import { etagSatisfiesIfMatch, formatStrongETag, parseIfMatchHeader } from "../etag.ts";
+import { composeGraphWithinTransaction } from "../supergraph-composition.ts";
+import { logCompositionFailure } from "./log-composition-failure.ts";
 import { toSubgraphPayload } from "./payloads.ts";
 
 type OperationHandlers = OpenApiOperationHandlers<
@@ -57,8 +59,11 @@ export const createSubgraphHandler: DependencyInjectedHandler<
         now,
       );
 
+      const composition = await composeGraphWithinTransaction(transaction, graph, now);
+
       return {
         kind: "created",
+        composition,
         subgraph,
       } as const;
     });
@@ -70,6 +75,8 @@ export const createSubgraphHandler: DependencyInjectedHandler<
     if (result.kind === "not_found") {
       return await reply.problemDetails({ status: 404 });
     }
+
+    logCompositionFailure(request.log, { graphSlug: request.params.graphSlug }, result.composition);
 
     reply.header("ETag", formatStrongETag(result.subgraph.id, result.subgraph.currentRevision));
     reply.header(

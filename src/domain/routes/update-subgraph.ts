@@ -11,6 +11,8 @@ import {
 } from "../database/subgraphs/repository.ts";
 import type { ActiveSubgraph } from "../database/types.ts";
 import { etagSatisfiesIfMatch, formatStrongETag, parseIfMatchHeader } from "../etag.ts";
+import { composeGraphWithinTransaction } from "../supergraph-composition.ts";
+import { logCompositionFailure } from "./log-composition-failure.ts";
 import { toSubgraphPayload } from "./payloads.ts";
 
 type OperationHandlers = OpenApiOperationHandlers<
@@ -31,6 +33,7 @@ type UpdateSubgraphTransactionResult =
     }
   | {
       kind: "ok";
+      composition?: Awaited<ReturnType<typeof composeGraphWithinTransaction>>;
       subgraph: ActiveSubgraph;
     };
 
@@ -88,6 +91,12 @@ export const updateSubgraphHandler: DependencyInjectedHandler<
           request.body.routingUrl,
           now,
         );
+
+        return {
+          kind: "ok",
+          composition: await composeGraphWithinTransaction(transaction, graph, now),
+          subgraph,
+        };
       }
 
       return {
@@ -104,6 +113,15 @@ export const updateSubgraphHandler: DependencyInjectedHandler<
   if (result.kind === "not_found") {
     return reply.problemDetails({ status: 404 });
   }
+
+  logCompositionFailure(
+    request.log,
+    {
+      graphSlug: request.params.graphSlug,
+      subgraphSlug: request.params.subgraphSlug,
+    },
+    result.composition,
+  );
 
   reply.header("ETag", formatStrongETag(result.subgraph.id, result.subgraph.currentRevision));
   return reply.code(200).send(toSubgraphPayload(result.subgraph));

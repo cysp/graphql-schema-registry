@@ -45,7 +45,7 @@ export const updateGraphHandler: DependencyInjectedHandler<
   const ifMatch = parseIfMatchHeader(request.headers["if-match"]);
 
   const result: UpdateGraphTransactionResult = await database.transaction(async (transaction) => {
-    let graph = await selectActiveGraphBySlugForUpdate(transaction, request.params.graphSlug);
+    const graph = await selectActiveGraphBySlugForUpdate(transaction, request.params.graphSlug);
 
     if (
       !etagSatisfiesIfMatch(ifMatch, graph && formatStrongETag(graph.id, graph.currentRevision))
@@ -58,8 +58,8 @@ export const updateGraphHandler: DependencyInjectedHandler<
     }
 
     return {
-      graph,
       kind: "ok",
+      graph,
     };
   });
 

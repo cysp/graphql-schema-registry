@@ -9,7 +9,9 @@ async function insertGraphRow(
   transaction: PostgresJsTransaction,
   slug: string,
   now: Date,
-): Promise<Pick<ActiveGraph, "id" | "slug" | "createdAt" | "updatedAt">> {
+): Promise<
+  Pick<ActiveGraph, "id" | "slug" | "createdAt" | "updatedAt" | "currentSupergraphSchemaRevision">
+> {
   const [insertedGraph] = await transaction
     .insert(graphs)
     .values({

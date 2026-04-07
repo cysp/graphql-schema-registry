@@ -13,19 +13,22 @@ export type AuthJwtSigner = Readonly<{
 type CreateAuthJwtSignerOptions = Readonly<{
   audience?: string;
   issuer?: string;
+  tokenLifetimeSeconds?: number;
 }>;
 
 const defaultAudience = "graphql-schema-registry";
 const defaultIssuer = "https://auth.example.com";
-const tokenLifetimeSeconds = 300;
+const defaultTokenLifetimeSeconds = 300;
 const issuedAtSkewSeconds = 10;
 
 function createDefaultClaims({
   audience,
   issuer,
+  tokenLifetimeSeconds,
 }: {
   audience: string;
   issuer: string;
+  tokenLifetimeSeconds: number;
 }): JwtClaims {
   const nowSeconds = Math.floor(Date.now() / 1000);
   return {
@@ -64,6 +67,7 @@ function createSignedJwt({
 export function createAuthJwtSigner({
   audience = defaultAudience,
   issuer = defaultIssuer,
+  tokenLifetimeSeconds = defaultTokenLifetimeSeconds,
 }: CreateAuthJwtSignerOptions = {}): AuthJwtSigner {
   const { privateKey, publicKey } = generateKeyPairSync("rsa", { modulusLength: 2048 });
   const privateKeyPem = privateKey.export({ format: "pem", type: "pkcs8" });
@@ -76,7 +80,10 @@ export function createAuthJwtSigner({
   return {
     createToken(claimsOverrides: JwtClaims = {}): string {
       return createSignedJwt({
-        claims: Object.assign(createDefaultClaims({ audience, issuer }), claimsOverrides),
+        claims: Object.assign(
+          createDefaultClaims({ audience, issuer, tokenLifetimeSeconds }),
+          claimsOverrides,
+        ),
         header: {
           alg: "RS256",
           typ: "JWT",

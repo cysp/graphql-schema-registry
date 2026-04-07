@@ -5,6 +5,7 @@ export const initialRevision = 1n;
 export const graphRowSelection = {
   id: graphs.id,
   slug: graphs.slug,
+  currentSupergraphSchemaRevision: graphs.currentSupergraphSchemaRevision,
   createdAt: graphs.createdAt,
   updatedAt: graphs.updatedAt,
 };
