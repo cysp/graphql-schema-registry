@@ -6,7 +6,7 @@
   "scripts": {
     "check": "pnpm run format:check && pnpm run lint && pnpm run typecheck && pnpm run test",
     "dev": "node --env-file-if-exists=.env --watch src/index.ts",
-    "drizzle:schema:generate": "drizzle-kit export --dialect postgresql --schema ./src/drizzle/schema.ts > db/schema.sql",
+    "drizzle:schema:generate": "drizzle-kit export --config ./drizzle.config.ts > db/schema.sql",
     "fastify:openapi:generate": "node tools/generate-fastify-openapi.ts",
     "format": "oxfmt .",
     "format:check": "oxfmt --check .",
