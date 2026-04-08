@@ -1,14 +1,11 @@
 // oxlint-disable import/no-default-export, no-process-env
 
-/// <reference types="node" />
+import type { Config } from "drizzle-kit";
 
 const databaseUrl = process.env["DATABASE_URL"];
 
-if (typeof databaseUrl !== "string" || databaseUrl.length === 0) {
-  throw new Error("DATABASE_URL is required to run drizzle-kit commands.");
-}
-
 export default {
+  casing: "snake_case",
   dbCredentials: {
     url: databaseUrl,
   },
@@ -17,4 +14,4 @@ export default {
   schema: "./src/drizzle/schema.ts",
   strict: true,
   verbose: true,
-};
+} as Config;
