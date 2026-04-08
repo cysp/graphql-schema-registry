@@ -16,7 +16,7 @@ importers:
         version: 6.0.4
       drizzle-orm:
         specifier: 1.0.0-beta.20
-        version: 1.0.0-beta.20(postgres@3.4.8)(zod@4.3.6)
+        version: 1.0.0-beta.20(postgres@3.4.9)(zod@4.3.6)
       fastify:
         specifier: 5.8.4
         version: 5.8.4
@@ -27,8 +27,8 @@ importers:
         specifier: 16.13.2
         version: 16.13.2
       postgres:
-        specifier: 3.4.8
-        version: 3.4.8
+        specifier: 3.4.9
+        version: 3.4.9
       zod:
         specifier: 4.3.6
         version: 4.3.6
@@ -909,8 +909,8 @@ packages:
     resolution: {integrity: sha512-r34yH/GlQpKZbU1BvFFqOjhISRo1MNx1tWYsYvmj6KIRHSPMT2+yHOEb1SG6NMvRoHRF0a07kCOox/9yakl1vg==}
     hasBin: true
 
-  postgres@3.4.8:
-    resolution: {integrity: sha512-d+JFcLM17njZaOLkv6SCev7uoLaBtfK86vMUXhW1Z4glPWh4jozno9APvW/XKFJ3CCxVoC7OL38BqRydtu5nGg==}
+  postgres@3.4.9:
+    resolution: {integrity: sha512-GD3qdB0x1z9xgFI6cdRD6xu2Sp2WCOEoe3mtnyB5Ee0XrrL5Pe+e4CCnJrRMnL1zYtRDZmQQVbvOttLnKDLnaw==}
     engines: {node: '>=12'}
 
   process-warning@4.0.1:
@@ -1380,9 +1380,9 @@ snapshots:
       get-tsconfig: 4.13.7
       jiti: 2.6.1
 
-  drizzle-orm@1.0.0-beta.20(postgres@3.4.8)(zod@4.3.6):
+  drizzle-orm@1.0.0-beta.20(postgres@3.4.9)(zod@4.3.6):
     optionalDependencies:
-      postgres: 3.4.8
+      postgres: 3.4.9
       zod: 4.3.6
 
   ecdsa-sig-formatter@1.0.11:
@@ -1639,7 +1639,7 @@ snapshots:
       sonic-boom: 4.2.1
       thread-stream: 4.0.0
 
-  postgres@3.4.8: {}
+  postgres@3.4.9: {}
 
   process-warning@4.0.1: {}
 
