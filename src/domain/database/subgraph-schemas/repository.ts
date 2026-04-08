@@ -42,7 +42,7 @@ export async function insertSubgraphSchemaRevisionAndSetCurrent(
     createdAt: Date;
     normalizedHash: string;
     normalizedSdl: string;
-    revision: number;
+    revision: bigint;
     subgraphId: string;
   },
 ): Promise<StoredSubgraphSchemaRevision> {

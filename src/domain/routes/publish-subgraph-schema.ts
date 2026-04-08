@@ -101,7 +101,7 @@ export const publishSubgraphSchemaHandler: DependencyInjectedHandler<
       };
     }
 
-    const nextRevision = (currentSchemaRevision?.revision ?? 0) + 1;
+    const nextRevision = (currentSchemaRevision?.revision ?? 0n) + 1n;
     const storedRevision = await insertSubgraphSchemaRevisionAndSetCurrent(transaction, {
       createdAt: new Date(),
       normalizedHash,

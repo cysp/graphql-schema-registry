@@ -32,7 +32,7 @@ async function insertSubgraphRow(
 async function insertSubgraphRevision(
   transaction: PostgresJsTransaction,
   subgraphId: string,
-  revision: number,
+  revision: bigint,
   routingUrl: string,
   createdAt: Date,
 ): Promise<void> {
@@ -47,7 +47,7 @@ async function insertSubgraphRevision(
 async function setSubgraphRevision(
   transaction: PostgresJsTransaction,
   subgraphId: string,
-  revision: number,
+  revision: bigint,
   now: Date,
 ): Promise<Pick<ActiveSubgraph, "createdAt" | "graphId" | "id" | "slug" | "updatedAt">> {
   const [updatedSubgraph] = await transaction
@@ -87,7 +87,7 @@ export async function insertSubgraphWithInitialRevision(
 export async function insertSubgraphRevisionAndSetCurrent(
   transaction: PostgresJsTransaction,
   subgraphId: string,
-  revision: number,
+  revision: bigint,
   routingUrl: string,
   now: Date,
 ): Promise<ActiveSubgraph> {

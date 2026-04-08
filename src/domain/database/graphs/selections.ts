@@ -1,6 +1,6 @@
 import { graphs } from "../../../drizzle/schema.ts";
 
-export const initialRevision = 1;
+export const initialRevision = 1n;
 
 export const graphRowSelection = {
   id: graphs.id,
