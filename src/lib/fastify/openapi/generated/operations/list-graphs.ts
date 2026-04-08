@@ -21,8 +21,7 @@ export const listGraphsRouteDefinition = {
           ],
           "properties": {
             "id": {
-              "type": "string",
-              "format": "uuid"
+              "type": "string"
             },
             "slug": {
               "type": "string",
