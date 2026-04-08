@@ -30,7 +30,7 @@ async function insertGraphRow(
 async function insertGraphRevision(
   transaction: PostgresJsTransaction,
   graphId: string,
-  revision: number,
+  revision: bigint,
   createdAt: Date,
 ): Promise<void> {
   await transaction.insert(graphRevisions).values({

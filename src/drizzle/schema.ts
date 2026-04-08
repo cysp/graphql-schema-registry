@@ -18,7 +18,7 @@ export const graphs = pgTable(
       .primaryKey()
       .$defaultFn(() => randomUUID()),
     slug: text().notNull(),
-    currentRevision: bigint({ mode: "number" }).notNull(),
+    currentRevision: bigint({ mode: "bigint" }).notNull(),
     createdAt: timestamp({ withTimezone: true }).notNull(),
     updatedAt: timestamp({ withTimezone: true }).notNull(),
     deletedAt: timestamp({ withTimezone: true }),
@@ -36,7 +36,7 @@ export const graphRevisions = pgTable(
     graphId: uuid()
       .notNull()
       .references(() => graphs.id),
-    revision: bigint({ mode: "number" }).notNull(),
+    revision: bigint({ mode: "bigint" }).notNull(),
     createdAt: timestamp({ withTimezone: true }).notNull(),
   },
   (table) => [primaryKey({ columns: [table.graphId, table.revision] }), index().on(table.graphId)],
@@ -52,8 +52,8 @@ export const subgraphs = pgTable(
       .notNull()
       .references(() => graphs.id),
     slug: text().notNull(),
-    currentRevision: bigint({ mode: "number" }).notNull(),
-    currentSchemaRevision: bigint({ mode: "number" }),
+    currentRevision: bigint({ mode: "bigint" }).notNull(),
+    currentSchemaRevision: bigint({ mode: "bigint" }),
     createdAt: timestamp({ withTimezone: true }).notNull(),
     updatedAt: timestamp({ withTimezone: true }).notNull(),
     deletedAt: timestamp({ withTimezone: true }),
@@ -72,7 +72,7 @@ export const subgraphRevisions = pgTable(
     subgraphId: uuid()
       .notNull()
       .references(() => subgraphs.id),
-    revision: bigint({ mode: "number" }).notNull(),
+    revision: bigint({ mode: "bigint" }).notNull(),
     routingUrl: text().notNull(),
     createdAt: timestamp({ withTimezone: true }).notNull(),
   },
@@ -88,7 +88,7 @@ export const subgraphSchemaRevisions = pgTable(
     subgraphId: uuid()
       .notNull()
       .references(() => subgraphs.id),
-    revision: bigint({ mode: "number" }).notNull(),
+    revision: bigint({ mode: "bigint" }).notNull(),
     normalizedSdl: text().notNull(),
     normalizedHash: text().notNull(),
     createdAt: timestamp({ withTimezone: true }).notNull(),

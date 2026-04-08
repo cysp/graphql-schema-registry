@@ -122,7 +122,7 @@ function encodeEntityTagComponent(value: string): string {
   return encodeURIComponent(value);
 }
 
-export function formatStrongETag(resourceId: string, revision: number): string {
+export function formatStrongETag(resourceId: string, revision: bigint | number): string {
   return `"${encodeEntityTagComponent(resourceId)}:${String(revision)}"`;
 }
 

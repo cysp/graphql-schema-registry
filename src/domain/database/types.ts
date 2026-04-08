@@ -1,7 +1,7 @@
 export type ActiveGraph = {
   id: string;
   slug: string;
-  currentRevision: number;
+  currentRevision: bigint;
   createdAt: Date;
   updatedAt: Date;
 };
@@ -10,7 +10,7 @@ export type ActiveSubgraph = {
   graphId: string;
   id: string;
   slug: string;
-  currentRevision: number;
+  currentRevision: bigint;
   routingUrl: string;
   createdAt: Date;
   updatedAt: Date;
@@ -18,7 +18,7 @@ export type ActiveSubgraph = {
 
 export type StoredSubgraphSchemaRevision = {
   subgraphId: string;
-  revision: number;
+  revision: bigint;
   normalizedHash: string;
   normalizedSdl: string;
   createdAt: Date;

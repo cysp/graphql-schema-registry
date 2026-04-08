@@ -84,7 +84,7 @@ export const updateSubgraphHandler: DependencyInjectedHandler<
         subgraph = await insertSubgraphRevisionAndSetCurrent(
           transaction,
           subgraph.id,
-          subgraph.currentRevision + 1,
+          subgraph.currentRevision + 1n,
           request.body.routingUrl,
           now,
         );
