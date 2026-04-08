@@ -32,8 +32,7 @@ export const getGraphRouteDefinition = {
         ],
         "properties": {
           "id": {
-            "type": "string",
-            "format": "uuid"
+            "type": "string"
           },
           "slug": {
             "type": "string",

@@ -62,12 +62,10 @@ export const createSubgraphRouteDefinition = {
         ],
         "properties": {
           "id": {
-            "type": "string",
-            "format": "uuid"
+            "type": "string"
           },
           "graphId": {
-            "type": "string",
-            "format": "uuid"
+            "type": "string"
           },
           "slug": {
             "type": "string",
