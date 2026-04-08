@@ -12,6 +12,7 @@
     "format:check": "oxfmt --check .",
     "lint": "oxlint --type-aware --report-unused-disable-directives .",
     "lint:fix": "oxlint --type-aware --fix .",
+    "pgschema": "node --env-file-if-exists=.env tools/pgschema.ts",
     "start": "node src/index.ts",
     "test": "node --env-file-if-exists=.env --env-file-if-exists=.env.test --test --experimental-test-coverage --test-coverage-exclude='**/*.fixture.ts' --test-coverage-exclude='**/*.test.ts' --test-coverage-exclude='**/*.test-support.ts' --test-coverage-exclude='src/test-support/**' --enable-source-maps --test-reporter=spec --test-reporter-destination=stdout --test-reporter=lcov --test-reporter-destination=lcov.info",
     "typecheck": "tsc --noEmit"
