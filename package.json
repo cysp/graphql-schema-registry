@@ -23,7 +23,7 @@
     "fastify": "5.8.4",
     "fastify-plugin": "5.1.0",
     "graphql": "16.13.2",
-    "postgres": "3.4.8",
+    "postgres": "3.4.9",
     "zod": "4.3.6"
   },
   "devDependencies": {
