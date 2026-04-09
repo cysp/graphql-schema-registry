@@ -26,7 +26,7 @@ CREATE TABLE "subgraph_schema_revisions" (
 	"subgraph_id" uuid,
 	"revision" bigint,
 	"normalized_sdl" text NOT NULL,
-	"normalized_hash" text NOT NULL,
+	"normalized_sdl_sha256" bytea GENERATED ALWAYS AS (digest("normalized_sdl", 'sha256')) STORED NOT NULL,
 	"created_at" timestamp with time zone NOT NULL,
 	CONSTRAINT "subgraph_schema_revisions_pkey" PRIMARY KEY("subgraph_id","revision")
 );
@@ -46,7 +46,6 @@ CREATE INDEX "graph_revisions_graph_id_index" ON "graph_revisions" ("graph_id");
 CREATE UNIQUE INDEX "graphs_slug_index" ON "graphs" ("slug") WHERE "deleted_at" is null;
 CREATE INDEX "subgraph_revisions_subgraph_id_index" ON "subgraph_revisions" ("subgraph_id");
 CREATE INDEX "subgraph_schema_revisions_subgraph_id_index" ON "subgraph_schema_revisions" ("subgraph_id");
-CREATE INDEX "subgraph_schema_revisions_subgraph_id_normalized_hash_index" ON "subgraph_schema_revisions" ("subgraph_id","normalized_hash");
 CREATE UNIQUE INDEX "subgraphs_graph_id_slug_index" ON "subgraphs" ("graph_id","slug") WHERE "deleted_at" is null;
 CREATE INDEX "subgraphs_graph_id_index" ON "subgraphs" ("graph_id");
 ALTER TABLE "graph_revisions" ADD CONSTRAINT "graph_revisions_graph_id_graphs_id_fkey" FOREIGN KEY ("graph_id") REFERENCES "graphs"("id");

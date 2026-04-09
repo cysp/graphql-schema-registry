@@ -6,6 +6,6 @@ export function normalizeSchemaSdl(schemaSdl: string): string {
   return `${print(parse(schemaSdl)).trim()}\n`;
 }
 
-export function hashNormalizedSchemaSdl(normalizedSdl: string): string {
-  return createHash("sha256").update(normalizedSdl).digest("hex");
+export function sha256NormalizedSchemaSdl(normalizedSdl: string): Buffer {
+  return createHash("sha256").update(normalizedSdl).digest();
 }
