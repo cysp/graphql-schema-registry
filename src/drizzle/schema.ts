@@ -4,7 +4,6 @@ import { sql } from "drizzle-orm";
 import {
   bigint,
   bytea,
-  index,
   pgTable,
   primaryKey,
   text,
@@ -40,7 +39,7 @@ export const graphRevisions = pgTable(
     revision: bigint({ mode: "bigint" }).notNull(),
     createdAt: timestamp({ withTimezone: true }).notNull(),
   },
-  (table) => [primaryKey({ columns: [table.graphId, table.revision] }), index().on(table.graphId)],
+  (table) => [primaryKey({ columns: [table.graphId, table.revision] })],
 );
 
 export const subgraphs = pgTable(
@@ -63,7 +62,6 @@ export const subgraphs = pgTable(
     uniqueIndex()
       .on(table.graphId, table.slug)
       .where(sql`${table.deletedAt} is null`),
-    index().on(table.graphId),
   ],
 );
 
@@ -77,10 +75,7 @@ export const subgraphRevisions = pgTable(
     routingUrl: text().notNull(),
     createdAt: timestamp({ withTimezone: true }).notNull(),
   },
-  (table) => [
-    primaryKey({ columns: [table.subgraphId, table.revision] }),
-    index().on(table.subgraphId),
-  ],
+  (table) => [primaryKey({ columns: [table.subgraphId, table.revision] })],
 );
 
 export const subgraphSchemaRevisions = pgTable(
@@ -96,8 +91,5 @@ export const subgraphSchemaRevisions = pgTable(
       .notNull(),
     createdAt: timestamp({ withTimezone: true }).notNull(),
   },
-  (table) => [
-    primaryKey({ columns: [table.subgraphId, table.revision] }),
-    index().on(table.subgraphId),
-  ],
+  (table) => [primaryKey({ columns: [table.subgraphId, table.revision] })],
 );
