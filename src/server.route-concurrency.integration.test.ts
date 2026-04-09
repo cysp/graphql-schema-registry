@@ -582,8 +582,8 @@ await test("route handler concurrency and rollback integration with postgres", a
             ]);
             await sql.unsafe(
               `
-              INSERT INTO subgraph_schema_revisions (subgraph_id, revision, normalized_sdl, normalized_hash, created_at)
-              VALUES ($1, 1, $2, 'hash-1', $3)
+              INSERT INTO subgraph_schema_revisions (subgraph_id, revision, normalized_sdl, created_at)
+              VALUES ($1, 1, $2, $3)
             `,
               [createdSubgraph.id, "type Query {\n  products: [String!]!\n}\n", now.toISOString()],
             );

@@ -14,7 +14,7 @@ import {
 } from "../database/subgraph-schemas/repository.ts";
 import { selectActiveSubgraphByGraphIdAndSlugForUpdate } from "../database/subgraphs/repository.ts";
 import { etagSatisfiesIfMatch, formatStrongETag, parseIfMatchHeader } from "../etag.ts";
-import { hashNormalizedSchemaSdl, normalizeSchemaSdl } from "../subgraph-schema.ts";
+import { normalizeSchemaSdl, sha256NormalizedSchemaSdl } from "../subgraph-schema.ts";
 
 type OperationHandlers = OpenApiOperationHandlers<
   keyof typeof operationRouteDefinitions,
@@ -53,7 +53,7 @@ export const publishSubgraphSchemaHandler: DependencyInjectedHandler<
   }
 
   const ifMatch = parseIfMatchHeader(request.headers["if-match"]);
-  const normalizedHash = hashNormalizedSchemaSdl(normalizedSdl);
+  const normalizedSdlSha256 = sha256NormalizedSchemaSdl(normalizedSdl);
 
   const result: PublishTransactionResult = await database.transaction(async (transaction) => {
     const graph = await selectActiveGraphBySlugForUpdate(transaction, request.params.graphSlug);
@@ -94,7 +94,7 @@ export const publishSubgraphSchemaHandler: DependencyInjectedHandler<
       return { kind: "precondition_failed" };
     }
 
-    if (currentSchemaRevision?.normalizedHash === normalizedHash) {
+    if (currentSchemaRevision?.normalizedSdlSha256.equals(normalizedSdlSha256)) {
       return {
         kind: "ok",
         etag: formatStrongETag(subgraph.id, currentSchemaRevision.revision),
@@ -104,7 +104,6 @@ export const publishSubgraphSchemaHandler: DependencyInjectedHandler<
     const nextRevision = (currentSchemaRevision?.revision ?? 0n) + 1n;
     const storedRevision = await insertSubgraphSchemaRevisionAndSetCurrent(transaction, {
       createdAt: new Date(),
-      normalizedHash,
       normalizedSdl,
       revision: nextRevision,
       subgraphId: subgraph.id,

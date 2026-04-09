@@ -12,7 +12,7 @@ export async function selectCurrentSubgraphSchemaRevision(
     .select({
       subgraphId: subgraphSchemaRevisions.subgraphId,
       revision: subgraphSchemaRevisions.revision,
-      normalizedHash: subgraphSchemaRevisions.normalizedHash,
+      normalizedSdlSha256: subgraphSchemaRevisions.normalizedSdlSha256,
       normalizedSdl: subgraphSchemaRevisions.normalizedSdl,
       createdAt: subgraphSchemaRevisions.createdAt,
     })
@@ -34,25 +34,35 @@ export async function insertSubgraphSchemaRevisionAndSetCurrent(
   transaction: PostgresJsTransaction,
   {
     createdAt,
-    normalizedHash,
     normalizedSdl,
     revision,
     subgraphId,
   }: {
     createdAt: Date;
-    normalizedHash: string;
     normalizedSdl: string;
     revision: bigint;
     subgraphId: string;
   },
 ): Promise<StoredSubgraphSchemaRevision> {
-  await transaction.insert(subgraphSchemaRevisions).values({
-    subgraphId,
-    revision,
-    normalizedHash,
-    normalizedSdl,
-    createdAt,
-  });
+  const [subgraphSchemaRevision] = await transaction
+    .insert(subgraphSchemaRevisions)
+    .values({
+      subgraphId,
+      revision,
+      normalizedSdl,
+      createdAt,
+    })
+    .returning({
+      subgraphId: subgraphSchemaRevisions.subgraphId,
+      revision: subgraphSchemaRevisions.revision,
+      normalizedSdlSha256: subgraphSchemaRevisions.normalizedSdlSha256,
+      normalizedSdl: subgraphSchemaRevisions.normalizedSdl,
+      createdAt: subgraphSchemaRevisions.createdAt,
+    });
+
+  if (!subgraphSchemaRevision) {
+    throw new Error("Subgraph schema revision insert did not return a row.");
+  }
 
   const [updatedSubgraph] = await transaction
     .update(subgraphs)
@@ -66,11 +76,5 @@ export async function insertSubgraphSchemaRevisionAndSetCurrent(
     throw new Error("Subgraph schema pointer update did not return the locked row.");
   }
 
-  return {
-    subgraphId,
-    revision,
-    normalizedHash,
-    normalizedSdl,
-    createdAt,
-  };
+  return subgraphSchemaRevision;
 }

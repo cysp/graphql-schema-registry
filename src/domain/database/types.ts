@@ -19,7 +19,7 @@ export type ActiveSubgraph = {
 export type StoredSubgraphSchemaRevision = {
   subgraphId: string;
   revision: bigint;
-  normalizedHash: string;
+  normalizedSdlSha256: Buffer;
   normalizedSdl: string;
   createdAt: Date;
 };

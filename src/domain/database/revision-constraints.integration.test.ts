@@ -116,8 +116,8 @@ await test("revision foreign keys", async (t) => {
           VALUES ('${subgraphId}', 1, 'https://inventory.example.com/graphql', '${now}')
         `);
         await sql.unsafe(`
-          INSERT INTO subgraph_schema_revisions (subgraph_id, revision, normalized_sdl, normalized_hash, created_at)
-          VALUES ('${subgraphId}', 1, 'type Query {\n  products: [String!]!\n}\n', 'hash-1', '${now}')
+          INSERT INTO subgraph_schema_revisions (subgraph_id, revision, normalized_sdl, created_at)
+          VALUES ('${subgraphId}', 1, 'type Query {\n  products: [String!]!\n}\n', '${now}')
         `);
       });
 

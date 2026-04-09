@@ -3,6 +3,7 @@ import { randomUUID } from "node:crypto";
 import { sql } from "drizzle-orm";
 import {
   bigint,
+  bytea,
   index,
   pgTable,
   primaryKey,
@@ -90,12 +91,13 @@ export const subgraphSchemaRevisions = pgTable(
       .references(() => subgraphs.id),
     revision: bigint({ mode: "bigint" }).notNull(),
     normalizedSdl: text().notNull(),
-    normalizedHash: text().notNull(),
+    normalizedSdlSha256: bytea()
+      .generatedAlwaysAs((): ReturnType<typeof sql> => sql`digest("normalized_sdl", 'sha256')`)
+      .notNull(),
     createdAt: timestamp({ withTimezone: true }).notNull(),
   },
   (table) => [
     primaryKey({ columns: [table.subgraphId, table.revision] }),
     index().on(table.subgraphId),
-    index().on(table.subgraphId, table.normalizedHash),
   ],
 );
