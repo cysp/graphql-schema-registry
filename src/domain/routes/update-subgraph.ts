@@ -11,6 +11,7 @@ import {
 } from "../database/subgraphs/repository.ts";
 import type { ActiveSubgraph } from "../database/types.ts";
 import { etagSatisfiesIfMatch, formatStrongETag, parseIfMatchHeader } from "../etag.ts";
+import { attemptGraphComposition } from "../graph-composition.ts";
 import { toSubgraphPayload } from "./payloads.ts";
 
 type OperationHandlers = OpenApiOperationHandlers<
@@ -88,6 +89,8 @@ export const updateSubgraphHandler: DependencyInjectedHandler<
           request.body.routingUrl,
           now,
         );
+
+        await attemptGraphComposition(transaction, graph, now);
       }
 
       return {

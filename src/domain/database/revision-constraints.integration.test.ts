@@ -87,7 +87,7 @@ await test("revision foreign keys", async (t) => {
     }
   });
 
-  await t.test("subgraph schema revision constraints are deferred and enforced", async () => {
+  await t.test("subgraph schema revision constraints are immediate and enforced", async () => {
     const integrationDatabase = await connectIntegrationDatabase(integrationDatabaseUrl);
 
     try {
@@ -108,8 +108,8 @@ await test("revision foreign keys", async (t) => {
 
       await integrationDatabase.database.sql.begin(async (sql) => {
         await sql.unsafe(`
-          INSERT INTO subgraphs (id, graph_id, slug, current_revision, current_schema_revision, created_at, updated_at)
-          VALUES ('${subgraphId}', '${graphId}', 'inventory', 1, 1, '${now}', '${now}')
+          INSERT INTO subgraphs (id, graph_id, slug, current_revision, created_at, updated_at)
+          VALUES ('${subgraphId}', '${graphId}', 'inventory', 1, '${now}', '${now}')
         `);
         await sql.unsafe(`
           INSERT INTO subgraph_revisions (subgraph_id, revision, routing_url, created_at)
@@ -119,6 +119,11 @@ await test("revision foreign keys", async (t) => {
           INSERT INTO subgraph_schema_revisions (subgraph_id, revision, normalized_sdl, created_at)
           VALUES ('${subgraphId}', 1, 'type Query {\n  products: [String!]!\n}\n', '${now}')
         `);
+        await sql.unsafe(`
+          UPDATE subgraphs
+          SET current_schema_revision = 1
+          WHERE id = '${subgraphId}'
+        `);
       });
 
       await assert.rejects(
@@ -127,7 +132,7 @@ await test("revision foreign keys", async (t) => {
           SET current_schema_revision = 2
           WHERE id = ${subgraphId}
         `,
-        /subgraphs_current_schema_revision_fkey/,
+        /violates foreign key constraint/,
       );
     } finally {
       await integrationDatabase.close();

@@ -10,6 +10,7 @@ import {
   softDeleteSubgraphById,
 } from "../database/subgraphs/repository.ts";
 import { etagSatisfiesIfMatch, formatStrongETag, parseIfMatchHeader } from "../etag.ts";
+import { attemptGraphComposition } from "../graph-composition.ts";
 
 type OperationHandlers = OpenApiOperationHandlers<
   keyof typeof operationRouteDefinitions,
@@ -66,6 +67,8 @@ export const deleteSubgraphHandler: DependencyInjectedHandler<
     }
 
     await softDeleteSubgraphById(transaction, subgraph.id, now);
+
+    await attemptGraphComposition(transaction, graph, now);
 
     return { kind: "no_content" } as const;
   });

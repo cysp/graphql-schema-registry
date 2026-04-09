@@ -10,6 +10,8 @@ function selectGraphWithRevisionQuery(database: PostgresJsExecutor) {
       id: graphs.id,
       slug: graphs.slug,
       currentRevision: graphRevisions.revision,
+      currentCompositionRevision: graphs.currentCompositionRevision,
+      currentSupergraphSchemaRevision: graphs.currentSupergraphSchemaRevision,
       createdAt: graphs.createdAt,
       updatedAt: graphs.updatedAt,
     })
