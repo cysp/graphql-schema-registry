@@ -1,4 +1,4 @@
-import { and, eq, isNull } from "drizzle-orm";
+import { and, desc, eq, isNull } from "drizzle-orm";
 
 import { subgraphSchemaRevisions, subgraphs } from "../../../drizzle/schema.ts";
 import type { PostgresJsExecutor, PostgresJsTransaction } from "../../../drizzle/types.ts";
@@ -25,6 +25,26 @@ export async function selectCurrentSubgraphSchemaRevision(
       ),
     )
     .where(and(eq(subgraphs.id, subgraphId), isNull(subgraphs.deletedAt)))
+    .limit(1);
+
+  return revision;
+}
+
+export async function selectLatestSubgraphSchemaRevision(
+  database: PostgresJsExecutor,
+  subgraphId: string,
+): Promise<StoredSubgraphSchemaRevision | undefined> {
+  const [revision] = await database
+    .select({
+      subgraphId: subgraphSchemaRevisions.subgraphId,
+      revision: subgraphSchemaRevisions.revision,
+      normalizedSdlSha256: subgraphSchemaRevisions.normalizedSdlSha256,
+      normalizedSdl: subgraphSchemaRevisions.normalizedSdl,
+      createdAt: subgraphSchemaRevisions.createdAt,
+    })
+    .from(subgraphSchemaRevisions)
+    .where(eq(subgraphSchemaRevisions.subgraphId, subgraphId))
+    .orderBy(desc(subgraphSchemaRevisions.revision))
     .limit(1);
 
   return revision;
@@ -77,4 +97,21 @@ export async function insertSubgraphSchemaRevisionAndSetCurrent(
   }
 
   return subgraphSchemaRevision;
+}
+
+export async function clearCurrentSubgraphSchemaRevision(
+  transaction: PostgresJsTransaction,
+  subgraphId: string,
+): Promise<void> {
+  const [updatedSubgraph] = await transaction
+    .update(subgraphs)
+    .set({
+      currentSchemaRevision: null,
+    })
+    .where(and(eq(subgraphs.id, subgraphId), isNull(subgraphs.deletedAt)))
+    .returning({ id: subgraphs.id });
+
+  if (!updatedSubgraph) {
+    throw new Error("Subgraph schema pointer clear did not return the locked row.");
+  }
 }

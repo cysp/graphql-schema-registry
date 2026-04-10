@@ -136,4 +136,44 @@ await test("server: subgraph schema routes", async (t) => {
       },
     );
   });
+
+  await t.test(
+    "DELETE /v1/graphs/:graphSlug/subgraphs/:subgraphSlug/schema.graphqls",
+    async (t) => {
+      const request = {
+        method: "DELETE",
+        url: "/v1/graphs/graph-1/subgraphs/products/schema.graphqls",
+      } as const satisfies RouteRequest;
+
+      await t.test("returns 401 without auth", async () => {
+        const response = await server.inject(request);
+        assertProblemResponse(response, 401, "Unauthorized");
+      });
+
+      await t.test("returns 503 for admin users before authorization can be resolved", async () => {
+        const response = await server.inject(createAuthorizedRequest(request, createAdminToken()));
+        assertProblemResponse(response, 503, "Service Unavailable");
+      });
+
+      await t.test(
+        "returns 503 for schema read users before authorization can be resolved",
+        async () => {
+          const response = await server.inject(
+            createAuthorizedRequest(request, createSchemaReadToken()),
+          );
+          assertProblemResponse(response, 503, "Service Unavailable");
+        },
+      );
+
+      await t.test(
+        "returns 503 for matching schema write users when database is absent",
+        async () => {
+          const response = await server.inject(
+            createAuthorizedRequest(request, createSchemaWriteToken()),
+          );
+          assertProblemResponse(response, 503, "Service Unavailable");
+        },
+      );
+    },
+  );
 });

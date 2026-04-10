@@ -12,6 +12,7 @@ import { updateSubgraphRouteDefinition } from "./update-subgraph.ts";
 import { deleteSubgraphRouteDefinition } from "./delete-subgraph.ts";
 import { getSubgraphSchemaRouteDefinition } from "./get-subgraph-schema.ts";
 import { publishSubgraphSchemaRouteDefinition } from "./publish-subgraph-schema.ts";
+import { deleteSubgraphSchemaRouteDefinition } from "./delete-subgraph-schema.ts";
 
 export const operationRouteDefinitions = {
   ["listGraphs"]: listGraphsRouteDefinition,
@@ -26,4 +27,5 @@ export const operationRouteDefinitions = {
   ["deleteSubgraph"]: deleteSubgraphRouteDefinition,
   ["getSubgraphSchema"]: getSubgraphSchemaRouteDefinition,
   ["publishSubgraphSchema"]: publishSubgraphSchemaRouteDefinition,
+  ["deleteSubgraphSchema"]: deleteSubgraphSchemaRouteDefinition,
 };

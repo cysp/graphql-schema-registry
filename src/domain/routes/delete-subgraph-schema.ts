@@ -9,14 +9,12 @@ import type { OpenApiOperationHandlers } from "../../lib/fastify/openapi/plugin.
 import { requireDatabase } from "../../lib/fastify/require-database.ts";
 import { selectActiveGraphBySlugForUpdate } from "../database/graphs/repository.ts";
 import {
-  insertSubgraphSchemaRevisionAndSetCurrent,
+  clearCurrentSubgraphSchemaRevision,
   selectCurrentSubgraphSchemaRevision,
-  selectLatestSubgraphSchemaRevision,
 } from "../database/subgraph-schemas/repository.ts";
 import { selectActiveSubgraphByGraphIdAndSlugForUpdate } from "../database/subgraphs/repository.ts";
 import { etagSatisfiesIfMatch, formatStrongETag, parseIfMatchHeader } from "../etag.ts";
 import { attemptGraphComposition } from "../graph-composition.ts";
-import { normalizeSchemaSdl, sha256NormalizedSchemaSdl } from "../subgraph-schema.ts";
 
 type OperationHandlers = OpenApiOperationHandlers<
   keyof typeof operationRouteDefinitions,
@@ -27,14 +25,13 @@ type RouteDependencies = {
   database: PostgresJsDatabase | undefined;
 };
 
-type PublishTransactionResult =
+type DeleteTransactionResult =
   | { kind: "forbidden" }
-  | { kind: "not_found" }
   | { kind: "precondition_failed" }
-  | { kind: "ok"; etag: string };
+  | { kind: "no_content" };
 
-export const publishSubgraphSchemaHandler: DependencyInjectedHandler<
-  OperationHandlers["publishSubgraphSchema"],
+export const deleteSubgraphSchemaHandler: DependencyInjectedHandler<
+  OperationHandlers["deleteSubgraphSchema"],
   RouteDependencies
 > = async ({ dependencies: { database }, request, reply }) => {
   const user = requireAuthenticatedUser(request, reply);
@@ -46,18 +43,9 @@ export const publishSubgraphSchemaHandler: DependencyInjectedHandler<
     return;
   }
 
-  let normalizedSdl: string;
-  try {
-    normalizedSdl = normalizeSchemaSdl(request.body);
-  } catch (error) {
-    request.log.warn({ error }, "invalid subgraph schema");
-    return reply.problemDetails({ status: 422 });
-  }
-
   const ifMatch = parseIfMatchHeader(request.headers["if-match"]);
-  const normalizedSdlSha256 = sha256NormalizedSchemaSdl(normalizedSdl);
 
-  const result: PublishTransactionResult = await database.transaction(async (transaction) => {
+  const result: DeleteTransactionResult = await database.transaction(async (transaction) => {
     const now = new Date();
 
     const graph = await selectActiveGraphBySlugForUpdate(transaction, request.params.graphSlug);
@@ -66,7 +54,7 @@ export const publishSubgraphSchemaHandler: DependencyInjectedHandler<
         return { kind: "precondition_failed" };
       }
 
-      return { kind: "not_found" };
+      return { kind: "no_content" };
     }
 
     const subgraph = await selectActiveSubgraphByGraphIdAndSlugForUpdate(
@@ -79,7 +67,7 @@ export const publishSubgraphSchemaHandler: DependencyInjectedHandler<
         return { kind: "precondition_failed" };
       }
 
-      return { kind: "not_found" };
+      return { kind: "no_content" };
     }
 
     if (!hasSubgraphSchemaWriteGrant(user, graph.id, subgraph.id)) {
@@ -97,29 +85,15 @@ export const publishSubgraphSchemaHandler: DependencyInjectedHandler<
       return { kind: "precondition_failed" };
     }
 
-    if (currentSchemaRevision?.normalizedSdlSha256.equals(normalizedSdlSha256)) {
-      return {
-        kind: "ok",
-        etag: formatStrongETag(subgraph.id, currentSchemaRevision.revision),
-      };
+    if (!currentSchemaRevision) {
+      return { kind: "no_content" };
     }
 
-    const latestSchemaRevision =
-      currentSchemaRevision ?? (await selectLatestSubgraphSchemaRevision(transaction, subgraph.id));
-    const nextRevision = (latestSchemaRevision?.revision ?? 0n) + 1n;
-    const storedRevision = await insertSubgraphSchemaRevisionAndSetCurrent(transaction, {
-      createdAt: now,
-      normalizedSdl,
-      revision: nextRevision,
-      subgraphId: subgraph.id,
-    });
+    await clearCurrentSubgraphSchemaRevision(transaction, subgraph.id);
 
     await attemptGraphComposition(transaction, graph, now);
 
-    return {
-      kind: "ok",
-      etag: formatStrongETag(subgraph.id, storedRevision.revision),
-    };
+    return { kind: "no_content" };
   });
 
   if (result.kind === "forbidden") {
@@ -130,10 +104,5 @@ export const publishSubgraphSchemaHandler: DependencyInjectedHandler<
     return reply.problemDetails({ status: 412 });
   }
 
-  if (result.kind === "not_found") {
-    return reply.problemDetails({ status: 404 });
-  }
-
-  reply.header("ETag", result.etag);
   return reply.code(204).send();
 };

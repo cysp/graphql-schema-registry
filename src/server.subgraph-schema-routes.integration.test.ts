@@ -188,6 +188,34 @@ await test("subgraph schema routes integration with postgres", async (t) => {
         assert.equal(getUpdatedSchemaResponse.headers.etag, secondSchemaEtag);
         assert.equal(getUpdatedSchemaResponse.body, normalizeSchemaSdl(secondSchemaSdl));
 
+        const deleteSchemaResponse = await server.inject({
+          headers: authorizationIfMatchHeaders(schemaWriteToken, secondSchemaEtag),
+          method: "DELETE",
+          url: "/v1/graphs/catalog/subgraphs/inventory/schema.graphqls",
+        });
+        assert.equal(deleteSchemaResponse.statusCode, 204);
+        assert.equal(deleteSchemaResponse.body, "");
+
+        const getDeletedSchemaResponse = await server.inject({
+          headers: authorizationHeaders(schemaReadToken),
+          method: "GET",
+          url: "/v1/graphs/catalog/subgraphs/inventory/schema.graphqls",
+        });
+        assert.equal(getDeletedSchemaResponse.statusCode, 404);
+
+        const republishResponse = await server.inject({
+          headers: {
+            ...authorizationHeaders(schemaWriteToken),
+            "content-type": "text/plain",
+          },
+          method: "POST",
+          payload: firstSchemaSdl,
+          url: "/v1/graphs/catalog/subgraphs/inventory/schema.graphqls",
+        });
+        assert.equal(republishResponse.statusCode, 204);
+        const thirdSchemaEtag = String(republishResponse.headers.etag);
+        assert.equal(thirdSchemaEtag, formatStrongETag(createdSubgraph.id, 3));
+
         const metadataAfterSchemaPublishResponse = await server.inject({
           headers: adminHeaders(adminToken),
           method: "GET",
@@ -221,8 +249,8 @@ await test("subgraph schema routes integration with postgres", async (t) => {
           url: "/v1/graphs/catalog/subgraphs/inventory/schema.graphqls",
         });
         assert.equal(schemaAfterMetadataUpdateResponse.statusCode, 200);
-        assert.equal(schemaAfterMetadataUpdateResponse.headers.etag, secondSchemaEtag);
-        assert.equal(schemaAfterMetadataUpdateResponse.body, normalizeSchemaSdl(secondSchemaSdl));
+        assert.equal(schemaAfterMetadataUpdateResponse.headers.etag, thirdSchemaEtag);
+        assert.equal(schemaAfterMetadataUpdateResponse.body, normalizeSchemaSdl(firstSchemaSdl));
       },
     );
   });
@@ -286,6 +314,13 @@ await test("subgraph schema routes integration with postgres", async (t) => {
         });
         assert.equal(adminGetResponse.statusCode, 403);
 
+        const adminDeleteResponse = await server.inject({
+          headers: adminHeaders(adminToken),
+          method: "DELETE",
+          url: "/v1/graphs/catalog/subgraphs/inventory/schema.graphqls",
+        });
+        assert.equal(adminDeleteResponse.statusCode, 403);
+
         const invalidIfMatchResponse = await server.inject({
           headers: {
             ...authorizationIfMatchHeaders(schemaWriteToken, "invalid-etag"),
@@ -320,6 +355,16 @@ await test("subgraph schema routes integration with postgres", async (t) => {
         assert.equal(publishResponse.statusCode, 204);
         const currentEtag = String(publishResponse.headers.etag);
 
+        const staleDeleteResponse = await server.inject({
+          headers: authorizationIfMatchHeaders(
+            schemaWriteToken,
+            formatStrongETag(createdSubgraph.id, 999),
+          ),
+          method: "DELETE",
+          url: "/v1/graphs/catalog/subgraphs/inventory/schema.graphqls",
+        });
+        assert.equal(staleDeleteResponse.statusCode, 412);
+
         const stalePublishResponse = await server.inject({
           headers: {
             ...authorizationIfMatchHeaders(
@@ -352,6 +397,13 @@ await test("subgraph schema routes integration with postgres", async (t) => {
         });
         assert.equal(missingGraphPublishResponse.statusCode, 404);
 
+        const missingGraphDeleteResponse = await server.inject({
+          headers: authorizationHeaders(schemaWriteToken),
+          method: "DELETE",
+          url: "/v1/graphs/missing/subgraphs/inventory/schema.graphqls",
+        });
+        assert.equal(missingGraphDeleteResponse.statusCode, 204);
+
         const staleMissingGraphPublishResponse = await server.inject({
           headers: {
             ...authorizationIfMatchHeaders(schemaWriteToken, currentEtag),
@@ -362,6 +414,13 @@ await test("subgraph schema routes integration with postgres", async (t) => {
           url: "/v1/graphs/missing/subgraphs/inventory/schema.graphqls",
         });
         assert.equal(staleMissingGraphPublishResponse.statusCode, 412);
+
+        const staleMissingGraphDeleteResponse = await server.inject({
+          headers: authorizationIfMatchHeaders(schemaWriteToken, currentEtag),
+          method: "DELETE",
+          url: "/v1/graphs/missing/subgraphs/inventory/schema.graphqls",
+        });
+        assert.equal(staleMissingGraphDeleteResponse.statusCode, 412);
       },
     );
   });
