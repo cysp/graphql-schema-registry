@@ -154,6 +154,41 @@ paths:
         "503":
           $ref: "#/components/responses/ServiceUnavailable"
 
+  /v1/graphs/{graphSlug}/supergraph.graphqls:
+    get:
+      operationId: getSupergraphSchema
+      summary: Get the current supergraph schema SDL
+      parameters:
+        - $ref: "#/components/parameters/GraphSlug"
+        - $ref: "#/components/parameters/IfNoneMatch"
+      responses:
+        "200":
+          description: OK
+          headers:
+            ETag:
+              $ref: "#/components/headers/ETag"
+          content:
+            text/plain:
+              schema:
+                type: string
+        "304":
+          description: Not Modified
+          headers:
+            ETag:
+              $ref: "#/components/headers/ETag"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "500":
+          $ref: "#/components/responses/InternalServerError"
+        "503":
+          $ref: "#/components/responses/ServiceUnavailable"
+
   /v1/graphs/{graphSlug}/subgraphs:
     get:
       operationId: listSubgraphs
@@ -414,6 +449,8 @@ components:
       $ref: "./components/parameters/subgraph-slug.yaml"
     IfMatch:
       $ref: "./components/parameters/if-match.yaml"
+    IfNoneMatch:
+      $ref: "./components/parameters/if-none-match.yaml"
   schemas:
     Graph:
       $ref: "./components/schemas/graph.yaml"
