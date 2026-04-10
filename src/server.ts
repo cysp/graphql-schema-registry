@@ -20,6 +20,7 @@ import { deleteSubgraphHandler } from "./domain/routes/delete-subgraph.ts";
 import { getGraphHandler } from "./domain/routes/get-graph.ts";
 import { getSubgraphSchemaHandler } from "./domain/routes/get-subgraph-schema.ts";
 import { getSubgraphHandler } from "./domain/routes/get-subgraph.ts";
+import { getSupergraphSchemaHandler } from "./domain/routes/get-supergraph-schema.ts";
 import { listGraphsHandler } from "./domain/routes/list-graphs.ts";
 import { listSubgraphsHandler } from "./domain/routes/list-subgraphs.ts";
 import { publishSubgraphSchemaHandler } from "./domain/routes/publish-subgraph-schema.ts";
@@ -142,6 +143,10 @@ export function createFastifyServer({
         ),
         deleteSubgraph: fastifyHandlerWithDependencies(deleteSubgraphHandler, routeDependencies),
         getGraph: fastifyHandlerWithDependencies(getGraphHandler, routeDependencies),
+        getSupergraphSchema: fastifyHandlerWithDependencies(
+          getSupergraphSchemaHandler,
+          routeDependencies,
+        ),
         getSubgraphSchema: fastifyHandlerWithDependencies(
           getSubgraphSchemaHandler,
           routeDependencies,
