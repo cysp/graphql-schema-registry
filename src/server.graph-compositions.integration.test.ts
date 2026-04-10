@@ -149,6 +149,21 @@ async function deleteSubgraph(
   assert.equal(response.statusCode, 204);
 }
 
+async function deleteSubgraphSchema(
+  fixture: IntegrationFixture,
+  createToken: ReturnType<typeof createAuthJwtSigner>["createToken"],
+  graph: ReturnType<typeof requireGraphPayload>,
+  subgraph: ReturnType<typeof requireSubgraphPayload>,
+): Promise<void> {
+  const schemaWriteToken = createSubgraphSchemaGrantToken(createToken, graph.id, subgraph.id);
+  const response = await fixture.server.inject({
+    headers: authorizationHeaders(schemaWriteToken),
+    method: "DELETE",
+    url: `/v1/graphs/${graph.slug}/subgraphs/${subgraph.slug}/schema.graphqls`,
+  });
+  assert.equal(response.statusCode, 204);
+}
+
 async function selectGraphCompositionSnapshot(
   fixture: IntegrationFixture,
   graphId: string,
@@ -438,6 +453,52 @@ await test("graph composition integration with postgres", async (t) => {
   );
 
   await t.test(
+    "clears both graph composition pointers when the final member schema is deleted",
+    async () => {
+      const fixture = await createIntegrationServerFixture({
+        databaseUrl: integrationDatabaseUrl,
+        jwtVerification: jwtSigner.jwtVerification,
+      });
+
+      try {
+        const createdGraph = await createGraph(fixture, adminToken, "catalog");
+        const createdSubgraph = await createSubgraph(
+          fixture,
+          adminToken,
+          createdGraph.slug,
+          "inventory",
+          "https://inventory.example.com/graphql",
+        );
+        await publishSubgraphSchema(
+          fixture,
+          jwtSigner.createToken,
+          createdGraph,
+          createdSubgraph,
+          inventorySchemaSdl,
+        );
+        await deleteSubgraphSchema(fixture, jwtSigner.createToken, createdGraph, createdSubgraph);
+
+        assert.deepEqual(await selectGraphCompositionSnapshot(fixture, createdGraph.id), {
+          currentCompositionRevision: null,
+          currentSupergraphSchemaRevision: null,
+          compositionRevisions: ["1"],
+          supergraphSchemaRevisions: ["1"],
+          members: [
+            {
+              compositionRevision: "1",
+              subgraphId: createdSubgraph.id,
+              subgraphRevision: "1",
+              subgraphSchemaRevision: "1",
+            },
+          ],
+        });
+      } finally {
+        await fixture.close();
+      }
+    },
+  );
+
+  await t.test(
     "does not recompose when a schema-less subgraph changes routing after a failed attempt",
     async () => {
       const fixture = await createIntegrationServerFixture({
@@ -547,6 +608,73 @@ await test("graph composition integration with postgres", async (t) => {
           inventorySchemaSdl,
         );
         await deleteSubgraph(fixture, adminToken, createdGraph.slug, firstSubgraph.slug);
+
+        const secondSubgraph = await createSubgraph(
+          fixture,
+          adminToken,
+          createdGraph.slug,
+          "warehouse",
+          "https://warehouse.example.com/graphql",
+        );
+        await publishSubgraphSchema(
+          fixture,
+          jwtSigner.createToken,
+          createdGraph,
+          secondSubgraph,
+          inventorySchemaSdl,
+        );
+
+        assert.deepEqual(await selectGraphCompositionSnapshot(fixture, createdGraph.id), {
+          currentCompositionRevision: "2",
+          currentSupergraphSchemaRevision: "2",
+          compositionRevisions: ["1", "2"],
+          supergraphSchemaRevisions: ["1", "2"],
+          members: sortGraphCompositionMembers([
+            {
+              compositionRevision: "1",
+              subgraphId: firstSubgraph.id,
+              subgraphRevision: "1",
+              subgraphSchemaRevision: "1",
+            },
+            {
+              compositionRevision: "2",
+              subgraphId: secondSubgraph.id,
+              subgraphRevision: "1",
+              subgraphSchemaRevision: "1",
+            },
+          ]),
+        });
+      } finally {
+        await fixture.close();
+      }
+    },
+  );
+
+  await t.test(
+    "uses a new composition revision after clearing graph composition pointers via schema delete",
+    async () => {
+      const fixture = await createIntegrationServerFixture({
+        databaseUrl: integrationDatabaseUrl,
+        jwtVerification: jwtSigner.jwtVerification,
+      });
+
+      try {
+        const createdGraph = await createGraph(fixture, adminToken, "catalog");
+        const firstSubgraph = await createSubgraph(
+          fixture,
+          adminToken,
+          createdGraph.slug,
+          "inventory",
+          "https://inventory.example.com/graphql",
+        );
+        await publishSubgraphSchema(
+          fixture,
+          jwtSigner.createToken,
+          createdGraph,
+          firstSubgraph,
+          inventorySchemaSdl,
+        );
+        await deleteSubgraphSchema(fixture, jwtSigner.createToken, createdGraph, firstSubgraph);
 
         const secondSubgraph = await createSubgraph(
           fixture,

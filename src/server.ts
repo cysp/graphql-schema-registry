@@ -15,6 +15,7 @@ import type { JwtVerification } from "./domain/jwt.ts";
 import { createGraphHandler } from "./domain/routes/create-graph.ts";
 import { createSubgraphHandler } from "./domain/routes/create-subgraph.ts";
 import { deleteGraphHandler } from "./domain/routes/delete-graph.ts";
+import { deleteSubgraphSchemaHandler } from "./domain/routes/delete-subgraph-schema.ts";
 import { deleteSubgraphHandler } from "./domain/routes/delete-subgraph.ts";
 import { getGraphHandler } from "./domain/routes/get-graph.ts";
 import { getSubgraphSchemaHandler } from "./domain/routes/get-subgraph-schema.ts";
@@ -135,6 +136,10 @@ export function createFastifyServer({
         createGraph: fastifyHandlerWithDependencies(createGraphHandler, routeDependencies),
         createSubgraph: fastifyHandlerWithDependencies(createSubgraphHandler, routeDependencies),
         deleteGraph: fastifyHandlerWithDependencies(deleteGraphHandler, routeDependencies),
+        deleteSubgraphSchema: fastifyHandlerWithDependencies(
+          deleteSubgraphSchemaHandler,
+          routeDependencies,
+        ),
         deleteSubgraph: fastifyHandlerWithDependencies(deleteSubgraphHandler, routeDependencies),
         getGraph: fastifyHandlerWithDependencies(getGraphHandler, routeDependencies),
         getSubgraphSchema: fastifyHandlerWithDependencies(
