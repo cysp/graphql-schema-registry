@@ -1,4 +1,4 @@
-import { and, asc, desc, eq, isNull } from "drizzle-orm";
+import { and, asc, desc, eq, isNull, sql } from "drizzle-orm";
 
 import {
   graphCompositionSubgraphs,
@@ -16,6 +16,10 @@ import type {
   StoredGraphCompositionAttempt,
   StoredSupergraphSchema,
 } from "../types.ts";
+import {
+  encodeSupergraphSchemaUpdatedNotification,
+  supergraphSchemaUpdatesChannel,
+} from "../../supergraph-schema-updates.ts";
 
 export async function selectLatestGraphCompositionRevision(
   database: PostgresJsExecutor,
@@ -207,4 +211,16 @@ export async function clearGraphCompositionPointers(
   if (!updatedGraph) {
     throw new Error("Graph composition pointers clear did not return the updated row.");
   }
+}
+
+export async function notifySupergraphSchemaUpdated(
+  transaction: PostgresJsTransaction,
+  notification: {
+    compositionRevision: bigint;
+    graphId: string;
+  },
+): Promise<void> {
+  await transaction.execute(
+    sql`SELECT pg_notify(${supergraphSchemaUpdatesChannel}, ${encodeSupergraphSchemaUpdatedNotification(notification)})`,
+  );
 }
