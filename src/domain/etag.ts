@@ -7,6 +7,12 @@ export type EntityTagCondition =
       entityTags: string[];
     };
 
+export type ResourceRevisionEntityTag = {
+  resourceId: string;
+  revision: bigint;
+  weak: boolean;
+};
+
 function isOptionalWhitespace(char: string | undefined): boolean {
   return char === " " || char === "\t";
 }
@@ -124,6 +130,46 @@ function encodeEntityTagComponent(value: string): string {
 
 export function formatStrongETag(resourceId: string, revision: bigint | number): string {
   return `"${encodeEntityTagComponent(resourceId)}:${String(revision)}"`;
+}
+
+export function parseResourceRevisionEntityTag(
+  entityTag: string,
+): ResourceRevisionEntityTag | undefined {
+  const parsedEntityTag = parseEntityTag(entityTag, 0);
+  if (parsedEntityTag === undefined || parsedEntityTag.nextIndex !== entityTag.length) {
+    return undefined;
+  }
+
+  const weak = entityTag.startsWith("W/");
+  const opaqueTagStart = weak ? 3 : 1;
+  const opaqueTag = entityTag.slice(opaqueTagStart, -1);
+  const separatorIndex = opaqueTag.lastIndexOf(":");
+  if (separatorIndex <= 0 || separatorIndex === opaqueTag.length - 1) {
+    return undefined;
+  }
+
+  const encodedResourceId = opaqueTag.slice(0, separatorIndex);
+  const revisionText = opaqueTag.slice(separatorIndex + 1);
+  if (!/^\d+$/u.test(revisionText)) {
+    return undefined;
+  }
+
+  let resourceId: string;
+  try {
+    resourceId = decodeURIComponent(encodedResourceId);
+  } catch {
+    return undefined;
+  }
+
+  try {
+    return {
+      resourceId,
+      revision: BigInt(revisionText),
+      weak,
+    };
+  } catch {
+    return undefined;
+  }
 }
 
 function parseEntityTagHeader(
