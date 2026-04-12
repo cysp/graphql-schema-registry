@@ -41,18 +41,20 @@ export const createSubgraphHandler: DependencyInjectedHandler<
 
       const graph = await selectActiveGraphBySlugForUpdate(transaction, request.params.graphSlug);
 
-      if (
-        !etagSatisfiesIfMatch(ifMatch, graph && formatStrongETag(graph.id, graph.currentRevision))
-      ) {
-        return { kind: "precondition_failed" } as const;
-      }
-
       if (!graph) {
+        if (!etagSatisfiesIfMatch(ifMatch, undefined)) {
+          return { kind: "precondition_failed" } as const;
+        }
+
         return { kind: "not_found" } as const;
       }
 
       if (!canManageGraph(user.grants, graph.id)) {
         return { kind: "forbidden" } as const;
+      }
+
+      if (!etagSatisfiesIfMatch(ifMatch, formatStrongETag(graph.id, graph.currentRevision))) {
+        return { kind: "precondition_failed" } as const;
       }
 
       const subgraph = await insertSubgraphWithInitialRevision(

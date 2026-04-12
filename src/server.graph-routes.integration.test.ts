@@ -256,6 +256,55 @@ await test("graph routes integration with postgres", async (t) => {
   });
 
   await t.test(
+    "returns 403 for unauthorized graph:manage users before evaluating If-Match on existing graphs",
+    async () => {
+      await withIntegrationServer(integrationDatabaseUrl, jwtVerification, async (server) => {
+        const createGraphResponse = await server.inject({
+          headers: adminHeaders(adminToken),
+          method: "POST",
+          payload: {
+            slug: "catalog",
+          },
+          url: "/v1/graphs",
+        });
+        assert.equal(createGraphResponse.statusCode, 201);
+        const createdGraph = requireGraphPayload(parseJson(createGraphResponse));
+
+        const unauthorizedManageToken = createToken({
+          authorization_details: [
+            {
+              graph_id: "unmanaged-graph-id",
+              scope: "graph:manage",
+              type: authorizationDetailsType,
+            },
+          ],
+        });
+
+        const unauthorizedUpdateResponse = await server.inject({
+          headers: adminIfMatchHeaders(
+            unauthorizedManageToken,
+            formatStrongETag(createdGraph.id, 2),
+          ),
+          method: "PUT",
+          payload: {},
+          url: "/v1/graphs/catalog",
+        });
+        assert.equal(unauthorizedUpdateResponse.statusCode, 403);
+
+        const unauthorizedDeleteResponse = await server.inject({
+          headers: adminIfMatchHeaders(
+            unauthorizedManageToken,
+            formatStrongETag(createdGraph.id, 2),
+          ),
+          method: "DELETE",
+          url: "/v1/graphs/catalog",
+        });
+        assert.equal(unauthorizedDeleteResponse.statusCode, 403);
+      });
+    },
+  );
+
+  await t.test(
     "filters list responses for scoped manage grants and requires wildcard for create",
     async () => {
       await withIntegrationServer(integrationDatabaseUrl, jwtVerification, async (server) => {

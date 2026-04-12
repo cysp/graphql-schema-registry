@@ -52,18 +52,20 @@ export const updateGraphHandler: DependencyInjectedHandler<
   const result: UpdateGraphTransactionResult = await database.transaction(async (transaction) => {
     let graph = await selectActiveGraphBySlugForUpdate(transaction, request.params.graphSlug);
 
-    if (
-      !etagSatisfiesIfMatch(ifMatch, graph && formatStrongETag(graph.id, graph.currentRevision))
-    ) {
-      return { kind: "precondition_failed" };
-    }
-
     if (!graph) {
+      if (!etagSatisfiesIfMatch(ifMatch, undefined)) {
+        return { kind: "precondition_failed" };
+      }
+
       return { kind: "not_found" };
     }
 
     if (!canManageGraph(user.grants, graph.id)) {
       return { kind: "forbidden" };
+    }
+
+    if (!etagSatisfiesIfMatch(ifMatch, formatStrongETag(graph.id, graph.currentRevision))) {
+      return { kind: "precondition_failed" };
     }
 
     return {

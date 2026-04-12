@@ -3,6 +3,7 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 
+import { authorizationDetailsType } from "./domain/authorization/details.ts";
 import { formatStrongETag } from "./domain/etag.ts";
 import {
   adminHeaders,
@@ -20,7 +21,7 @@ await test("subgraph routes integration with postgres", async (t) => {
     return;
   }
 
-  const { adminToken, jwtVerification } = createAdminIntegrationAuth();
+  const { adminToken, createToken, jwtVerification } = createAdminIntegrationAuth();
 
   await t.test("supports full subgraph CRUD flow", async () => {
     await withIntegrationServer(integrationDatabaseUrl, jwtVerification, async (server) => {
@@ -357,4 +358,46 @@ await test("subgraph routes integration with postgres", async (t) => {
       assert.equal(invalidDeleteResponse.statusCode, 400);
     });
   });
+
+  await t.test(
+    "returns 403 for unauthorized graph:manage users before evaluating If-Match on existing graphs",
+    async () => {
+      await withIntegrationServer(integrationDatabaseUrl, jwtVerification, async (server) => {
+        const createGraphResponse = await server.inject({
+          headers: adminHeaders(adminToken),
+          method: "POST",
+          payload: {
+            slug: "catalog",
+          },
+          url: "/v1/graphs",
+        });
+        assert.equal(createGraphResponse.statusCode, 201);
+        const createdGraph = requireGraphPayload(parseJson(createGraphResponse));
+
+        const unauthorizedManageToken = createToken({
+          authorization_details: [
+            {
+              graph_id: "unmanaged-graph-id",
+              scope: "graph:manage",
+              type: authorizationDetailsType,
+            },
+          ],
+        });
+
+        const createSubgraphResponse = await server.inject({
+          headers: adminIfMatchHeaders(
+            unauthorizedManageToken,
+            formatStrongETag(createdGraph.id, 2),
+          ),
+          method: "POST",
+          payload: {
+            routingUrl: "https://inventory.example.com/graphql",
+            slug: "inventory",
+          },
+          url: "/v1/graphs/catalog/subgraphs",
+        });
+        assert.equal(createSubgraphResponse.statusCode, 403);
+      });
+    },
+  );
 });
