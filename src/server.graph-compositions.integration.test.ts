@@ -7,10 +7,9 @@ import { authorizationDetailsType } from "./domain/authorization/details.ts";
 import { createAuthJwtSigner } from "./domain/jwt-signer.ts";
 import { normalizeSchemaSdl } from "./domain/subgraph-schema.ts";
 import {
-  adminHeaders,
   authorizationHeaders,
-  parseJson,
   createIntegrationServerFixture,
+  parseJson,
 } from "./test-support/integration-server.ts";
 import { requireGraphPayload, requireSubgraphPayload } from "./test-support/payloads.ts";
 
@@ -59,7 +58,7 @@ function createSubgraphSchemaGrantToken(
     authorization_details: [
       {
         graph_id: graphId,
-        scope: "subgraph-schema:write",
+        scope: "subgraph_schema:write",
         subgraph_id: subgraphId,
         type: authorizationDetailsType,
       },
@@ -69,11 +68,11 @@ function createSubgraphSchemaGrantToken(
 
 async function createGraph(
   fixture: IntegrationFixture,
-  adminToken: string,
+  graphManageToken: string,
   slug: string,
 ): Promise<ReturnType<typeof requireGraphPayload>> {
   const response = await fixture.server.inject({
-    headers: adminHeaders(adminToken),
+    headers: authorizationHeaders(graphManageToken),
     method: "POST",
     payload: { slug },
     url: "/v1/graphs",
@@ -84,13 +83,13 @@ async function createGraph(
 
 async function createSubgraph(
   fixture: IntegrationFixture,
-  adminToken: string,
+  graphManageToken: string,
   graphSlug: string,
   slug: string,
   routingUrl: string,
 ): Promise<ReturnType<typeof requireSubgraphPayload>> {
   const response = await fixture.server.inject({
-    headers: adminHeaders(adminToken),
+    headers: authorizationHeaders(graphManageToken),
     method: "POST",
     payload: { routingUrl, slug },
     url: `/v1/graphs/${graphSlug}/subgraphs`,
@@ -121,13 +120,13 @@ async function publishSubgraphSchema(
 
 async function updateSubgraphRoutingUrl(
   fixture: IntegrationFixture,
-  adminToken: string,
+  graphManageToken: string,
   graphSlug: string,
   subgraphSlug: string,
   routingUrl: string,
 ): Promise<void> {
   const response = await fixture.server.inject({
-    headers: adminHeaders(adminToken),
+    headers: authorizationHeaders(graphManageToken),
     method: "PUT",
     payload: { routingUrl },
     url: `/v1/graphs/${graphSlug}/subgraphs/${subgraphSlug}`,
@@ -137,12 +136,12 @@ async function updateSubgraphRoutingUrl(
 
 async function deleteSubgraph(
   fixture: IntegrationFixture,
-  adminToken: string,
+  graphManageToken: string,
   graphSlug: string,
   subgraphSlug: string,
 ): Promise<void> {
   const response = await fixture.server.inject({
-    headers: adminHeaders(adminToken),
+    headers: authorizationHeaders(graphManageToken),
     method: "DELETE",
     url: `/v1/graphs/${graphSlug}/subgraphs/${subgraphSlug}`,
   });
@@ -250,10 +249,11 @@ await test("graph composition integration with postgres", async (t) => {
   }
 
   const jwtSigner = createAuthJwtSigner();
-  const adminToken = jwtSigner.createToken({
+  const graphManageToken = jwtSigner.createToken({
     authorization_details: [
       {
-        scope: "admin",
+        graph_id: "*",
+        scope: "graph:manage",
         type: authorizationDetailsType,
       },
     ],
@@ -266,10 +266,10 @@ await test("graph composition integration with postgres", async (t) => {
     });
 
     try {
-      const createdGraph = await createGraph(fixture, adminToken, "catalog");
+      const createdGraph = await createGraph(fixture, graphManageToken, "catalog");
       const createdSubgraph = await createSubgraph(
         fixture,
-        adminToken,
+        graphManageToken,
         createdGraph.slug,
         "inventory",
         "https://inventory.example.com/graphql",
@@ -323,10 +323,10 @@ await test("graph composition integration with postgres", async (t) => {
       });
 
       try {
-        const createdGraph = await createGraph(fixture, adminToken, "catalog");
+        const createdGraph = await createGraph(fixture, graphManageToken, "catalog");
         const inventorySubgraph = await createSubgraph(
           fixture,
-          adminToken,
+          graphManageToken,
           createdGraph.slug,
           "inventory",
           "https://inventory.example.com/graphql",
@@ -340,7 +340,7 @@ await test("graph composition integration with postgres", async (t) => {
         );
         const warehouseSubgraph = await createSubgraph(
           fixture,
-          adminToken,
+          graphManageToken,
           createdGraph.slug,
           "warehouse",
           "https://warehouse.example.com/graphql",
@@ -415,10 +415,10 @@ await test("graph composition integration with postgres", async (t) => {
       });
 
       try {
-        const createdGraph = await createGraph(fixture, adminToken, "catalog");
+        const createdGraph = await createGraph(fixture, graphManageToken, "catalog");
         const createdSubgraph = await createSubgraph(
           fixture,
-          adminToken,
+          graphManageToken,
           createdGraph.slug,
           "inventory",
           "https://inventory.example.com/graphql",
@@ -430,7 +430,7 @@ await test("graph composition integration with postgres", async (t) => {
           createdSubgraph,
           inventorySchemaSdl,
         );
-        await deleteSubgraph(fixture, adminToken, createdGraph.slug, createdSubgraph.slug);
+        await deleteSubgraph(fixture, graphManageToken, createdGraph.slug, createdSubgraph.slug);
 
         assert.deepEqual(await selectGraphCompositionSnapshot(fixture, createdGraph.id), {
           currentCompositionRevision: null,
@@ -461,10 +461,10 @@ await test("graph composition integration with postgres", async (t) => {
       });
 
       try {
-        const createdGraph = await createGraph(fixture, adminToken, "catalog");
+        const createdGraph = await createGraph(fixture, graphManageToken, "catalog");
         const createdSubgraph = await createSubgraph(
           fixture,
-          adminToken,
+          graphManageToken,
           createdGraph.slug,
           "inventory",
           "https://inventory.example.com/graphql",
@@ -507,10 +507,10 @@ await test("graph composition integration with postgres", async (t) => {
       });
 
       try {
-        const createdGraph = await createGraph(fixture, adminToken, "catalog");
+        const createdGraph = await createGraph(fixture, graphManageToken, "catalog");
         const inventorySubgraph = await createSubgraph(
           fixture,
-          adminToken,
+          graphManageToken,
           createdGraph.slug,
           "inventory",
           "https://inventory.example.com/graphql",
@@ -524,7 +524,7 @@ await test("graph composition integration with postgres", async (t) => {
         );
         const warehouseSubgraph = await createSubgraph(
           fixture,
-          adminToken,
+          graphManageToken,
           createdGraph.slug,
           "warehouse",
           "https://warehouse.example.com/graphql",
@@ -538,14 +538,14 @@ await test("graph composition integration with postgres", async (t) => {
         );
         await createSubgraph(
           fixture,
-          adminToken,
+          graphManageToken,
           createdGraph.slug,
           "logistics",
           "https://logistics-v1.example.com/graphql",
         );
         await updateSubgraphRoutingUrl(
           fixture,
-          adminToken,
+          graphManageToken,
           createdGraph.slug,
           "logistics",
           "https://logistics-v2.example.com/graphql",
@@ -592,10 +592,10 @@ await test("graph composition integration with postgres", async (t) => {
       });
 
       try {
-        const createdGraph = await createGraph(fixture, adminToken, "catalog");
+        const createdGraph = await createGraph(fixture, graphManageToken, "catalog");
         const firstSubgraph = await createSubgraph(
           fixture,
-          adminToken,
+          graphManageToken,
           createdGraph.slug,
           "inventory",
           "https://inventory.example.com/graphql",
@@ -607,11 +607,11 @@ await test("graph composition integration with postgres", async (t) => {
           firstSubgraph,
           inventorySchemaSdl,
         );
-        await deleteSubgraph(fixture, adminToken, createdGraph.slug, firstSubgraph.slug);
+        await deleteSubgraph(fixture, graphManageToken, createdGraph.slug, firstSubgraph.slug);
 
         const secondSubgraph = await createSubgraph(
           fixture,
-          adminToken,
+          graphManageToken,
           createdGraph.slug,
           "warehouse",
           "https://warehouse.example.com/graphql",
@@ -659,10 +659,10 @@ await test("graph composition integration with postgres", async (t) => {
       });
 
       try {
-        const createdGraph = await createGraph(fixture, adminToken, "catalog");
+        const createdGraph = await createGraph(fixture, graphManageToken, "catalog");
         const firstSubgraph = await createSubgraph(
           fixture,
-          adminToken,
+          graphManageToken,
           createdGraph.slug,
           "inventory",
           "https://inventory.example.com/graphql",
@@ -678,7 +678,7 @@ await test("graph composition integration with postgres", async (t) => {
 
         const secondSubgraph = await createSubgraph(
           fixture,
-          adminToken,
+          graphManageToken,
           createdGraph.slug,
           "warehouse",
           "https://warehouse.example.com/graphql",
