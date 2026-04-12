@@ -11,7 +11,7 @@ import { createFastifyServer } from "./server.ts";
 
 const graphReadGrant = {
   graph_id: "graph-1",
-  scope: "graph:read",
+  scope: "supergraph_schema:read",
   type: authorizationDetailsType,
 } as const;
 
@@ -35,7 +35,8 @@ await test("server: graph routes", async (t) => {
     return createToken({
       authorization_details: [
         {
-          scope: "admin",
+          graph_id: "*",
+          scope: "graph:manage",
           type: authorizationDetailsType,
         },
       ],
@@ -58,7 +59,9 @@ await test("server: graph routes", async (t) => {
       adminExpectedStatus: 503,
       adminExpectedTitle: "Service Unavailable",
       createAdminToken,
-      forbiddenDescription: "graph:read users",
+      forbiddenDescription: "supergraph_schema:read users",
+      forbiddenExpectedStatus: 503,
+      forbiddenExpectedTitle: "Service Unavailable",
       forbiddenToken: createGraphReadToken(),
       request,
       server,
@@ -79,7 +82,7 @@ await test("server: graph routes", async (t) => {
       adminExpectedStatus: 503,
       adminExpectedTitle: "Service Unavailable",
       createAdminToken,
-      forbiddenDescription: "graph:read users",
+      forbiddenDescription: "supergraph_schema:read users",
       forbiddenToken: createGraphReadToken(),
       request,
       server,
@@ -96,7 +99,9 @@ await test("server: graph routes", async (t) => {
       adminExpectedStatus: 503,
       adminExpectedTitle: "Service Unavailable",
       createAdminToken,
-      forbiddenDescription: "graph:read users",
+      forbiddenDescription: "supergraph_schema:read users",
+      forbiddenExpectedStatus: 503,
+      forbiddenExpectedTitle: "Service Unavailable",
       forbiddenToken: createGraphReadToken(),
       request,
       server,
@@ -115,7 +120,9 @@ await test("server: graph routes", async (t) => {
       adminExpectedStatus: 503,
       adminExpectedTitle: "Service Unavailable",
       createAdminToken,
-      forbiddenDescription: "graph:read users",
+      forbiddenDescription: "supergraph_schema:read users",
+      forbiddenExpectedStatus: 503,
+      forbiddenExpectedTitle: "Service Unavailable",
       forbiddenToken: createGraphReadToken(),
       request,
       server,
@@ -132,7 +139,9 @@ await test("server: graph routes", async (t) => {
       adminExpectedStatus: 503,
       adminExpectedTitle: "Service Unavailable",
       createAdminToken,
-      forbiddenDescription: "graph:read users",
+      forbiddenDescription: "supergraph_schema:read users",
+      forbiddenExpectedStatus: 503,
+      forbiddenExpectedTitle: "Service Unavailable",
       forbiddenToken: createGraphReadToken(),
       request,
       server,

@@ -3,6 +3,7 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 
+import { authorizationDetailsType } from "./domain/authorization/details.ts";
 import { formatStrongETag } from "./domain/etag.ts";
 import {
   adminHeaders,
@@ -20,7 +21,7 @@ await test("graph routes integration with postgres", async (t) => {
     return;
   }
 
-  const { adminToken, jwtVerification } = createAdminIntegrationAuth();
+  const { adminToken, createToken, jwtVerification } = createAdminIntegrationAuth();
 
   await t.test("supports full graph CRUD flow", async () => {
     await withIntegrationServer(integrationDatabaseUrl, jwtVerification, async (server) => {
@@ -253,6 +254,71 @@ await test("graph routes integration with postgres", async (t) => {
       assert.equal(idempotentDeleteResponse.statusCode, 204);
     });
   });
+
+  await t.test(
+    "filters list responses for scoped manage grants and requires wildcard for create",
+    async () => {
+      await withIntegrationServer(integrationDatabaseUrl, jwtVerification, async (server) => {
+        const createCatalogResponse = await server.inject({
+          headers: adminHeaders(adminToken),
+          method: "POST",
+          payload: {
+            slug: "catalog",
+          },
+          url: "/v1/graphs",
+        });
+        assert.equal(createCatalogResponse.statusCode, 201);
+        const catalogGraph = requireGraphPayload(parseJson(createCatalogResponse));
+
+        const createReviewsResponse = await server.inject({
+          headers: adminHeaders(adminToken),
+          method: "POST",
+          payload: {
+            slug: "reviews",
+          },
+          url: "/v1/graphs",
+        });
+        assert.equal(createReviewsResponse.statusCode, 201);
+        const reviewsGraph = requireGraphPayload(parseJson(createReviewsResponse));
+
+        const scopedManageToken = createToken({
+          authorization_details: [
+            {
+              graph_id: catalogGraph.id,
+              scope: "graph:manage",
+              type: authorizationDetailsType,
+            },
+          ],
+        });
+
+        const scopedListResponse = await server.inject({
+          headers: adminHeaders(scopedManageToken),
+          method: "GET",
+          url: "/v1/graphs",
+        });
+        assert.equal(scopedListResponse.statusCode, 200);
+        assert.deepEqual(parseJson(scopedListResponse), [catalogGraph]);
+
+        const scopedCreateResponse = await server.inject({
+          headers: adminHeaders(scopedManageToken),
+          method: "POST",
+          payload: {
+            slug: "products",
+          },
+          url: "/v1/graphs",
+        });
+        assert.equal(scopedCreateResponse.statusCode, 403);
+
+        const wildcardListResponse = await server.inject({
+          headers: adminHeaders(adminToken),
+          method: "GET",
+          url: "/v1/graphs",
+        });
+        assert.equal(wildcardListResponse.statusCode, 200);
+        assert.deepEqual(parseJson(wildcardListResponse), [catalogGraph, reviewsGraph]);
+      });
+    },
+  );
 
   await t.test("returns 400 for invalid if-match headers", async () => {
     await withIntegrationServer(integrationDatabaseUrl, jwtVerification, async (server) => {

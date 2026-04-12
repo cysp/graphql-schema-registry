@@ -59,7 +59,7 @@ function createSubgraphSchemaGrantToken(
     authorization_details: [
       {
         graph_id: graphId,
-        scope: "subgraph-schema:write",
+        scope: "subgraph_schema:write",
         subgraph_id: subgraphId,
         type: authorizationDetailsType,
       },
@@ -253,7 +253,8 @@ await test("graph composition integration with postgres", async (t) => {
   const adminToken = jwtSigner.createToken({
     authorization_details: [
       {
-        scope: "admin",
+        graph_id: "*",
+        scope: "graph:manage",
         type: authorizationDetailsType,
       },
     ],

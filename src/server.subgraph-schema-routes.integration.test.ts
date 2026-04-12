@@ -39,7 +39,7 @@ const invalidSchemaSdl = `
 
 function createSubgraphSchemaGrantToken(
   createToken: ReturnType<typeof createAuthJwtSigner>["createToken"],
-  scope: "subgraph-schema:read" | "subgraph-schema:write",
+  scope: "subgraph_schema:read" | "subgraph_schema:write",
   graphId: string,
   subgraphId: string,
 ): string {
@@ -66,7 +66,8 @@ await test("subgraph schema routes integration with postgres", async (t) => {
   const adminToken = jwtSigner.createToken({
     authorization_details: [
       {
-        scope: "admin",
+        graph_id: "*",
+        scope: "graph:manage",
         type: authorizationDetailsType,
       },
     ],
@@ -102,13 +103,13 @@ await test("subgraph schema routes integration with postgres", async (t) => {
 
         const schemaReadToken = createSubgraphSchemaGrantToken(
           jwtSigner.createToken,
-          "subgraph-schema:read",
+          "subgraph_schema:read",
           createdGraph.id,
           createdSubgraph.id,
         );
         const schemaWriteToken = createSubgraphSchemaGrantToken(
           jwtSigner.createToken,
-          "subgraph-schema:write",
+          "subgraph_schema:write",
           createdGraph.id,
           createdSubgraph.id,
         );
@@ -285,13 +286,13 @@ await test("subgraph schema routes integration with postgres", async (t) => {
 
         const schemaReadToken = createSubgraphSchemaGrantToken(
           jwtSigner.createToken,
-          "subgraph-schema:read",
+          "subgraph_schema:read",
           createdGraph.id,
           createdSubgraph.id,
         );
         const schemaWriteToken = createSubgraphSchemaGrantToken(
           jwtSigner.createToken,
-          "subgraph-schema:write",
+          "subgraph_schema:write",
           createdGraph.id,
           createdSubgraph.id,
         );

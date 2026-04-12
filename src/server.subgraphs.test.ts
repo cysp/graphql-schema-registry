@@ -11,13 +11,13 @@ import { createFastifyServer } from "./server.ts";
 
 const graphReadGrant = {
   graph_id: "graph-1",
-  scope: "graph:read",
+  scope: "supergraph_schema:read",
   type: authorizationDetailsType,
 } as const;
 
 const subgraphWriteGrant = {
   graph_id: "graph-1",
-  scope: "subgraph:write",
+  scope: "subgraph_schema:write",
   subgraph_id: "products",
   type: authorizationDetailsType,
 } as const;
@@ -42,7 +42,8 @@ await test("server: subgraph routes", async (t) => {
     return createToken({
       authorization_details: [
         {
-          scope: "admin",
+          graph_id: "*",
+          scope: "graph:manage",
           type: authorizationDetailsType,
         },
       ],
@@ -71,7 +72,9 @@ await test("server: subgraph routes", async (t) => {
       adminExpectedStatus: 503,
       adminExpectedTitle: "Service Unavailable",
       createAdminToken,
-      forbiddenDescription: "graph:read users",
+      forbiddenDescription: "supergraph_schema:read users",
+      forbiddenExpectedStatus: 503,
+      forbiddenExpectedTitle: "Service Unavailable",
       forbiddenToken: createGraphReadToken(),
       request,
       server,
@@ -93,7 +96,9 @@ await test("server: subgraph routes", async (t) => {
       adminExpectedStatus: 503,
       adminExpectedTitle: "Service Unavailable",
       createAdminToken,
-      forbiddenDescription: "subgraph:write users",
+      forbiddenDescription: "subgraph_schema:write users",
+      forbiddenExpectedStatus: 503,
+      forbiddenExpectedTitle: "Service Unavailable",
       forbiddenToken: createSubgraphWriteToken(),
       request,
       server,
@@ -110,7 +115,9 @@ await test("server: subgraph routes", async (t) => {
       adminExpectedStatus: 503,
       adminExpectedTitle: "Service Unavailable",
       createAdminToken,
-      forbiddenDescription: "graph:read users",
+      forbiddenDescription: "supergraph_schema:read users",
+      forbiddenExpectedStatus: 503,
+      forbiddenExpectedTitle: "Service Unavailable",
       forbiddenToken: createGraphReadToken(),
       request,
       server,
@@ -131,7 +138,9 @@ await test("server: subgraph routes", async (t) => {
       adminExpectedStatus: 503,
       adminExpectedTitle: "Service Unavailable",
       createAdminToken,
-      forbiddenDescription: "subgraph:write users",
+      forbiddenDescription: "subgraph_schema:write users",
+      forbiddenExpectedStatus: 503,
+      forbiddenExpectedTitle: "Service Unavailable",
       forbiddenToken: createSubgraphWriteToken(),
       request,
       server,
@@ -148,7 +157,9 @@ await test("server: subgraph routes", async (t) => {
       adminExpectedStatus: 503,
       adminExpectedTitle: "Service Unavailable",
       createAdminToken,
-      forbiddenDescription: "subgraph:write users",
+      forbiddenDescription: "subgraph_schema:write users",
+      forbiddenExpectedStatus: 503,
+      forbiddenExpectedTitle: "Service Unavailable",
       forbiddenToken: createSubgraphWriteToken(),
       request,
       server,

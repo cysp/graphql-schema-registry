@@ -2,25 +2,26 @@ import { z } from "zod";
 
 import { decodeAuthorizationDetailsClaim } from "./details.ts";
 
-export type AdminAuthorizationGrant = {
-  scope: "admin";
-};
-
-export type GraphAuthorizationGrant = {
-  scope: "graph:read";
+export type GraphManageAuthorizationGrant = {
+  scope: "graph:manage";
   graphId: string;
 };
 
-export type SubgraphAuthorizationGrant = {
-  scope: "subgraph:write" | "subgraph-schema:read" | "subgraph-schema:write";
+export type SupergraphSchemaReadAuthorizationGrant = {
+  scope: "supergraph_schema:read";
+  graphId: string;
+};
+
+export type SubgraphSchemaAuthorizationGrant = {
+  scope: "subgraph_schema:read" | "subgraph_schema:write";
   graphId: string;
   subgraphId: string;
 };
 
 export type AuthorizationGrant =
-  | AdminAuthorizationGrant
-  | GraphAuthorizationGrant
-  | SubgraphAuthorizationGrant;
+  | GraphManageAuthorizationGrant
+  | SupergraphSchemaReadAuthorizationGrant
+  | SubgraphSchemaAuthorizationGrant;
 
 export type RequestUser = {
   grants: readonly AuthorizationGrant[];

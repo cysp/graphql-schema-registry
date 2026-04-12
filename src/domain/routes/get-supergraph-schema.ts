@@ -1,12 +1,10 @@
 import type { PostgresJsDatabase } from "../../drizzle/types.ts";
-import {
-  requireAuthenticatedUser,
-  requireGraphReadGrant,
-} from "../../lib/fastify/authorization/guards.ts";
+import { requireAuthenticatedUser } from "../../lib/fastify/authorization/guards.ts";
 import type { DependencyInjectedHandler } from "../../lib/fastify/handler-with-dependencies.ts";
 import type { operationRouteDefinitions } from "../../lib/fastify/openapi/generated/operations/index.ts";
 import type { OpenApiOperationHandlers } from "../../lib/fastify/openapi/plugin.ts";
 import { requireDatabase } from "../../lib/fastify/require-database.ts";
+import { canReadSupergraphSchema } from "../authorization/policy.ts";
 import { selectActiveGraphBySlug } from "../database/graphs/repository.ts";
 import { selectCurrentSupergraphSchemaRevision } from "../database/supergraph-schemas/repository.ts";
 import { etagSatisfiesIfNoneMatch, formatStrongETag, parseIfNoneMatchHeader } from "../etag.ts";
@@ -24,7 +22,8 @@ export const getSupergraphSchemaHandler: DependencyInjectedHandler<
   OperationHandlers["getSupergraphSchema"],
   RouteDependencies
 > = async ({ dependencies: { database }, request, reply }) => {
-  if (!requireAuthenticatedUser(request, reply)) {
+  const user = requireAuthenticatedUser(request, reply);
+  if (!user) {
     return;
   }
 
@@ -39,8 +38,8 @@ export const getSupergraphSchemaHandler: DependencyInjectedHandler<
     return reply.problemDetails({ status: 404 });
   }
 
-  if (!requireGraphReadGrant(request, reply, graph.id)) {
-    return;
+  if (!canReadSupergraphSchema(user.grants, graph.id)) {
+    return reply.problemDetails({ status: 403 });
   }
 
   const supergraphSchema = await selectCurrentSupergraphSchemaRevision(database, graph.id);
