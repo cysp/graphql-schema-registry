@@ -14,8 +14,8 @@ import { deferred } from "./test-support/deferred.ts";
 import { createFailingDatabase } from "./test-support/failing-database.ts";
 import type { IntegrationServerFixture } from "./test-support/integration-server.ts";
 import {
-  adminHeaders,
-  adminIfMatchHeaders,
+  authorizationHeaders,
+  authorizationIfMatchHeaders,
   parseJson,
   withConcurrentIntegrationServer,
 } from "./test-support/integration-server.ts";
@@ -34,11 +34,11 @@ async function assertPromiseStillPending<T>(promise: Promise<T>, waitMs = 25): P
 
 async function createGraphThroughApi(
   server: IntegrationServerFixture["server"],
-  adminToken: string,
+  graphManageToken: string,
   slug = "catalog",
 ) {
   const response = await server.inject({
-    headers: adminHeaders(adminToken),
+    headers: authorizationHeaders(graphManageToken),
     method: "POST",
     payload: {
       slug,
@@ -51,13 +51,13 @@ async function createGraphThroughApi(
 
 async function createSubgraphThroughApi(
   server: IntegrationServerFixture["server"],
-  adminToken: string,
+  graphManageToken: string,
   graphSlug = "catalog",
   slug = "inventory",
   routingUrl = "https://inventory.example.com/graphql",
 ) {
   const response = await server.inject({
-    headers: adminHeaders(adminToken),
+    headers: authorizationHeaders(graphManageToken),
     method: "POST",
     payload: {
       routingUrl,
@@ -71,7 +71,7 @@ async function createSubgraphThroughApi(
 
 function createSubgraphSchemaGrantToken(
   createToken: ReturnType<typeof createAuthJwtSigner>["createToken"],
-  scope: "subgraph-schema:write",
+  scope: "subgraph_schema:write",
   graphId: string,
   subgraphId: string,
 ) {
@@ -115,14 +115,16 @@ await test("route handler concurrency and rollback integration with postgres", a
   }
 
   const jwtSigner = createAuthJwtSigner();
-  const adminToken = jwtSigner.createToken({
-    authorization_details: [
-      {
-        scope: "admin",
-        type: authorizationDetailsType,
-      },
-    ],
-  });
+  const createGraphManageToken = (): string =>
+    jwtSigner.createToken({
+      authorization_details: [
+        {
+          graph_id: "*",
+          scope: "graph:manage",
+          type: authorizationDetailsType,
+        },
+      ],
+    });
   const { jwtVerification } = jwtSigner;
 
   await t.test("graph update waits for the lock and evaluates If-Match after commit", async () => {
@@ -132,7 +134,7 @@ await test("route handler concurrency and rollback integration with postgres", a
         jwtVerification,
       },
       async (fixture) => {
-        const createdGraph = await createGraphThroughApi(fixture.server, adminToken);
+        const createdGraph = await createGraphThroughApi(fixture.server, createGraphManageToken());
         const session = await fixture.openSession();
         const release = deferred<undefined>();
         const locked = deferred<undefined>();
@@ -162,7 +164,10 @@ await test("route handler concurrency and rollback integration with postgres", a
         await locked.promise;
 
         const responsePromise = fixture.server.inject({
-          headers: adminIfMatchHeaders(adminToken, formatStrongETag(createdGraph.id, 1)),
+          headers: authorizationIfMatchHeaders(
+            createGraphManageToken(),
+            formatStrongETag(createdGraph.id, 1),
+          ),
           method: "PUT",
           payload: {},
           url: "/v1/graphs/catalog",
@@ -203,8 +208,11 @@ await test("route handler concurrency and rollback integration with postgres", a
           jwtVerification,
         },
         async (fixture) => {
-          const createdGraph = await createGraphThroughApi(fixture.server, adminToken);
-          await createSubgraphThroughApi(fixture.server, adminToken);
+          const createdGraph = await createGraphThroughApi(
+            fixture.server,
+            createGraphManageToken(),
+          );
+          await createSubgraphThroughApi(fixture.server, createGraphManageToken());
           const session = await fixture.openSession();
           const release = deferred<undefined>();
           const locked = deferred<undefined>();
@@ -218,7 +226,7 @@ await test("route handler concurrency and rollback integration with postgres", a
           await locked.promise;
 
           const responsePromise = fixture.server.inject({
-            headers: adminHeaders(adminToken),
+            headers: authorizationHeaders(createGraphManageToken()),
             method: "DELETE",
             url: "/v1/graphs/catalog",
           });
@@ -274,7 +282,10 @@ await test("route handler concurrency and rollback integration with postgres", a
           jwtVerification,
         },
         async (fixture) => {
-          const createdGraph = await createGraphThroughApi(fixture.server, adminToken);
+          const createdGraph = await createGraphThroughApi(
+            fixture.server,
+            createGraphManageToken(),
+          );
           const session = await fixture.openSession();
           const release = deferred<undefined>();
           const locked = deferred<undefined>();
@@ -297,7 +308,7 @@ await test("route handler concurrency and rollback integration with postgres", a
           await locked.promise;
 
           const responsePromise = fixture.server.inject({
-            headers: adminHeaders(adminToken),
+            headers: authorizationHeaders(createGraphManageToken()),
             method: "POST",
             payload: {
               routingUrl: "https://inventory.example.com/graphql",
@@ -336,7 +347,10 @@ await test("route handler concurrency and rollback integration with postgres", a
           jwtVerification,
         },
         async (fixture) => {
-          const createdGraph = await createGraphThroughApi(fixture.server, adminToken);
+          const createdGraph = await createGraphThroughApi(
+            fixture.server,
+            createGraphManageToken(),
+          );
           const session = await fixture.openSession();
           const release = deferred<undefined>();
           const locked = deferred<undefined>();
@@ -366,7 +380,10 @@ await test("route handler concurrency and rollback integration with postgres", a
           await locked.promise;
 
           const responsePromise = fixture.server.inject({
-            headers: adminIfMatchHeaders(adminToken, formatStrongETag(createdGraph.id, 1)),
+            headers: authorizationIfMatchHeaders(
+              createGraphManageToken(),
+              formatStrongETag(createdGraph.id, 1),
+            ),
             method: "POST",
             payload: {
               routingUrl: "https://inventory.example.com/graphql",
@@ -398,8 +415,11 @@ await test("route handler concurrency and rollback integration with postgres", a
           jwtVerification,
         },
         async (fixture) => {
-          await createGraphThroughApi(fixture.server, adminToken);
-          const createdSubgraph = await createSubgraphThroughApi(fixture.server, adminToken);
+          await createGraphThroughApi(fixture.server, createGraphManageToken());
+          const createdSubgraph = await createSubgraphThroughApi(
+            fixture.server,
+            createGraphManageToken(),
+          );
           const session = await fixture.openSession();
           const release = deferred<undefined>();
           const locked = deferred<undefined>();
@@ -431,7 +451,10 @@ await test("route handler concurrency and rollback integration with postgres", a
           await locked.promise;
 
           const responsePromise = fixture.server.inject({
-            headers: adminIfMatchHeaders(adminToken, formatStrongETag(createdSubgraph.id, 1)),
+            headers: authorizationIfMatchHeaders(
+              createGraphManageToken(),
+              formatStrongETag(createdSubgraph.id, 1),
+            ),
             method: "PUT",
             payload: {
               routingUrl: "https://inventory-v3.example.com/graphql",
@@ -479,8 +502,11 @@ await test("route handler concurrency and rollback integration with postgres", a
           jwtVerification,
         },
         async (fixture) => {
-          const createdGraph = await createGraphThroughApi(fixture.server, adminToken);
-          await createSubgraphThroughApi(fixture.server, adminToken);
+          const createdGraph = await createGraphThroughApi(
+            fixture.server,
+            createGraphManageToken(),
+          );
+          await createSubgraphThroughApi(fixture.server, createGraphManageToken());
           const session = await fixture.openSession();
           const release = deferred<undefined>();
           const locked = deferred<undefined>();
@@ -503,7 +529,7 @@ await test("route handler concurrency and rollback integration with postgres", a
           await locked.promise;
 
           const responsePromise = fixture.server.inject({
-            headers: adminHeaders(adminToken),
+            headers: authorizationHeaders(createGraphManageToken()),
             method: "GET",
             url: "/v1/graphs/catalog/subgraphs",
           });
@@ -536,7 +562,7 @@ await test("route handler concurrency and rollback integration with postgres", a
       },
       async (fixture) => {
         const response = await fixture.server.inject({
-          headers: adminHeaders(adminToken),
+          headers: authorizationHeaders(createGraphManageToken()),
           method: "POST",
           payload: {
             slug: "catalog",
@@ -563,11 +589,17 @@ await test("route handler concurrency and rollback integration with postgres", a
           jwtVerification,
         },
         async (fixture) => {
-          const createdGraph = await createGraphThroughApi(fixture.server, adminToken);
-          const createdSubgraph = await createSubgraphThroughApi(fixture.server, adminToken);
+          const createdGraph = await createGraphThroughApi(
+            fixture.server,
+            createGraphManageToken(),
+          );
+          const createdSubgraph = await createSubgraphThroughApi(
+            fixture.server,
+            createGraphManageToken(),
+          );
           const schemaWriteToken = createSubgraphSchemaGrantToken(
             jwtSigner.createToken,
-            "subgraph-schema:write",
+            "subgraph_schema:write",
             createdGraph.id,
             createdSubgraph.id,
           );
@@ -655,7 +687,7 @@ await test("route handler concurrency and rollback integration with postgres", a
         },
         async (fixture) => {
           const response = await fixture.server.inject({
-            headers: adminHeaders(adminToken),
+            headers: authorizationHeaders(createGraphManageToken()),
             method: "POST",
             payload: {
               slug: "catalog",
@@ -690,11 +722,11 @@ await test("route handler concurrency and rollback integration with postgres", a
         jwtVerification,
       },
       async (fixture) => {
-        await createGraphThroughApi(fixture.server, adminToken);
-        await createSubgraphThroughApi(fixture.server, adminToken);
+        await createGraphThroughApi(fixture.server, createGraphManageToken());
+        await createSubgraphThroughApi(fixture.server, createGraphManageToken());
 
         const response = await fixture.server.inject({
-          headers: adminHeaders(adminToken),
+          headers: authorizationHeaders(createGraphManageToken()),
           method: "DELETE",
           url: "/v1/graphs/catalog",
         });
@@ -733,10 +765,10 @@ await test("route handler concurrency and rollback integration with postgres", a
           jwtVerification,
         },
         async (fixture) => {
-          await createGraphThroughApi(fixture.server, adminToken);
+          await createGraphThroughApi(fixture.server, createGraphManageToken());
 
           const response = await fixture.server.inject({
-            headers: adminHeaders(adminToken),
+            headers: authorizationHeaders(createGraphManageToken()),
             method: "POST",
             payload: {
               routingUrl: "https://inventory.example.com/graphql",
@@ -772,17 +804,17 @@ await test("route handler concurrency and rollback integration with postgres", a
         jwtVerification,
       },
       async (fixture) => {
-        await createGraphThroughApi(fixture.server, adminToken);
+        await createGraphThroughApi(fixture.server, createGraphManageToken());
         const createdSubgraph = await createSubgraphThroughApi(
           fixture.server,
-          adminToken,
+          createGraphManageToken(),
           "catalog",
           "inventory",
           "https://inventory-v1.example.com/graphql",
         );
 
         const response = await fixture.server.inject({
-          headers: adminHeaders(adminToken),
+          headers: authorizationHeaders(createGraphManageToken()),
           method: "PUT",
           payload: {
             routingUrl: "https://inventory-v2.example.com/graphql",
@@ -852,11 +884,17 @@ await test("route handler concurrency and rollback integration with postgres", a
           jwtVerification,
         },
         async (fixture) => {
-          const createdGraph = await createGraphThroughApi(fixture.server, adminToken);
-          const createdSubgraph = await createSubgraphThroughApi(fixture.server, adminToken);
+          const createdGraph = await createGraphThroughApi(
+            fixture.server,
+            createGraphManageToken(),
+          );
+          const createdSubgraph = await createSubgraphThroughApi(
+            fixture.server,
+            createGraphManageToken(),
+          );
           const schemaWriteToken = createSubgraphSchemaGrantToken(
             jwtSigner.createToken,
-            "subgraph-schema:write",
+            "subgraph_schema:write",
             createdGraph.id,
             createdSubgraph.id,
           );
@@ -907,11 +945,11 @@ await test("route handler concurrency and rollback integration with postgres", a
         jwtVerification,
       },
       async (fixture) => {
-        await createGraphThroughApi(fixture.server, adminToken);
-        await createSubgraphThroughApi(fixture.server, adminToken);
+        await createGraphThroughApi(fixture.server, createGraphManageToken());
+        await createSubgraphThroughApi(fixture.server, createGraphManageToken());
 
         const response = await fixture.server.inject({
-          headers: adminHeaders(adminToken),
+          headers: authorizationHeaders(createGraphManageToken()),
           method: "DELETE",
           url: "/v1/graphs/catalog/subgraphs/inventory",
         });

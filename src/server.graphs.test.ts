@@ -1,18 +1,27 @@
+import assert from "node:assert/strict";
 import test from "node:test";
 
 import { authorizationDetailsType } from "./domain/authorization/details.ts";
 import { createAuthJwtSigner } from "./domain/jwt-signer.ts";
-import {
-  assertProtectedRouteBehavior,
-  jsonHeaders,
-  type RouteRequest,
-} from "./server.route.test-support.ts";
+import { assertProblemResponse, createAuthorizedRequest } from "./server.route.test-support.ts";
 import { createFastifyServer } from "./server.ts";
 
-const graphReadGrant = {
-  graph_id: "graph-1",
-  scope: "graph:read",
-  type: authorizationDetailsType,
+const jsonHeaders = {
+  "content-type": "application/json",
+} as const;
+
+const listGraphsRequest = {
+  method: "GET",
+  url: "/v1/graphs",
+} as const;
+
+const createGraphRequest = {
+  headers: jsonHeaders,
+  method: "POST",
+  payload: {
+    slug: "graph-1",
+  },
+  url: "/v1/graphs",
 } as const;
 
 await test("server: graph routes", async (t) => {
@@ -31,111 +40,52 @@ await test("server: graph routes", async (t) => {
     await server.close();
   });
 
-  function createAdminToken(): string {
+  function createGraphManageToken(): string {
     return createToken({
       authorization_details: [
         {
-          scope: "admin",
+          graph_id: "*",
+          scope: "graph:manage",
           type: authorizationDetailsType,
         },
       ],
     });
   }
 
-  function createGraphReadToken(): string {
+  function createSupergraphSchemaReadToken(): string {
     return createToken({
-      authorization_details: [graphReadGrant],
+      authorization_details: [
+        {
+          graph_id: "graph-1",
+          scope: "supergraph_schema:read",
+          type: authorizationDetailsType,
+        },
+      ],
     });
   }
 
-  await t.test("GET /v1/graphs", async (t) => {
-    const request = {
-      method: "GET",
-      url: "/v1/graphs",
-    } as const satisfies RouteRequest;
+  await t.test("GET /v1/graphs returns 401 without auth", async () => {
+    const response = await server.inject(listGraphsRequest);
 
-    await assertProtectedRouteBehavior(t, {
-      adminExpectedStatus: 503,
-      adminExpectedTitle: "Service Unavailable",
-      createAdminToken,
-      forbiddenDescription: "graph:read users",
-      forbiddenToken: createGraphReadToken(),
-      request,
-      server,
-    });
+    assertProblemResponse(response, 401, "Unauthorized");
+    assert.equal(response.headers["www-authenticate"], "Bearer");
   });
 
-  await t.test("POST /v1/graphs", async (t) => {
-    const request = {
-      method: "POST",
-      url: "/v1/graphs",
-      headers: jsonHeaders,
-      payload: {
-        slug: "graph-1",
-      },
-    } as const satisfies RouteRequest;
+  await t.test("POST /v1/graphs rejects non-manage grants before database access", async () => {
+    const response = await server.inject(
+      createAuthorizedRequest(createGraphRequest, createSupergraphSchemaReadToken()),
+    );
 
-    await assertProtectedRouteBehavior(t, {
-      adminExpectedStatus: 503,
-      adminExpectedTitle: "Service Unavailable",
-      createAdminToken,
-      forbiddenDescription: "graph:read users",
-      forbiddenToken: createGraphReadToken(),
-      request,
-      server,
-    });
+    assertProblemResponse(response, 403, "Forbidden");
+    assert.equal(response.headers["www-authenticate"], undefined);
   });
 
-  await t.test("GET /v1/graphs/:graphSlug", async (t) => {
-    const request = {
-      method: "GET",
-      url: "/v1/graphs/graph-1",
-    } as const satisfies RouteRequest;
+  await t.test("POST /v1/graphs accepts wildcard graph:manage before database access", async () => {
+    const response = await server.inject(
+      createAuthorizedRequest(createGraphRequest, createGraphManageToken()),
+    );
 
-    await assertProtectedRouteBehavior(t, {
-      adminExpectedStatus: 503,
-      adminExpectedTitle: "Service Unavailable",
-      createAdminToken,
-      forbiddenDescription: "graph:read users",
-      forbiddenToken: createGraphReadToken(),
-      request,
-      server,
-    });
-  });
-
-  await t.test("PUT /v1/graphs/:graphSlug", async (t) => {
-    const request = {
-      method: "PUT",
-      url: "/v1/graphs/graph-1",
-      headers: jsonHeaders,
-      payload: {},
-    } as const satisfies RouteRequest;
-
-    await assertProtectedRouteBehavior(t, {
-      adminExpectedStatus: 503,
-      adminExpectedTitle: "Service Unavailable",
-      createAdminToken,
-      forbiddenDescription: "graph:read users",
-      forbiddenToken: createGraphReadToken(),
-      request,
-      server,
-    });
-  });
-
-  await t.test("DELETE /v1/graphs/:graphSlug", async (t) => {
-    const request = {
-      method: "DELETE",
-      url: "/v1/graphs/graph-1",
-    } as const satisfies RouteRequest;
-
-    await assertProtectedRouteBehavior(t, {
-      adminExpectedStatus: 503,
-      adminExpectedTitle: "Service Unavailable",
-      createAdminToken,
-      forbiddenDescription: "graph:read users",
-      forbiddenToken: createGraphReadToken(),
-      request,
-      server,
-    });
+    assertProblemResponse(response, 503, "Service Unavailable");
+    assert.equal(response.headers["www-authenticate"], undefined);
   });
 });

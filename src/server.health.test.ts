@@ -74,7 +74,8 @@ await test("server: /health", async (t) => {
       headers: {
         authorization: `Bearer ${createToken({
           authorization_details: {
-            scope: "admin",
+            graph_id: "*",
+            scope: "graph:manage",
             type: "graphql-schema-registry",
           },
         })}`,

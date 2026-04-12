@@ -5,22 +5,13 @@ import type { AuthorizationGrant } from "./user.ts";
 export const authorizationDetailsType = "https://chikachow.org/graphql-schema-registry";
 
 const authorizationDetailsTypeSchema = z.literal(authorizationDetailsType);
+const resourceIdSchema = z.string().min(1);
 
-const adminAuthorizationDetailSchema = z
+const graphManageAuthorizationDetailSchema = z
   .object({
     type: authorizationDetailsTypeSchema,
-    scope: z.literal("admin"),
-  })
-  .strict()
-  .transform((detail) => ({
-    scope: detail.scope,
-  }));
-
-const graphAuthorizationDetailSchema = z
-  .object({
-    type: authorizationDetailsTypeSchema,
-    scope: z.enum(["graph:read"]),
-    graph_id: z.string(),
+    scope: z.literal("graph:manage"),
+    graph_id: resourceIdSchema,
   })
   .strict()
   .transform((detail) => ({
@@ -28,12 +19,24 @@ const graphAuthorizationDetailSchema = z
     graphId: detail.graph_id,
   }));
 
-const subgraphAuthorizationDetailSchema = z
+const supergraphSchemaReadAuthorizationDetailSchema = z
   .object({
     type: authorizationDetailsTypeSchema,
-    scope: z.enum(["subgraph:write", "subgraph-schema:read", "subgraph-schema:write"]),
-    graph_id: z.string(),
-    subgraph_id: z.string(),
+    scope: z.literal("supergraph_schema:read"),
+    graph_id: resourceIdSchema,
+  })
+  .strict()
+  .transform((detail) => ({
+    scope: detail.scope,
+    graphId: detail.graph_id,
+  }));
+
+const subgraphSchemaAuthorizationDetailSchema = z
+  .object({
+    type: authorizationDetailsTypeSchema,
+    scope: z.enum(["subgraph_schema:read", "subgraph_schema:write"]),
+    graph_id: resourceIdSchema,
+    subgraph_id: resourceIdSchema,
   })
   .strict()
   .transform((detail) => ({
@@ -45,9 +48,9 @@ const subgraphAuthorizationDetailSchema = z
 const authorizationDetailsClaimSchema = z
   .array(
     z.union([
-      adminAuthorizationDetailSchema,
-      graphAuthorizationDetailSchema,
-      subgraphAuthorizationDetailSchema,
+      graphManageAuthorizationDetailSchema,
+      supergraphSchemaReadAuthorizationDetailSchema,
+      subgraphSchemaAuthorizationDetailSchema,
     ]),
   )
   .optional()

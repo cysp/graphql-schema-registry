@@ -1,6 +1,6 @@
 import type { FastifyReply, FastifyRequest } from "fastify";
 
-import type { AuthorizationGrant, RequestUser } from "../../../domain/authorization/user.ts";
+import type { RequestUser } from "../../../domain/authorization/user.ts";
 import { bearerAuthenticateHeaders } from "./bearer-authenticate-headers.ts";
 
 type GuardRequest = Pick<FastifyRequest, "user">;
@@ -22,101 +22,4 @@ export function requireAuthenticatedUser(
   }
 
   return user;
-}
-
-function requireGrant(
-  request: GuardRequest,
-  reply: GuardReply,
-  predicate: (grant: AuthorizationGrant) => boolean,
-): RequestUser | undefined {
-  const user = requireAuthenticatedUser(request, reply);
-  if (!user) {
-    return undefined;
-  }
-
-  if (!user.grants.some(predicate)) {
-    reply.problemDetails({ status: 403 });
-    return undefined;
-  }
-
-  return user;
-}
-
-function adminGrantPredicate(grant: AuthorizationGrant): boolean {
-  return grant.scope === "admin";
-}
-
-export function requireAdminGrant(
-  request: GuardRequest,
-  reply: GuardReply,
-): RequestUser | undefined {
-  return requireGrant(request, reply, adminGrantPredicate);
-}
-
-function makeGraphReadGrantPredicate(graphId: string): (grant: AuthorizationGrant) => boolean {
-  return (grant) => grant.scope === "graph:read" && grant.graphId === graphId;
-}
-
-export function requireGraphReadGrant(
-  request: GuardRequest,
-  reply: GuardReply,
-  graphId: string,
-): RequestUser | undefined {
-  return requireGrant(request, reply, makeGraphReadGrantPredicate(graphId));
-}
-
-function makeSubgraphWriteGrantPredicate(
-  graphId: string,
-  subgraphId: string,
-): (grant: AuthorizationGrant) => boolean {
-  return (grant) =>
-    grant.scope === "subgraph:write" &&
-    grant.graphId === graphId &&
-    grant.subgraphId === subgraphId;
-}
-
-export function requireSubgraphWriteGrant(
-  request: GuardRequest,
-  reply: GuardReply,
-  graphId: string,
-  subgraphId: string,
-): RequestUser | undefined {
-  return requireGrant(request, reply, makeSubgraphWriteGrantPredicate(graphId, subgraphId));
-}
-
-function makeSubgraphSchemaReadGrantPredicate(
-  graphId: string,
-  subgraphId: string,
-): (grant: AuthorizationGrant) => boolean {
-  return (grant) =>
-    grant.scope === "subgraph-schema:read" &&
-    grant.graphId === graphId &&
-    grant.subgraphId === subgraphId;
-}
-
-export function requireSubgraphSchemaReadGrant(
-  request: GuardRequest,
-  reply: GuardReply,
-  graphId: string,
-  subgraphId: string,
-): RequestUser | undefined {
-  return requireGrant(request, reply, makeSubgraphSchemaReadGrantPredicate(graphId, subgraphId));
-}
-
-function makeSubgraphSchemaWriteGrantPredicate(
-  graphId: string,
-  subgraphId: string,
-): (grant: AuthorizationGrant) => boolean {
-  return (grant) =>
-    grant.scope === "subgraph-schema:write" &&
-    grant.graphId === graphId &&
-    grant.subgraphId === subgraphId;
-}
-
-export function hasSubgraphSchemaWriteGrant(
-  user: RequestUser,
-  graphId: string,
-  subgraphId: string,
-): boolean {
-  return user.grants.some(makeSubgraphSchemaWriteGrantPredicate(graphId, subgraphId));
 }

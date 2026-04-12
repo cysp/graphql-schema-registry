@@ -69,7 +69,9 @@ await test("createAuthJwtSigner", async (t) => {
       issuer: "https://issuer.example.com",
     });
     const token = signer.createToken({
-      authorization_details: [{ scope: "admin", type: "graphql-schema-registry" }],
+      authorization_details: [
+        { graph_id: "*", scope: "graph:manage", type: "graphql-schema-registry" },
+      ],
       sub: "user-123",
     });
 
@@ -83,7 +85,7 @@ await test("createAuthJwtSigner", async (t) => {
     assert.strictEqual(claims["iss"], "https://issuer.example.com");
     assert.strictEqual(claims["sub"], "user-123");
     assert.deepStrictEqual(claims["authorization_details"], [
-      { scope: "admin", type: "graphql-schema-registry" },
+      { graph_id: "*", scope: "graph:manage", type: "graphql-schema-registry" },
     ]);
 
     const signedPayload = `${encodedProtectedHeader}.${encodedPayload}`;

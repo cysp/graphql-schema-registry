@@ -39,32 +39,27 @@ export function authorizationIfMatchHeaders(token: string, etag: string): Record
   };
 }
 
-export function adminHeaders(token: string): Record<string, string> {
-  return authorizationHeaders(token);
-}
-
-export function adminIfMatchHeaders(token: string, etag: string): Record<string, string> {
-  return authorizationIfMatchHeaders(token, etag);
-}
-
 export function parseJson(response: { json: () => unknown }): unknown {
   return response.json();
 }
 
-export function createAdminIntegrationAuth(): Readonly<{
-  adminToken: string;
+export function createGraphManageIntegrationAuth(): Readonly<{
+  graphManageToken: string;
+  createToken: ReturnType<typeof createAuthJwtSigner>["createToken"];
   jwtVerification: JwtVerification;
 }> {
   const jwtSigner = createAuthJwtSigner();
   return {
-    adminToken: jwtSigner.createToken({
+    graphManageToken: jwtSigner.createToken({
       authorization_details: [
         {
-          scope: "admin",
+          graph_id: "*",
+          scope: "graph:manage",
           type: authorizationDetailsType,
         },
       ],
     }),
+    createToken: jwtSigner.createToken,
     jwtVerification: jwtSigner.jwtVerification,
   };
 }

@@ -1,8 +1,5 @@
 import assert from "node:assert/strict";
 import type { OutgoingHttpHeader, OutgoingHttpHeaders } from "node:http";
-import type { TestContext } from "node:test";
-
-import type { FastifyInstance } from "fastify";
 
 export type RouteRequest = {
   headers?: Record<string, string>;
@@ -16,14 +13,6 @@ type ProblemResponse = {
   headers: OutgoingHttpHeaders;
   statusCode: number;
 };
-
-export const jsonHeaders = {
-  "content-type": "application/json",
-} as const;
-
-export const ifMatchHeaders = {
-  "if-match": "*",
-} as const;
 
 export function createAuthorizedRequest(request: RouteRequest, token: string): RouteRequest {
   return {
@@ -63,47 +52,5 @@ export function assertProblemResponse(
     type: "about:blank",
     status,
     title,
-  });
-}
-
-export async function assertProtectedRouteBehavior(
-  t: TestContext,
-  {
-    adminExpectedStatus = 501,
-    adminExpectedTitle = "Not Implemented",
-    createAdminToken,
-    forbiddenDescription,
-    forbiddenToken,
-    request,
-    server,
-  }: {
-    adminExpectedStatus?: number;
-    adminExpectedTitle?: string;
-    createAdminToken: () => string;
-    forbiddenDescription: string;
-    forbiddenToken: string;
-    request: RouteRequest;
-    server: FastifyInstance;
-  },
-): Promise<void> {
-  await t.test("returns 401 without auth", async () => {
-    const response = await server.inject(request);
-
-    assertProblemResponse(response, 401, "Unauthorized");
-    assert.equal(response.headers["www-authenticate"], "Bearer");
-  });
-
-  await t.test(`returns 403 for ${forbiddenDescription}`, async () => {
-    const response = await server.inject(createAuthorizedRequest(request, forbiddenToken));
-
-    assertProblemResponse(response, 403, "Forbidden");
-    assert.equal(response.headers["www-authenticate"], undefined);
-  });
-
-  await t.test(`returns ${String(adminExpectedStatus)} for admin users`, async () => {
-    const response = await server.inject(createAuthorizedRequest(request, createAdminToken()));
-
-    assertProblemResponse(response, adminExpectedStatus, adminExpectedTitle);
-    assert.equal(response.headers["www-authenticate"], undefined);
   });
 }
