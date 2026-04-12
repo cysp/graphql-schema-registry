@@ -71,7 +71,7 @@ async function createSubgraphThroughApi(
 
 function createSubgraphSchemaGrantToken(
   createToken: ReturnType<typeof createAuthJwtSigner>["createToken"],
-  scope: "subgraph-schema:write",
+  scope: "subgraph_schema:write",
   graphId: string,
   subgraphId: string,
 ) {
@@ -118,7 +118,8 @@ await test("route handler concurrency and rollback integration with postgres", a
   const adminToken = jwtSigner.createToken({
     authorization_details: [
       {
-        scope: "admin",
+        graph_id: "*",
+        scope: "graph:manage",
         type: authorizationDetailsType,
       },
     ],
@@ -567,7 +568,7 @@ await test("route handler concurrency and rollback integration with postgres", a
           const createdSubgraph = await createSubgraphThroughApi(fixture.server, adminToken);
           const schemaWriteToken = createSubgraphSchemaGrantToken(
             jwtSigner.createToken,
-            "subgraph-schema:write",
+            "subgraph_schema:write",
             createdGraph.id,
             createdSubgraph.id,
           );
@@ -856,7 +857,7 @@ await test("route handler concurrency and rollback integration with postgres", a
           const createdSubgraph = await createSubgraphThroughApi(fixture.server, adminToken);
           const schemaWriteToken = createSubgraphSchemaGrantToken(
             jwtSigner.createToken,
-            "subgraph-schema:write",
+            "subgraph_schema:write",
             createdGraph.id,
             createdSubgraph.id,
           );

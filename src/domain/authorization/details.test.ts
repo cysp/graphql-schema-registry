@@ -10,26 +10,37 @@ await test("decodeAuthorizationDetailsClaim", async (t) => {
     assert.deepStrictEqual(grants, []);
   });
 
-  await t.test("decodes admin grants", () => {
+  await t.test("decodes graph:manage grants", () => {
     const grants = decodeAuthorizationDetailsClaim([
       {
-        scope: "admin",
+        graph_id: "*",
+        scope: "graph:manage",
+        type: authorizationDetailsType,
+      },
+      {
+        graph_id: "alpha",
+        scope: "graph:manage",
         type: authorizationDetailsType,
       },
     ]);
 
     assert.deepStrictEqual(grants, [
       {
-        scope: "admin",
+        graphId: "*",
+        scope: "graph:manage",
+      },
+      {
+        graphId: "alpha",
+        scope: "graph:manage",
       },
     ]);
   });
 
-  await t.test("decodes graph:read grants", () => {
+  await t.test("decodes supergraph_schema:read grants", () => {
     const grants = decodeAuthorizationDetailsClaim([
       {
         graph_id: "alpha",
-        scope: "graph:read",
+        scope: "supergraph_schema:read",
         type: authorizationDetailsType,
       },
     ]);
@@ -37,16 +48,22 @@ await test("decodeAuthorizationDetailsClaim", async (t) => {
     assert.deepStrictEqual(grants, [
       {
         graphId: "alpha",
-        scope: "graph:read",
+        scope: "supergraph_schema:read",
       },
     ]);
   });
 
-  await t.test("decodes subgraph:write grants", () => {
+  await t.test("decodes subgraph_schema grants", () => {
     const grants = decodeAuthorizationDetailsClaim([
       {
         graph_id: "alpha",
-        scope: "subgraph:write",
+        scope: "subgraph_schema:read",
+        subgraph_id: "*",
+        type: authorizationDetailsType,
+      },
+      {
+        graph_id: "*",
+        scope: "subgraph_schema:write",
         subgraph_id: "inventory",
         type: authorizationDetailsType,
       },
@@ -55,93 +72,13 @@ await test("decodeAuthorizationDetailsClaim", async (t) => {
     assert.deepStrictEqual(grants, [
       {
         graphId: "alpha",
-        scope: "subgraph:write",
+        scope: "subgraph_schema:read",
+        subgraphId: "*",
+      },
+      {
+        graphId: "*",
+        scope: "subgraph_schema:write",
         subgraphId: "inventory",
-      },
-    ]);
-  });
-
-  await t.test("decodes subgraph-schema grants", () => {
-    const grants = decodeAuthorizationDetailsClaim([
-      {
-        graph_id: "alpha",
-        scope: "subgraph-schema:read",
-        subgraph_id: "inventory",
-        type: authorizationDetailsType,
-      },
-      {
-        graph_id: "alpha",
-        scope: "subgraph-schema:write",
-        subgraph_id: "inventory",
-        type: authorizationDetailsType,
-      },
-    ]);
-
-    assert.deepStrictEqual(grants, [
-      {
-        graphId: "alpha",
-        scope: "subgraph-schema:read",
-        subgraphId: "inventory",
-      },
-      {
-        graphId: "alpha",
-        scope: "subgraph-schema:write",
-        subgraphId: "inventory",
-      },
-    ]);
-  });
-
-  await t.test("accepts empty graph_id for graph:read grants", () => {
-    const grants = decodeAuthorizationDetailsClaim([
-      {
-        graph_id: "",
-        scope: "graph:read",
-        type: authorizationDetailsType,
-      },
-    ]);
-
-    assert.deepStrictEqual(grants, [
-      {
-        graphId: "",
-        scope: "graph:read",
-      },
-    ]);
-  });
-
-  await t.test("accepts empty graph_id and subgraph_id for subgraph:write grants", () => {
-    const grants = decodeAuthorizationDetailsClaim([
-      {
-        graph_id: "",
-        scope: "subgraph:write",
-        subgraph_id: "",
-        type: authorizationDetailsType,
-      },
-    ]);
-
-    assert.deepStrictEqual(grants, [
-      {
-        graphId: "",
-        scope: "subgraph:write",
-        subgraphId: "",
-      },
-    ]);
-  });
-
-  await t.test("accepts empty graph_id and subgraph_id for subgraph-schema grants", () => {
-    const grants = decodeAuthorizationDetailsClaim([
-      {
-        graph_id: "",
-        scope: "subgraph-schema:read",
-        subgraph_id: "",
-        type: authorizationDetailsType,
-      },
-    ]);
-
-    assert.deepStrictEqual(grants, [
-      {
-        graphId: "",
-        scope: "subgraph-schema:read",
-        subgraphId: "",
       },
     ]);
   });
@@ -150,17 +87,52 @@ await test("decodeAuthorizationDetailsClaim", async (t) => {
     assert.throws(() => {
       decodeAuthorizationDetailsClaim({
         graph_id: "alpha",
-        scope: "graph:read",
+        scope: "graph:manage",
         type: authorizationDetailsType,
       });
     }, /Invalid input/);
   });
 
-  await t.test("throws when graph:read detail is missing graph_id", () => {
+  await t.test("throws when graph_id is missing", () => {
     assert.throws(() => {
       decodeAuthorizationDetailsClaim([
         {
-          scope: "graph:read",
+          scope: "graph:manage",
+          type: authorizationDetailsType,
+        },
+      ]);
+    }, /Invalid input/);
+  });
+
+  await t.test("throws when subgraph_id is missing for subgraph_schema grants", () => {
+    assert.throws(() => {
+      decodeAuthorizationDetailsClaim([
+        {
+          graph_id: "alpha",
+          scope: "subgraph_schema:read",
+          type: authorizationDetailsType,
+        },
+      ]);
+    }, /Invalid input/);
+  });
+
+  await t.test("throws when graph_id or subgraph_id are empty strings", () => {
+    assert.throws(() => {
+      decodeAuthorizationDetailsClaim([
+        {
+          graph_id: "",
+          scope: "graph:manage",
+          type: authorizationDetailsType,
+        },
+      ]);
+    }, /Invalid input/);
+
+    assert.throws(() => {
+      decodeAuthorizationDetailsClaim([
+        {
+          graph_id: "alpha",
+          scope: "subgraph_schema:write",
+          subgraph_id: "",
           type: authorizationDetailsType,
         },
       ]);
@@ -171,7 +143,8 @@ await test("decodeAuthorizationDetailsClaim", async (t) => {
     assert.throws(() => {
       decodeAuthorizationDetailsClaim([
         {
-          scope: "admin",
+          graph_id: "alpha",
+          scope: "graph:manage",
           type: "other-service",
         },
       ]);

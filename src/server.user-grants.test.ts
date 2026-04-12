@@ -62,29 +62,30 @@ await test("server: /user/grants", async (t) => {
         authorization: `Bearer ${createToken({
           authorization_details: [
             {
-              scope: "admin",
+              graph_id: "*",
+              scope: "graph:manage",
               type: authorizationDetailsType,
             },
             {
               graph_id: "graph-1",
-              scope: "graph:read",
+              scope: "supergraph_schema:read",
               type: authorizationDetailsType,
             },
             {
-              graph_id: "graph-2",
-              scope: "subgraph:write",
-              subgraph_id: "subgraph-a",
+              graph_id: "*",
+              scope: "subgraph_schema:read",
+              subgraph_id: "*",
               type: authorizationDetailsType,
             },
             {
               graph_id: "graph-3",
-              scope: "subgraph-schema:read",
+              scope: "subgraph_schema:read",
               subgraph_id: "subgraph-b",
               type: authorizationDetailsType,
             },
             {
               graph_id: "graph-4",
-              scope: "subgraph-schema:write",
+              scope: "subgraph_schema:write",
               subgraph_id: "subgraph-c",
               type: authorizationDetailsType,
             },
@@ -96,25 +97,26 @@ await test("server: /user/grants", async (t) => {
     assert.strictEqual(response.statusCode, 200);
     assert.deepStrictEqual(getJsonPayload(response), [
       {
-        scope: "admin",
+        graphId: "*",
+        scope: "graph:manage",
       },
       {
         graphId: "graph-1",
-        scope: "graph:read",
+        scope: "supergraph_schema:read",
       },
       {
-        graphId: "graph-2",
-        scope: "subgraph:write",
-        subgraphId: "subgraph-a",
+        graphId: "*",
+        scope: "subgraph_schema:read",
+        subgraphId: "*",
       },
       {
         graphId: "graph-3",
-        scope: "subgraph-schema:read",
+        scope: "subgraph_schema:read",
         subgraphId: "subgraph-b",
       },
       {
         graphId: "graph-4",
-        scope: "subgraph-schema:write",
+        scope: "subgraph_schema:write",
         subgraphId: "subgraph-c",
       },
     ]);
@@ -128,7 +130,8 @@ await test("server: /user/grants", async (t) => {
         authorization: `bearer ${createToken({
           authorization_details: [
             {
-              scope: "admin",
+              graph_id: "*",
+              scope: "graph:manage",
               type: authorizationDetailsType,
             },
           ],
@@ -139,7 +142,8 @@ await test("server: /user/grants", async (t) => {
     assert.strictEqual(response.statusCode, 200);
     assert.deepStrictEqual(getJsonPayload(response), [
       {
-        scope: "admin",
+        graphId: "*",
+        scope: "graph:manage",
       },
     ]);
   });
@@ -151,7 +155,8 @@ await test("server: /user/grants", async (t) => {
       headers: {
         authorization: `Bearer ${createToken({
           authorization_details: {
-            scope: "admin",
+            graph_id: "*",
+            scope: "graph:manage",
             type: authorizationDetailsType,
           },
         })}`,

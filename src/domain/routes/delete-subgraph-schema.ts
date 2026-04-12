@@ -1,12 +1,10 @@
 import type { PostgresJsDatabase } from "../../drizzle/types.ts";
-import {
-  hasSubgraphSchemaWriteGrant,
-  requireAuthenticatedUser,
-} from "../../lib/fastify/authorization/guards.ts";
+import { requireAuthenticatedUser } from "../../lib/fastify/authorization/guards.ts";
 import type { DependencyInjectedHandler } from "../../lib/fastify/handler-with-dependencies.ts";
 import type { operationRouteDefinitions } from "../../lib/fastify/openapi/generated/operations/index.ts";
 import type { OpenApiOperationHandlers } from "../../lib/fastify/openapi/plugin.ts";
 import { requireDatabase } from "../../lib/fastify/require-database.ts";
+import { canWriteSubgraphSchema } from "../authorization/policy.ts";
 import { selectActiveGraphBySlugForUpdate } from "../database/graphs/repository.ts";
 import {
   clearCurrentSubgraphSchemaRevision,
@@ -70,7 +68,7 @@ export const deleteSubgraphSchemaHandler: DependencyInjectedHandler<
       return { kind: "no_content" };
     }
 
-    if (!hasSubgraphSchemaWriteGrant(user, graph.id, subgraph.id)) {
+    if (!canWriteSubgraphSchema(user.grants, graph.id, subgraph.id)) {
       return { kind: "forbidden" };
     }
 

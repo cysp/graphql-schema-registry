@@ -11,14 +11,14 @@ import { createFastifyServer } from "./server.ts";
 
 const subgraphSchemaReadGrant = {
   graph_id: "graph-1",
-  scope: "subgraph-schema:read",
+  scope: "subgraph_schema:read",
   subgraph_id: "products",
   type: authorizationDetailsType,
 } as const;
 
 const subgraphSchemaWriteGrant = {
   graph_id: "graph-1",
-  scope: "subgraph-schema:write",
+  scope: "subgraph_schema:write",
   subgraph_id: "products",
   type: authorizationDetailsType,
 } as const;
@@ -43,7 +43,8 @@ await test("server: subgraph schema routes", async (t) => {
     return createToken({
       authorization_details: [
         {
-          scope: "admin",
+          graph_id: "*",
+          scope: "graph:manage",
           type: authorizationDetailsType,
         },
       ],

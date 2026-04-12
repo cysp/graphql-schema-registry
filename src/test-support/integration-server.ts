@@ -53,6 +53,7 @@ export function parseJson(response: { json: () => unknown }): unknown {
 
 export function createAdminIntegrationAuth(): Readonly<{
   adminToken: string;
+  createToken: ReturnType<typeof createAuthJwtSigner>["createToken"];
   jwtVerification: JwtVerification;
 }> {
   const jwtSigner = createAuthJwtSigner();
@@ -60,11 +61,13 @@ export function createAdminIntegrationAuth(): Readonly<{
     adminToken: jwtSigner.createToken({
       authorization_details: [
         {
-          scope: "admin",
+          graph_id: "*",
+          scope: "graph:manage",
           type: authorizationDetailsType,
         },
       ],
     }),
+    createToken: jwtSigner.createToken,
     jwtVerification: jwtSigner.jwtVerification,
   };
 }

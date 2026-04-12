@@ -36,7 +36,7 @@ function createGraphReadGrantToken(
     authorization_details: [
       {
         graph_id: graphId,
-        scope: "graph:read",
+        scope: "supergraph_schema:read",
         type: authorizationDetailsType,
       },
     ],
@@ -52,7 +52,7 @@ function createSubgraphSchemaGrantToken(
     authorization_details: [
       {
         graph_id: graphId,
-        scope: "subgraph-schema:write",
+        scope: "subgraph_schema:write",
         subgraph_id: subgraphId,
         type: authorizationDetailsType,
       },
@@ -123,7 +123,8 @@ await test("supergraph schema routes integration with postgres", async (t) => {
   const adminToken = jwtSigner.createToken({
     authorization_details: [
       {
-        scope: "admin",
+        graph_id: "*",
+        scope: "graph:manage",
         type: authorizationDetailsType,
       },
     ],
@@ -207,7 +208,7 @@ await test("supergraph schema routes integration with postgres", async (t) => {
     }
   });
 
-  await t.test("serves the current supergraph schema to graph:read users", async () => {
+  await t.test("serves the current supergraph schema to supergraph_schema:read users", async () => {
     const fixture = await createIntegrationServerFixture({
       databaseUrl: integrationDatabaseUrl,
       jwtVerification: jwtSigner.jwtVerification,
