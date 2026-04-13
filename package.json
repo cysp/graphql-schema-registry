@@ -36,7 +36,7 @@
     "@tsconfig/strictest": "2.0.8",
     "@types/json-schema": "7.0.15",
     "@types/node": "24.12.2",
-    "drizzle-kit": "1.0.0-beta.20",
+    "drizzle-kit": "1.0.0-beta.22-41a7d21",
     "json-schema-to-ts": "3.1.1",
     "oxfmt": "0.43.0",
     "oxlint": "1.58.0",
