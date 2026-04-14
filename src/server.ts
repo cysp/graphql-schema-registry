@@ -38,11 +38,13 @@ import { problemDetailsPlugin } from "./lib/fastify/problem-details/plugin.ts";
 type CreateFastifyServerOptions = {
   database?: PostgresJsDatabase | undefined;
   jwtVerification?: JwtVerification | undefined;
+  logger?: boolean | undefined;
 };
 
 export function createFastifyServer({
   database,
   jwtVerification,
+  logger = true,
 }: CreateFastifyServerOptions): FastifyInstance<
   RawServerDefault,
   RawRequestDefaultExpression,
@@ -51,7 +53,7 @@ export function createFastifyServer({
   JsonSchemaToTsProvider
 > {
   const server = fastify({
-    logger: true,
+    logger,
   }).withTypeProvider<JsonSchemaToTsProvider>();
 
   server.register(fastifySensible);

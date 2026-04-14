@@ -14,7 +14,7 @@ import {
 } from "./test-support/integration-server.ts";
 import { requireGraphPayload } from "./test-support/payloads.ts";
 
-await test("graph routes integration with postgres", async (t) => {
+await test("[integration] graph routes integration with postgres", async (t) => {
   const integrationDatabaseUrl = process.env["INTEGRATION_TEST_DATABASE_URL"]?.trim();
   if (!integrationDatabaseUrl) {
     t.skip("INTEGRATION_TEST_DATABASE_URL is not configured");

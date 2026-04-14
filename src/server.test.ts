@@ -22,6 +22,7 @@ await test("server: /", async (t) => {
   t.beforeEach(async () => {
     server = createFastifyServer({
       jwtVerification,
+      logger: false,
     });
     await server.ready();
   });
