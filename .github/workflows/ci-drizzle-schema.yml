@@ -30,7 +30,7 @@ jobs:
 
       - run: pnpm install --frozen-lockfile
 
-      - run: pnpm exec drizzle-kit export --config=drizzle.config.ts > db/schema.sql
+      - run: node --run drizzle:schema:generate
         env:
           DATABASE_URL: postgres://postgres:postgres@localhost:5432/postgres
 

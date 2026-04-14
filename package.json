@@ -4,7 +4,7 @@
   "private": true,
   "type": "module",
   "scripts": {
-    "check": "pnpm run format:check && pnpm run lint && pnpm run typecheck && pnpm run test",
+    "check": "node --run format:check && node --run lint && node --run typecheck && node --run test",
     "dev": "node --env-file-if-exists=.env --watch src/index.ts",
     "drizzle:schema:generate": "drizzle-kit export --config ./drizzle.config.ts > db/schema.sql",
     "fastify:openapi:generate": "node tools/generate-fastify-openapi.ts",
@@ -13,9 +13,11 @@
     "lint": "oxlint --type-aware --report-unused-disable-directives .",
     "lint:fix": "oxlint --type-aware --fix .",
     "start": "node src/index.ts",
-    "test": "node tools/run-tests.ts all lcov.info",
-    "test:integration": "node tools/run-tests.ts integration lcov.integration.info",
-    "test:unit": "node tools/run-tests.ts unit lcov.unit.info",
+    "test": "node --env-file-if-exists=.env --env-file-if-exists=.env.test --test --enable-source-maps",
+    "test:integration": "node --env-file-if-exists=.env --env-file-if-exists=.env.test --test --enable-source-maps $(find src -name '*.integration.test.ts' -print | sort)",
+    "test:integration:coverage": "node --env-file-if-exists=.env --env-file-if-exists=.env.test --test --enable-source-maps --experimental-test-coverage --test-coverage-exclude=**/*.fixture.ts --test-coverage-exclude=**/*.test.ts --test-coverage-exclude=**/*.test-support.ts --test-coverage-exclude=src/test-support/** --test-coverage-exclude=tools/** --test-reporter=spec --test-reporter-destination=stdout --test-reporter=lcov --test-reporter-destination=lcov.integration.info $(find src -name '*.integration.test.ts' -print | sort)",
+    "test:unit": "node --env-file-if-exists=.env --env-file-if-exists=.env.test --test --enable-source-maps $(find src tools -name '*.test.ts' ! -name '*.integration.test.ts' -print | sort)",
+    "test:unit:coverage": "node --env-file-if-exists=.env --env-file-if-exists=.env.test --test --enable-source-maps --experimental-test-coverage --test-coverage-exclude=**/*.fixture.ts --test-coverage-exclude=**/*.test.ts --test-coverage-exclude=**/*.test-support.ts --test-coverage-exclude=src/test-support/** --test-coverage-exclude=tools/** --test-reporter=spec --test-reporter-destination=stdout --test-reporter=lcov --test-reporter-destination=lcov.unit.info $(find src tools -name '*.test.ts' ! -name '*.integration.test.ts' -print | sort)",
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {

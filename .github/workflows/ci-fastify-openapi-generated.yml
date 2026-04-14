@@ -30,6 +30,6 @@ jobs:
 
       - run: pnpm install --frozen-lockfile
 
-      - run: pnpm run fastify:openapi:generate
+      - run: node --run fastify:openapi:generate
 
       - run: git --no-pager diff --no-color --exit-code

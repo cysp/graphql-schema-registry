@@ -30,7 +30,7 @@ jobs:
 
       - run: pnpm install --frozen-lockfile
 
-      - run: pnpm run test:unit
+      - run: node --run test:unit:coverage
 
       - uses: codecov/codecov-action@57e3a136b779b570ffcdbf80b3bdc90e7fab3de2 # v6.0.0
         if: ${{ always() }}
@@ -93,7 +93,7 @@ jobs:
           pgschema-package: github.com/pgplex/pgschema
           file: db/local.sql
 
-      - run: pnpm run test:integration
+      - run: node --run test:integration:coverage
         env:
           INTEGRATION_TEST_DATABASE_URL: postgres://postgres:postgres@localhost:5432/postgres
 

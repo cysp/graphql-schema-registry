@@ -74,6 +74,7 @@ export async function createIntegrationServerFixture({
   const server = createFastifyServer({
     database,
     jwtVerification,
+    logger: false,
   });
 
   try {

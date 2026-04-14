@@ -18,6 +18,7 @@ await test("server: subgraph routes", async (t) => {
   t.beforeEach(async () => {
     server = createFastifyServer({
       jwtVerification,
+      logger: false,
     });
     await server.ready();
   });

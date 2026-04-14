@@ -23,6 +23,7 @@ await test("server: /user/grants", async (t) => {
   t.beforeEach(async () => {
     server = createFastifyServer({
       jwtVerification,
+      logger: false,
     });
     await server.ready();
   });

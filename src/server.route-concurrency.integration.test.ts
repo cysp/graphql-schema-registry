@@ -107,7 +107,7 @@ function createPostCallbackFailingDatabase(
   });
 }
 
-await test("route handler concurrency and rollback integration with postgres", async (t) => {
+await test("[integration] route handler concurrency and rollback integration with postgres", async (t) => {
   const integrationDatabaseUrl = process.env["INTEGRATION_TEST_DATABASE_URL"]?.trim();
   if (!integrationDatabaseUrl) {
     t.skip("INTEGRATION_TEST_DATABASE_URL is not configured");
