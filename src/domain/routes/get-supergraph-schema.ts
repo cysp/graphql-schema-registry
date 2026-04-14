@@ -35,7 +35,7 @@ export const getSupergraphSchemaHandler: DependencyInjectedHandler<
 
   const graph = await selectActiveGraphBySlug(database, request.params.graphSlug);
 
-  if (!canReadSupergraphSchema(user.grants, graph?.id ?? "*")) {
+  if (!canReadSupergraphSchema(user.grants, graph?.id)) {
     return reply.problemDetails({ status: 403 });
   }
 

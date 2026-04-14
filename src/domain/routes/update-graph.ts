@@ -52,7 +52,7 @@ export const updateGraphHandler: DependencyInjectedHandler<
   const result: UpdateGraphTransactionResult = await database.transaction(async (transaction) => {
     const graph = await selectActiveGraphBySlugForUpdate(transaction, request.params.graphSlug);
 
-    if (!canManageGraph(user.grants, graph?.id ?? "*")) {
+    if (!canManageGraph(user.grants, graph?.id)) {
       return { kind: "forbidden" };
     }
 

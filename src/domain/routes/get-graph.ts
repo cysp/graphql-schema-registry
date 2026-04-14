@@ -33,7 +33,7 @@ export const getGraphHandler: DependencyInjectedHandler<
 
   const graph = await selectActiveGraphBySlug(database, request.params.graphSlug);
 
-  if (!canManageGraph(user.grants, graph?.id ?? "*")) {
+  if (!canManageGraph(user.grants, graph?.id)) {
     return reply.problemDetails({ status: 403 });
   }
 

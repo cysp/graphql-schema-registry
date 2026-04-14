@@ -42,7 +42,7 @@ export const getSubgraphSchemaHandler: DependencyInjectedHandler<
     );
   }
 
-  if (!canReadSubgraphSchema(user.grants, graph?.id ?? "*", subgraph?.id ?? "*")) {
+  if (!canReadSubgraphSchema(user.grants, graph?.id, subgraph?.id)) {
     return reply.problemDetails({ status: 403 });
   }
 
