@@ -1,4 +1,6 @@
 .env
+.env.*
 dist
+lcov.*.info
 lcov.info
 node_modules

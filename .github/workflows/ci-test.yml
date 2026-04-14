@@ -7,7 +7,7 @@ permissions:
   contents: read
 
 jobs:
-  test:
+  unit:
     runs-on: ubuntu-latest
     timeout-minutes: 10
 
@@ -30,22 +30,33 @@ jobs:
 
       - run: pnpm install --frozen-lockfile
 
-      - run: pnpm run test
+      - run: pnpm run test:unit
 
       - uses: codecov/codecov-action@57e3a136b779b570ffcdbf80b3bdc90e7fab3de2 # v6.0.0
+        if: ${{ always() }}
         with:
           token: ${{ secrets.CODECOV_TOKEN }}
+          files: lcov.unit.info
+          flags: unit
 
-  integration-test-neon:
+  integration:
     runs-on: ubuntu-latest
-    timeout-minutes: 15
-    if: ${{ vars.NEON_PROJECT_ID != '' }}
+    timeout-minutes: 10
 
-    env:
-      NEON_PROJECT_ID: ${{ vars.NEON_PROJECT_ID }}
-      NEON_PARENT_BRANCH: ${{ vars.NEON_PARENT_BRANCH || 'production' }}
-      NEON_DATABASE_NAME: ${{ vars.NEON_DATABASE_NAME || 'neondb' }}
-      NEON_ROLE_NAME: ${{ vars.NEON_ROLE_NAME || 'neondb_owner' }}
+    services:
+      postgres:
+        image: postgres:18
+        env:
+          POSTGRES_DB: postgres
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_USER: postgres
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U postgres -d postgres"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
 
     steps:
       - name: Harden the runner (Audit all outbound calls)
@@ -66,41 +77,29 @@ jobs:
 
       - run: pnpm install --frozen-lockfile
 
-      - id: neon_compute_branch_expires_at
-        run: echo "expires_at=$(date -u -d '+20 minutes' +'%Y-%m-%dT%H:%M:%SZ')" >>"${GITHUB_OUTPUT}"
-
-      - id: neon_create_branch
+      - run: psql -h localhost -p 5432 -U postgres -d postgres -v ON_ERROR_STOP=1 -f db/schema-extensions.sql
         env:
-          NEON_API_KEY: ${{ secrets.NEON_API_KEY }}
-          NEON_BRANCH_NAME: github-actions-${{ github.run_id }}-${{ github.run_attempt }}-${{ github.job }}
-          NEON_EXPIRES_AT: ${{ steps.neon_compute_branch_expires_at.outputs.expires_at }}
-        run: node .github/scripts/create-neon-branch.mjs
+          PGPASSWORD: postgres
 
       - uses: ./.github/actions/pgschema-apply
         env:
-          PGHOST: ${{ steps.neon_create_branch.outputs.db_host }}
+          PGHOST: localhost
           PGPORT: "5432"
-          PGDATABASE: ${{ env.NEON_DATABASE_NAME }}
-          PGUSER: ${{ env.NEON_ROLE_NAME }}
-          PGPASSWORD: ${{ steps.neon_create_branch.outputs.password }}
+          PGDATABASE: postgres
+          PGUSER: postgres
+          PGPASSWORD: postgres
         with:
           pgschema-package-version: v1.9.0
           pgschema-package: github.com/pgplex/pgschema
-          file: db/neon.sql
+          file: db/local.sql
 
-      - shell: bash
-        run: pnpm run test -- "src/**/*.integration.test.ts"
+      - run: pnpm run test:integration
         env:
-          INTEGRATION_TEST_DATABASE_URL: ${{ steps.neon_create_branch.outputs.db_url }}
+          INTEGRATION_TEST_DATABASE_URL: postgres://postgres:postgres@localhost:5432/postgres
 
       - uses: codecov/codecov-action@57e3a136b779b570ffcdbf80b3bdc90e7fab3de2 # v6.0.0
+        if: ${{ always() }}
         with:
           token: ${{ secrets.CODECOV_TOKEN }}
-          flags: integration-neon
-
-      - if: ${{ always() && steps.neon_create_branch.outputs.branch_id != '' }}
-        uses: neondatabase/delete-branch-action@4468d825d5a88ef4012f1705a82f02ec3072f776 # v3.2.1
-        with:
-          project_id: ${{ env.NEON_PROJECT_ID }}
-          branch: ${{ steps.neon_create_branch.outputs.branch_id }}
-          api_key: ${{ secrets.NEON_API_KEY }}
+          files: lcov.integration.info
+          flags: integration

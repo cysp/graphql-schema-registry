@@ -31,6 +31,10 @@ jobs:
     uses: ./.github/workflows/ci-drizzle-schema.yml
     secrets: inherit
 
+  neon:
+    uses: ./.github/workflows/ci-neon.yaml
+    secrets: inherit
+
   test:
     uses: ./.github/workflows/ci-test.yml
     secrets: inherit
