@@ -13,7 +13,9 @@
     "lint": "oxlint --type-aware --report-unused-disable-directives .",
     "lint:fix": "oxlint --type-aware --fix .",
     "start": "node src/index.ts",
-    "test": "node --env-file-if-exists=.env --env-file-if-exists=.env.test --test --experimental-test-coverage --test-coverage-exclude='**/*.fixture.ts' --test-coverage-exclude='**/*.test.ts' --test-coverage-exclude='**/*.test-support.ts' --test-coverage-exclude='src/test-support/**' --enable-source-maps --test-reporter=spec --test-reporter-destination=stdout --test-reporter=lcov --test-reporter-destination=lcov.info",
+    "test": "node tools/run-tests.ts all lcov.info",
+    "test:integration": "node tools/run-tests.ts integration lcov.integration.info",
+    "test:unit": "node tools/run-tests.ts unit lcov.unit.info",
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
