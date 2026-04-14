@@ -46,7 +46,7 @@ export const listSubgraphsHandler: DependencyInjectedHandler<
   const result: ListSubgraphsTransactionResult = await database.transaction(async (transaction) => {
     const graph = await selectActiveGraphBySlugForShare(transaction, request.params.graphSlug);
 
-    if (!canManageGraph(user.grants, graph?.id ?? "*")) {
+    if (!canManageGraph(user.grants, graph?.id)) {
       return { kind: "forbidden" };
     }
 

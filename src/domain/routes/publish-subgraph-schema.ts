@@ -68,7 +68,7 @@ export const publishSubgraphSchemaHandler: DependencyInjectedHandler<
       );
     }
 
-    if (!canWriteSubgraphSchema(user.grants, graph?.id ?? "*", subgraph?.id ?? "*")) {
+    if (!canWriteSubgraphSchema(user.grants, graph?.id, subgraph?.id)) {
       return { kind: "forbidden" };
     }
 

@@ -37,6 +37,8 @@ await test("graph manage policy", async (t) => {
     assert.equal(canManageGraph(concrete, "beta"), false);
     assert.equal(canManageGraph(wildcard, "alpha"), true);
     assert.equal(canManageGraph(wildcard, "beta"), true);
+    assert.equal(canManageGraph(concrete, undefined), false);
+    assert.equal(canManageGraph(wildcard, undefined), true);
   });
 });
 
@@ -60,6 +62,20 @@ await test("schema policy", async (t) => {
       canReadSupergraphSchema(
         createGrants({ graphId: "*", scope: "supergraph_schema:read" }),
         "beta",
+      ),
+      true,
+    );
+    assert.equal(
+      canReadSupergraphSchema(
+        createGrants({ graphId: "alpha", scope: "supergraph_schema:read" }),
+        undefined,
+      ),
+      false,
+    );
+    assert.equal(
+      canReadSupergraphSchema(
+        createGrants({ graphId: "*", scope: "supergraph_schema:read" }),
+        undefined,
       ),
       true,
     );
@@ -93,6 +109,10 @@ await test("schema policy", async (t) => {
     assert.equal(canReadSubgraphSchema(wildcardGraph, "beta", "inventory"), true);
     assert.equal(canReadSubgraphSchema(wildcardSubgraph, "alpha", "products"), true);
     assert.equal(canReadSubgraphSchema(wildcardBoth, "beta", "products"), true);
+    assert.equal(canReadSubgraphSchema(concrete, undefined, "inventory"), false);
+    assert.equal(canReadSubgraphSchema(wildcardGraph, undefined, "inventory"), true);
+    assert.equal(canReadSubgraphSchema(wildcardSubgraph, "alpha", undefined), true);
+    assert.equal(canReadSubgraphSchema(wildcardBoth, undefined, undefined), true);
   });
 
   await t.test("canWriteSubgraphSchema supports graph and subgraph wildcards", () => {
@@ -101,8 +121,17 @@ await test("schema policy", async (t) => {
       scope: "subgraph_schema:write",
       subgraphId: "*",
     });
+    const concrete = createGrants({
+      graphId: "alpha",
+      scope: "subgraph_schema:write",
+      subgraphId: "inventory",
+    });
 
     assert.equal(canWriteSubgraphSchema(grant, "alpha", "inventory"), true);
     assert.equal(canWriteSubgraphSchema(grant, "beta", "products"), true);
+    assert.equal(canWriteSubgraphSchema(concrete, undefined, "inventory"), false);
+    assert.equal(canWriteSubgraphSchema(grant, undefined, "inventory"), true);
+    assert.equal(canWriteSubgraphSchema(grant, "alpha", undefined), true);
+    assert.equal(canWriteSubgraphSchema(grant, undefined, undefined), true);
   });
 });

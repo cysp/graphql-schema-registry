@@ -42,7 +42,7 @@ export const deleteSubgraphHandler: DependencyInjectedHandler<
 
     const graph = await selectActiveGraphBySlugForUpdate(transaction, request.params.graphSlug);
 
-    if (!canManageGraph(user.grants, graph?.id ?? "*")) {
+    if (!canManageGraph(user.grants, graph?.id)) {
       return { kind: "forbidden" } as const;
     }
 

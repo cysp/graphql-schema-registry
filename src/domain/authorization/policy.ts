@@ -1,6 +1,10 @@
 import type { AuthorizationGrant } from "./user.ts";
 
-function matchesResourceId(grantedId: string, requiredId: string): boolean {
+function matchesResourceId(grantedId: string, requiredId: string | undefined): boolean {
+  if (requiredId === undefined) {
+    return grantedId === "*";
+  }
+
   return grantedId === "*" || grantedId === requiredId;
 }
 
@@ -12,7 +16,10 @@ export function canCreateGraph(grants: readonly AuthorizationGrant[]): boolean {
   return canManageAnyGraph(grants);
 }
 
-export function canManageGraph(grants: readonly AuthorizationGrant[], graphId: string): boolean {
+export function canManageGraph(
+  grants: readonly AuthorizationGrant[],
+  graphId: string | undefined,
+): boolean {
   return grants.some(
     (grant) => grant.scope === "graph:manage" && matchesResourceId(grant.graphId, graphId),
   );
@@ -20,7 +27,7 @@ export function canManageGraph(grants: readonly AuthorizationGrant[], graphId: s
 
 export function canReadSupergraphSchema(
   grants: readonly AuthorizationGrant[],
-  graphId: string,
+  graphId: string | undefined,
 ): boolean {
   return grants.some(
     (grant) =>
@@ -30,8 +37,8 @@ export function canReadSupergraphSchema(
 
 export function canReadSubgraphSchema(
   grants: readonly AuthorizationGrant[],
-  graphId: string,
-  subgraphId: string,
+  graphId: string | undefined,
+  subgraphId: string | undefined,
 ): boolean {
   return grants.some(
     (grant) =>
@@ -43,8 +50,8 @@ export function canReadSubgraphSchema(
 
 export function canWriteSubgraphSchema(
   grants: readonly AuthorizationGrant[],
-  graphId: string,
-  subgraphId: string,
+  graphId: string | undefined,
+  subgraphId: string | undefined,
 ): boolean {
   return grants.some(
     (grant) =>
