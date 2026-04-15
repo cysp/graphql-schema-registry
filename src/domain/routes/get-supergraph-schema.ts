@@ -14,9 +14,11 @@ import {
   parseIfNoneMatchHeader,
 } from "../etag.ts";
 import {
+  type SupergraphSchemaUpdatedNotification,
   decodeSupergraphSchemaUpdatedNotification,
   supergraphSchemaUpdatesChannel,
 } from "../supergraph-schema-updates.ts";
+import { createAsyncNotificationGenerator } from "./async-notification-generator.ts";
 
 type OperationHandlers = OpenApiOperationHandlers<
   keyof typeof operationRouteDefinitions,
@@ -102,11 +104,9 @@ export const getSupergraphSchemaHandler: DependencyInjectedHandler<
     }
 
     let closed = false;
-    let isPolling = false;
-    let pollQueued = false;
-    let listenMeta: Awaited<ReturnType<PostgresJsDatabase["$client"]["listen"]>> | undefined;
     let heartbeatTimer: NodeJS.Timeout | undefined;
     let lastSentEtag = lastEventId;
+    let notifications: AsyncGenerator<SupergraphSchemaUpdatedNotification, void, void> | undefined;
 
     const teardown = async (): Promise<void> => {
       if (closed) {
@@ -119,16 +119,18 @@ export const getSupergraphSchemaHandler: DependencyInjectedHandler<
         clearInterval(heartbeatTimer);
       }
 
-      if (listenMeta) {
-        try {
-          await listenMeta.unlisten();
-        } catch (error) {
-          request.log.warn({ error }, "failed to unlisten supergraph schema updates");
-        }
+      if (!notifications) {
+        return;
+      }
+
+      try {
+        await notifications.return();
+      } catch (error) {
+        request.log.warn({ error }, "failed to unlisten supergraph schema updates");
       }
     };
 
-    const pollAndEmitLatest = async (): Promise<void> => {
+    const emitLatest = async (): Promise<void> => {
       const currentSupergraphSchema = await selectCurrentSupergraphSchemaRevision(
         database,
         graph.id,
@@ -150,46 +152,12 @@ export const getSupergraphSchemaHandler: DependencyInjectedHandler<
       lastSentEtag = currentEtag;
     };
 
-    const queuePoll = async (): Promise<void> => {
-      if (closed) {
-        return;
-      }
-
-      if (isPolling) {
-        pollQueued = true;
-        return;
-      }
-
-      isPolling = true;
-      try {
-        await pollAndEmitLatest();
-      } catch (error) {
-        request.log.warn({ error }, "failed to publish supergraph schema SSE update");
-        await teardown();
-        if (!reply.raw.writableEnded) {
-          reply.raw.end();
-        }
-        return;
-      } finally {
-        isPolling = false;
-      }
-
-      if (pollQueued) {
-        pollQueued = false;
-        await queuePoll();
-      }
-    };
-
     try {
-      listenMeta = await database.$client.listen(supergraphSchemaUpdatesChannel, (payload) => {
-        const notification = decodeSupergraphSchemaUpdatedNotification(payload);
-        if (!notification || notification.graphId !== graph.id) {
-          return;
-        }
-
-        // oxlint-disable-next-line eslint(no-void)
-        void queuePoll();
-      });
+      notifications = await createAsyncNotificationGenerator(
+        async (channel, onnotify) => database.$client.listen(channel, onnotify),
+        supergraphSchemaUpdatesChannel,
+        decodeSupergraphSchemaUpdatedNotification,
+      );
     } catch (error) {
       request.log.warn({ error }, "failed to listen for supergraph schema updates");
       return reply.problemDetails({ status: 503 });
@@ -215,7 +183,24 @@ export const getSupergraphSchemaHandler: DependencyInjectedHandler<
       reply.raw.write(": heartbeat\n\n");
     }, 25_000);
 
-    await queuePoll();
+    try {
+      await emitLatest();
+
+      for await (const notification of notifications) {
+        if (notification.graphId !== graph.id) {
+          continue;
+        }
+
+        await emitLatest();
+      }
+    } catch (error) {
+      request.log.warn({ error }, "failed to publish supergraph schema SSE update");
+      await teardown();
+      if (!reply.raw.writableEnded) {
+        reply.raw.end();
+      }
+    }
+
     return;
   }
 
