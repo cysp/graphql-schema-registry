@@ -649,7 +649,10 @@ await test("supergraph schema SSE stream integration with postgres", async (t) =
       const sseReader = createSseReader(response.body);
       const closePromise = fixture.server.close();
 
-      await assert.rejects(async () => sseReader.readDataEvent(2_000), /SSE stream ended unexpectedly/);
+      await assert.rejects(
+        async () => sseReader.readDataEvent(2_000),
+        /SSE stream ended unexpectedly/,
+      );
       await closePromise;
     } finally {
       controller?.abort();

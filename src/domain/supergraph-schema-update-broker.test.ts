@@ -3,6 +3,7 @@ import test from "node:test";
 
 import {
   createSupergraphSchemaUpdateBroker,
+  SupergraphSchemaUpdateBrokerFailure,
   type SupergraphSchemaUpdateBroker,
 } from "./supergraph-schema-update-broker.ts";
 import {
@@ -119,7 +120,9 @@ function createFailingNotificationsHarness(): {
         value: undefined,
       };
     },
-    async throw(error: unknown): Promise<IteratorResult<SupergraphSchemaUpdatedNotification, void>> {
+    async throw(
+      error: unknown,
+    ): Promise<IteratorResult<SupergraphSchemaUpdatedNotification, void>> {
       closed = true;
       if (waiter) {
         waiter.reject(error instanceof Error ? error : new Error(String(error)));
@@ -130,15 +133,18 @@ function createFailingNotificationsHarness(): {
     },
   };
 
-  const broker = createSupergraphSchemaUpdateBroker(async () => {
-    return {
-      async unlisten() {
-        closed = true;
-      },
-    };
-  }, {
-    createNotifications: async () => iterator,
-  });
+  const broker = createSupergraphSchemaUpdateBroker(
+    async () => {
+      return {
+        async unlisten() {
+          closed = true;
+        },
+      };
+    },
+    {
+      createNotifications: async () => iterator,
+    },
+  );
 
   return {
     broker,
@@ -308,19 +314,25 @@ await test("supergraph schema update broker", async (t) => {
     assert.equal(unlistenCalls(), 1);
   });
 
-  await t.test("unexpected listener failure ends active subscribers and future subscriptions", async () => {
-    const { broker, fail } = createFailingNotificationsHarness();
+  await t.test(
+    "unexpected listener failure ends active subscribers and future subscriptions",
+    async () => {
+      const { broker, fail } = createFailingNotificationsHarness();
 
-    const first = await broker.subscribe("graph-1");
-    const second = await broker.subscribe("graph-2");
+      const first = await broker.subscribe("graph-1");
+      const second = await broker.subscribe("graph-2");
 
-    const firstNext = first.next();
-    const secondNext = second.next();
+      const firstNext = first.next();
+      const secondNext = second.next();
 
-    fail(new Error("listener failed"));
+      fail(new Error("listener failed"));
 
-    assert.deepEqual(await firstNext, { done: true, value: undefined });
-    assert.deepEqual(await secondNext, { done: true, value: undefined });
-    await assert.rejects(async () => broker.subscribe("graph-3"), /listener failed/);
-  });
+      await assert.rejects(async () => firstNext, SupergraphSchemaUpdateBrokerFailure);
+      await assert.rejects(async () => secondNext, SupergraphSchemaUpdateBrokerFailure);
+      await assert.rejects(
+        async () => broker.subscribe("graph-3"),
+        SupergraphSchemaUpdateBrokerFailure,
+      );
+    },
+  );
 });

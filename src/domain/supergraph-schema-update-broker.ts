@@ -22,17 +22,21 @@ type NotificationFactory = () => Promise<
 >;
 
 type SubscriberWaiter = {
+  reject: (error: Error) => void;
   resolve: (result: IteratorResult<SupergraphSchemaUpdatedNotification, void>) => void;
 };
 
 type Subscriber = {
   cleanupPromise: Promise<void> | undefined;
-  closed: boolean;
   graphId: string;
   iterator: AsyncGenerator<SupergraphSchemaUpdatedNotification, void, void>;
   pendingNotification: SupergraphSchemaUpdatedNotification | undefined;
+  terminalError: Error | undefined;
+  terminated: boolean;
   waiter: SubscriberWaiter | undefined;
 };
+
+type BrokerState = "closed" | "failed" | "idle" | "running" | "starting" | "stopping";
 
 function resolveSubscriber(
   subscriber: Subscriber,
@@ -45,6 +49,23 @@ function resolveSubscriber(
   const currentWaiter = subscriber.waiter;
   subscriber.waiter = undefined;
   currentWaiter.resolve(result);
+}
+
+function rejectSubscriber(subscriber: Subscriber, error: Error): void {
+  if (!subscriber.waiter) {
+    return;
+  }
+
+  const currentWaiter = subscriber.waiter;
+  subscriber.waiter = undefined;
+  currentWaiter.reject(error);
+}
+
+export class SupergraphSchemaUpdateBrokerFailure extends Error {
+  constructor(message: string, options?: ErrorOptions) {
+    super(message, options);
+    this.name = "SupergraphSchemaUpdateBrokerFailure";
+  }
 }
 
 export type SupergraphSchemaUpdateBroker = {
@@ -63,33 +84,45 @@ export function createSupergraphSchemaUpdateBroker(
 ): SupergraphSchemaUpdateBroker {
   const { logger } = options;
   const subscribersByGraph = new Map<string, Set<Subscriber>>();
-  let closed = false;
-  let failure: Error | undefined;
+  let failure: SupergraphSchemaUpdateBrokerFailure | undefined;
   let notifications: AsyncGenerator<SupergraphSchemaUpdatedNotification, void, void> | undefined;
   let notificationLoop: Promise<void> | undefined;
   let notificationStopRequested = false;
+  let state: BrokerState = "idle";
   let subscriberCount = 0;
   let transition = Promise.resolve();
   let syncListenerState!: () => Promise<void>;
 
+  const setState = (nextState: BrokerState): void => {
+    if (state === nextState) {
+      return;
+    }
+
+    logger?.debug?.(
+      {
+        activeSubscriberCount: subscriberCount,
+        nextState,
+        previousState: state,
+      },
+      "transitioned supergraph schema update broker state",
+    );
+    state = nextState;
+  };
+
   const createNotifications =
     options.createNotifications ??
     (async (): Promise<AsyncGenerator<SupergraphSchemaUpdatedNotification, void, void>> => {
-      return createAsyncNotificationGenerator(
-        listen,
-        supergraphSchemaUpdatesChannel,
-        (payload) => {
-          const notification = decodeSupergraphSchemaUpdatedNotification(payload);
-          if (!notification) {
-            logger?.debug?.(
-              { channel: supergraphSchemaUpdatesChannel },
-              "ignored invalid supergraph schema update payload",
-            );
-          }
+      return createAsyncNotificationGenerator(listen, supergraphSchemaUpdatesChannel, (payload) => {
+        const notification = decodeSupergraphSchemaUpdatedNotification(payload);
+        if (!notification) {
+          logger?.debug?.(
+            { channel: supergraphSchemaUpdatesChannel },
+            "ignored invalid supergraph schema update payload",
+          );
+        }
 
-          return notification;
-        },
-      );
+        return notification;
+      });
     });
 
   const serializeTransition = async (fn: () => Promise<void>): Promise<void> => {
@@ -107,17 +140,33 @@ export function createSupergraphSchemaUpdateBroker(
     }
   };
 
-  const removeSubscriber = (subscriber: Subscriber): void => {
-    if (subscriber.closed) {
+  const terminateSubscriber = (
+    subscriber: Subscriber,
+    termination:
+      | {
+          kind: "closed";
+        }
+      | {
+          error: Error;
+          kind: "failed";
+        },
+  ): void => {
+    if (subscriber.terminated) {
       return;
     }
 
-    subscriber.closed = true;
     subscriber.pendingNotification = undefined;
-    resolveSubscriber(subscriber, {
-      done: true,
-      value: undefined,
-    });
+    subscriber.terminated = true;
+    subscriber.terminalError = termination.kind === "failed" ? termination.error : undefined;
+
+    if (termination.kind === "failed") {
+      rejectSubscriber(subscriber, termination.error);
+    } else {
+      resolveSubscriber(subscriber, {
+        done: true,
+        value: undefined,
+      });
+    }
 
     const subscribers = subscribersByGraph.get(subscriber.graphId);
     if (subscribers) {
@@ -132,6 +181,7 @@ export function createSupergraphSchemaUpdateBroker(
       {
         activeSubscriberCount: subscriberCount,
         graphId: subscriber.graphId,
+        terminationKind: termination.kind,
       },
       "removed supergraph schema update broker subscriber",
     );
@@ -141,8 +191,17 @@ export function createSupergraphSchemaUpdateBroker(
     subscriber: Subscriber,
     {
       syncListenerStateAfterCleanup,
+      termination,
     }: {
       syncListenerStateAfterCleanup: boolean;
+      termination:
+        | {
+            kind: "closed";
+          }
+        | {
+            error: Error;
+            kind: "failed";
+          };
     },
   ): Promise<void> => {
     if (subscriber.cleanupPromise) {
@@ -150,11 +209,11 @@ export function createSupergraphSchemaUpdateBroker(
     }
 
     subscriber.cleanupPromise = (async () => {
-      if (subscriber.closed) {
+      if (subscriber.terminated) {
         return;
       }
 
-      removeSubscriber(subscriber);
+      terminateSubscriber(subscriber, termination);
       if (syncListenerStateAfterCleanup) {
         await serializeTransition(syncListenerState);
       }
@@ -167,23 +226,48 @@ export function createSupergraphSchemaUpdateBroker(
     return [...subscribersByGraph.values()].flatMap((subscribers) => [...subscribers]);
   };
 
-  const failActiveSubscribers = async (): Promise<void> => {
+  const closeActiveSubscribers = async (): Promise<void> => {
     const activeSubscribers = getActiveSubscribers();
-    await Promise.all(
-      activeSubscribers.map(async (subscriber) => {
-        await cleanupSubscriber(subscriber, {
-          syncListenerStateAfterCleanup: false,
-        });
-      }),
-    );
+    for (const subscriber of activeSubscribers) {
+      await cleanupSubscriber(subscriber, {
+        syncListenerStateAfterCleanup: false,
+        termination: {
+          kind: "closed",
+        },
+      });
+    }
+  };
+
+  const failActiveSubscribers = async (
+    error: SupergraphSchemaUpdateBrokerFailure,
+  ): Promise<void> => {
+    const activeSubscribers = getActiveSubscribers();
+    for (const subscriber of activeSubscribers) {
+      await cleanupSubscriber(subscriber, {
+        syncListenerStateAfterCleanup: false,
+        termination: {
+          error,
+          kind: "failed",
+        },
+      });
+    }
   };
 
   const failBroker = async (error: unknown): Promise<void> => {
-    if (failure || closed) {
+    if (failure || state === "closed") {
       return;
     }
 
-    failure = error instanceof Error ? error : new Error(String(error));
+    failure =
+      error instanceof SupergraphSchemaUpdateBrokerFailure
+        ? error
+        : new SupergraphSchemaUpdateBrokerFailure(
+            "Shared supergraph schema update listener terminated unexpectedly.",
+            {
+              cause: error instanceof Error ? error : new Error(String(error)),
+            },
+          );
+    setState("failed");
     logger?.warn?.(
       {
         activeSubscriberCount: subscriberCount,
@@ -191,7 +275,7 @@ export function createSupergraphSchemaUpdateBroker(
       },
       "shared supergraph schema update listener terminated unexpectedly",
     );
-    await failActiveSubscribers();
+    await failActiveSubscribers(failure);
   };
 
   const dispatchNotification = (notification: SupergraphSchemaUpdatedNotification): void => {
@@ -201,7 +285,7 @@ export function createSupergraphSchemaUpdateBroker(
     }
 
     for (const subscriber of subscribers) {
-      if (subscriber.closed) {
+      if (subscriber.terminated) {
         continue;
       }
 
@@ -244,14 +328,18 @@ export function createSupergraphSchemaUpdateBroker(
   };
 
   syncListenerState = async (): Promise<void> => {
-    if (closed || failure || subscriberCount === 0) {
+    if (state === "closed" || state === "failed" || subscriberCount === 0) {
       if (!notifications) {
+        if (state !== "closed" && state !== "failed") {
+          setState("idle");
+        }
         return;
       }
 
       const currentNotifications = notifications;
       notifications = undefined;
       notificationStopRequested = true;
+      setState("stopping");
       logger?.info?.(
         {
           activeSubscriberCount: subscriberCount,
@@ -265,6 +353,10 @@ export function createSupergraphSchemaUpdateBroker(
         notificationStopRequested = false;
         notificationLoop = undefined;
       }
+
+      if (state !== "closed" && state !== "failed") {
+        setState("idle");
+      }
       return;
     }
 
@@ -272,6 +364,7 @@ export function createSupergraphSchemaUpdateBroker(
       return;
     }
 
+    setState("starting");
     logger?.info?.(
       {
         activeSubscriberCount: subscriberCount,
@@ -279,6 +372,7 @@ export function createSupergraphSchemaUpdateBroker(
       "starting shared supergraph schema update listener",
     );
     notifications = await createNotifications();
+    setState("running");
     const currentNotifications = notifications;
 
     notificationLoop = (async () => {
@@ -287,7 +381,11 @@ export function createSupergraphSchemaUpdateBroker(
           dispatchNotification(notification);
         }
         if (!notificationStopRequested && subscriberCount > 0) {
-          await failBroker(new Error("Shared supergraph schema update listener ended unexpectedly."));
+          await failBroker(
+            new SupergraphSchemaUpdateBrokerFailure(
+              "Shared supergraph schema update listener ended unexpectedly.",
+            ),
+          );
         }
       } catch (error) {
         if (!notificationStopRequested && subscriberCount > 0) {
@@ -299,6 +397,9 @@ export function createSupergraphSchemaUpdateBroker(
         }
 
         notificationLoop = undefined;
+        if (state === "running") {
+          setState("idle");
+        }
       }
     })();
   };
@@ -323,7 +424,11 @@ export function createSupergraphSchemaUpdateBroker(
           };
         }
 
-        if (subscriber.closed) {
+        if (subscriber.terminalError) {
+          throw subscriber.terminalError;
+        }
+
+        if (subscriber.terminated) {
           return {
             done: true,
             value: undefined,
@@ -334,13 +439,18 @@ export function createSupergraphSchemaUpdateBroker(
           throw new Error("Concurrent next() calls are not supported for broker subscriptions.");
         }
 
-        return new Promise<IteratorResult<SupergraphSchemaUpdatedNotification, void>>((resolve) => {
-          subscriber.waiter = { resolve };
-        });
+        return new Promise<IteratorResult<SupergraphSchemaUpdatedNotification, void>>(
+          (resolve, reject) => {
+            subscriber.waiter = { reject, resolve };
+          },
+        );
       },
       async return(): Promise<IteratorResult<SupergraphSchemaUpdatedNotification, void>> {
         await cleanupSubscriber(subscriber, {
           syncListenerStateAfterCleanup: true,
+          termination: {
+            kind: "closed",
+          },
         });
         return {
           done: true,
@@ -352,6 +462,10 @@ export function createSupergraphSchemaUpdateBroker(
       ): Promise<IteratorResult<SupergraphSchemaUpdatedNotification, void>> {
         await cleanupSubscriber(subscriber, {
           syncListenerStateAfterCleanup: true,
+          termination: {
+            error: error instanceof Error ? error : new Error(String(error)),
+            kind: "failed",
+          },
         });
         throw error instanceof Error ? error : new Error(String(error));
       },
@@ -359,10 +473,11 @@ export function createSupergraphSchemaUpdateBroker(
 
     subscriber = {
       cleanupPromise: undefined,
-      closed: false,
       graphId,
       iterator,
       pendingNotification: undefined,
+      terminalError: undefined,
+      terminated: false,
       waiter: undefined,
     };
 
@@ -371,30 +486,31 @@ export function createSupergraphSchemaUpdateBroker(
 
   return {
     async close(): Promise<void> {
-      if (closed) {
+      if (state === "closed") {
         return;
       }
 
-      closed = true;
+      setState("closed");
       logger?.info?.(
         {
           activeSubscriberCount: subscriberCount,
         },
         "closing supergraph schema update broker",
       );
-      await failActiveSubscribers();
+      await closeActiveSubscribers();
       await serializeTransition(syncListenerState);
     },
     async subscribe(
       graphId: string,
     ): Promise<AsyncGenerator<SupergraphSchemaUpdatedNotification, void, void>> {
-      if (closed) {
+      if (state === "closed") {
         throw new Error("Supergraph schema update broker is closed.");
       }
 
-      if (failure) {
-        throw new Error("Supergraph schema update broker listener failed.", {
-          cause: failure,
+      const currentFailure = failure;
+      if (currentFailure) {
+        throw new SupergraphSchemaUpdateBrokerFailure(currentFailure.message, {
+          cause: currentFailure,
         });
       }
 
