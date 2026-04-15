@@ -549,6 +549,18 @@ await test("supergraph schema SSE stream integration with postgres", async (t) =
       });
 
       assert.equal(response.statusCode, 400);
+
+      const weakResponse = await fixture.server.inject({
+        headers: {
+          ...authorizationHeaders(graphReadToken),
+          accept: "text/event-stream",
+          "last-event-id": `W/${formatStrongETag(graph.id, 1)}`,
+        },
+        method: "GET",
+        url: `/v1/graphs/${graph.slug}/supergraph.graphqls`,
+      });
+
+      assert.equal(weakResponse.statusCode, 400);
     } finally {
       await fixture.close();
     }

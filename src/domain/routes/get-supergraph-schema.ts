@@ -1,3 +1,5 @@
+import type { FastifyReply, FastifyRequest } from "fastify";
+
 import type { PostgresJsDatabase } from "../../drizzle/types.ts";
 import { requireAuthenticatedUser } from "../../lib/fastify/authorization/guards.ts";
 import type { DependencyInjectedHandler } from "../../lib/fastify/handler-with-dependencies.ts";
@@ -6,10 +8,14 @@ import type { OpenApiOperationHandlers } from "../../lib/fastify/openapi/plugin.
 import { requireDatabase } from "../../lib/fastify/require-database.ts";
 import { canReadSupergraphSchema } from "../authorization/policy.ts";
 import { selectActiveGraphBySlug } from "../database/graphs/repository.ts";
-import { selectCurrentSupergraphSchemaRevision } from "../database/supergraph-schemas/repository.ts";
+import {
+  selectCurrentSupergraphSchemaVersion,
+  selectSupergraphSchemaRevision,
+} from "../database/supergraph-schemas/repository.ts";
 import {
   etagSatisfiesIfNoneMatch,
   formatStrongETag,
+  parseResourceRevisionEntityTag,
   parseIfMatchHeader,
   parseIfNoneMatchHeader,
 } from "../etag.ts";
@@ -27,6 +33,14 @@ type OperationHandlers = OpenApiOperationHandlers<
 
 type RouteDependencies = {
   database: PostgresJsDatabase | undefined;
+};
+
+type RouteGraph = NonNullable<Awaited<ReturnType<typeof selectActiveGraphBySlug>>>;
+
+type CurrentSupergraphSchemaDescriptor = {
+  etag: string;
+  graphId: string;
+  compositionRevision: bigint;
 };
 
 function acceptsServerSentEvents(acceptHeader: string | string[] | undefined): boolean {
@@ -58,7 +72,17 @@ function parseLastEventIdHeader(value: string | string[] | undefined): string | 
     throw new Error("Last-Event-ID must be a single entity-tag value.");
   }
 
-  return condition.entityTags[0];
+  const [entityTag] = condition.entityTags;
+  if (entityTag === undefined) {
+    throw new Error("Last-Event-ID must be a single entity-tag value.");
+  }
+
+  const parsedEntityTag = parseResourceRevisionEntityTag(entityTag);
+  if (!parsedEntityTag || parsedEntityTag.weak) {
+    throw new Error("Last-Event-ID must be a single strong entity-tag value.");
+  }
+
+  return entityTag;
 }
 
 function writeSseEvent(response: NodeJS.WritableStream, eventId: string, sdl: string): void {
@@ -68,6 +92,217 @@ function writeSseEvent(response: NodeJS.WritableStream, eventId: string, sdl: st
     response.write(`data: ${line}\n`);
   }
   response.write("\n");
+}
+
+function resolveLastEventCursor(
+  lastEventId: string | undefined,
+  graphId: string,
+): {
+  lastSeenRevision: bigint | undefined;
+  lastSentEtag: string | undefined;
+} {
+  if (lastEventId === undefined) {
+    return {
+      lastSeenRevision: undefined,
+      lastSentEtag: undefined,
+    };
+  }
+
+  const parsedEntityTag = parseResourceRevisionEntityTag(lastEventId);
+  if (!parsedEntityTag || parsedEntityTag.resourceId !== graphId) {
+    return {
+      lastSeenRevision: undefined,
+      lastSentEtag: undefined,
+    };
+  }
+
+  return {
+    lastSeenRevision: parsedEntityTag.revision,
+    lastSentEtag: lastEventId,
+  };
+}
+
+async function selectCurrentSupergraphSchemaDescriptor(
+  database: PostgresJsDatabase,
+  graphId: string,
+): Promise<CurrentSupergraphSchemaDescriptor | undefined> {
+  const currentSupergraphSchemaVersion = await selectCurrentSupergraphSchemaVersion(
+    database,
+    graphId,
+  );
+  if (!currentSupergraphSchemaVersion) {
+    return undefined;
+  }
+
+  return {
+    compositionRevision: currentSupergraphSchemaVersion.compositionRevision,
+    etag: formatStrongETag(
+      currentSupergraphSchemaVersion.graphId,
+      currentSupergraphSchemaVersion.compositionRevision,
+    ),
+    graphId: currentSupergraphSchemaVersion.graphId,
+  };
+}
+
+async function handleSupergraphSchemaSse(
+  database: PostgresJsDatabase,
+  graph: RouteGraph,
+  request: FastifyRequest,
+  reply: FastifyReply,
+): Promise<void> {
+  let lastEventId: string | undefined;
+  try {
+    lastEventId = parseLastEventIdHeader(request.headers["last-event-id"]);
+  } catch {
+    await reply.problemDetails({ status: 400 });
+    return;
+  }
+
+  let closed = false;
+  let heartbeatTimer: NodeJS.Timeout | undefined;
+  let { lastSeenRevision, lastSentEtag } = resolveLastEventCursor(lastEventId, graph.id);
+  let notifications: AsyncGenerator<SupergraphSchemaUpdatedNotification, void, void> | undefined;
+
+  const teardown = async (): Promise<void> => {
+    if (closed) {
+      return;
+    }
+
+    closed = true;
+
+    if (heartbeatTimer) {
+      clearInterval(heartbeatTimer);
+    }
+
+    if (!notifications) {
+      return;
+    }
+
+    try {
+      await notifications.return();
+    } catch (error) {
+      request.log.warn({ error }, "failed to unlisten supergraph schema updates");
+    }
+  };
+
+  const emitLatest = async (): Promise<void> => {
+    const currentSupergraphSchema = await selectCurrentSupergraphSchemaDescriptor(
+      database,
+      graph.id,
+    );
+    if (!currentSupergraphSchema) {
+      return;
+    }
+
+    if (currentSupergraphSchema.etag === lastSentEtag || closed) {
+      return;
+    }
+
+    const currentSupergraphSchemaRevision = await selectSupergraphSchemaRevision(
+      database,
+      currentSupergraphSchema.graphId,
+      currentSupergraphSchema.compositionRevision,
+    );
+    if (!currentSupergraphSchemaRevision) {
+      return;
+    }
+
+    writeSseEvent(
+      reply.raw,
+      currentSupergraphSchema.etag,
+      currentSupergraphSchemaRevision.supergraphSdl,
+    );
+    lastSentEtag = currentSupergraphSchema.etag;
+    lastSeenRevision = currentSupergraphSchema.compositionRevision;
+  };
+
+  try {
+    notifications = await createAsyncNotificationGenerator(
+      async (channel, onnotify) => database.$client.listen(channel, onnotify),
+      supergraphSchemaUpdatesChannel,
+      decodeSupergraphSchemaUpdatedNotification,
+    );
+  } catch (error) {
+    request.log.warn({ error }, "failed to listen for supergraph schema updates");
+    await reply.problemDetails({ status: 503 });
+    return;
+  }
+
+  reply.hijack();
+  reply.raw.writeHead(200, {
+    "Cache-Control": "no-cache",
+    Connection: "keep-alive",
+    "Content-Type": "text/event-stream",
+  });
+
+  request.raw.once("close", () => {
+    // oxlint-disable-next-line eslint(no-void)
+    void teardown();
+  });
+
+  heartbeatTimer = setInterval(() => {
+    if (closed || reply.raw.writableEnded) {
+      return;
+    }
+
+    reply.raw.write(": heartbeat\n\n");
+  }, 25_000);
+
+  try {
+    await emitLatest();
+
+    for await (const notification of notifications) {
+      if (notification.graphId !== graph.id) {
+        continue;
+      }
+
+      if (lastSeenRevision !== undefined && notification.compositionRevision <= lastSeenRevision) {
+        continue;
+      }
+
+      await emitLatest();
+    }
+  } catch (error) {
+    request.log.warn({ error }, "failed to publish supergraph schema SSE update");
+    await teardown();
+    if (!reply.raw.writableEnded) {
+      reply.raw.end();
+    }
+  }
+}
+
+async function handleSupergraphSchemaGet(
+  database: PostgresJsDatabase,
+  graph: RouteGraph,
+  request: FastifyRequest,
+  reply: FastifyReply,
+): Promise<void> {
+  const ifNoneMatch = parseIfNoneMatchHeader(request.headers["if-none-match"]);
+  const currentSupergraphSchema = await selectCurrentSupergraphSchemaDescriptor(database, graph.id);
+  if (!currentSupergraphSchema) {
+    await reply.problemDetails({ status: 404 });
+    return;
+  }
+
+  reply.header("ETag", currentSupergraphSchema.etag);
+
+  if (!etagSatisfiesIfNoneMatch(ifNoneMatch, currentSupergraphSchema.etag)) {
+    await reply.code(304).send();
+    return;
+  }
+
+  const supergraphSchema = await selectSupergraphSchemaRevision(
+    database,
+    currentSupergraphSchema.graphId,
+    currentSupergraphSchema.compositionRevision,
+  );
+  if (!supergraphSchema) {
+    await reply.problemDetails({ status: 404 });
+    return;
+  }
+
+  reply.header("Content-Type", "text/plain; charset=utf-8");
+  await reply.code(200).send(supergraphSchema.supergraphSdl);
 }
 
 export const getSupergraphSchemaHandler: DependencyInjectedHandler<
@@ -93,135 +328,10 @@ export const getSupergraphSchemaHandler: DependencyInjectedHandler<
     return reply.problemDetails({ status: 404 });
   }
 
-  const sseRequested = acceptsServerSentEvents(request.headers.accept);
-
-  if (sseRequested) {
-    let lastEventId: string | undefined;
-    try {
-      lastEventId = parseLastEventIdHeader(request.headers["last-event-id"]);
-    } catch {
-      return reply.problemDetails({ status: 400 });
-    }
-
-    let closed = false;
-    let heartbeatTimer: NodeJS.Timeout | undefined;
-    let lastSentEtag = lastEventId;
-    let notifications: AsyncGenerator<SupergraphSchemaUpdatedNotification, void, void> | undefined;
-
-    const teardown = async (): Promise<void> => {
-      if (closed) {
-        return;
-      }
-
-      closed = true;
-
-      if (heartbeatTimer) {
-        clearInterval(heartbeatTimer);
-      }
-
-      if (!notifications) {
-        return;
-      }
-
-      try {
-        await notifications.return();
-      } catch (error) {
-        request.log.warn({ error }, "failed to unlisten supergraph schema updates");
-      }
-    };
-
-    const emitLatest = async (): Promise<void> => {
-      const currentSupergraphSchema = await selectCurrentSupergraphSchemaRevision(
-        database,
-        graph.id,
-      );
-      if (!currentSupergraphSchema) {
-        return;
-      }
-
-      const currentEtag = formatStrongETag(
-        currentSupergraphSchema.graphId,
-        currentSupergraphSchema.compositionRevision,
-      );
-
-      if (currentEtag === lastSentEtag || closed) {
-        return;
-      }
-
-      writeSseEvent(reply.raw, currentEtag, currentSupergraphSchema.supergraphSdl);
-      lastSentEtag = currentEtag;
-    };
-
-    try {
-      notifications = await createAsyncNotificationGenerator(
-        async (channel, onnotify) => database.$client.listen(channel, onnotify),
-        supergraphSchemaUpdatesChannel,
-        decodeSupergraphSchemaUpdatedNotification,
-      );
-    } catch (error) {
-      request.log.warn({ error }, "failed to listen for supergraph schema updates");
-      return reply.problemDetails({ status: 503 });
-    }
-
-    reply.hijack();
-    reply.raw.writeHead(200, {
-      "Cache-Control": "no-cache",
-      Connection: "keep-alive",
-      "Content-Type": "text/event-stream",
-    });
-
-    request.raw.once("close", () => {
-      // oxlint-disable-next-line eslint(no-void)
-      void teardown();
-    });
-
-    heartbeatTimer = setInterval(() => {
-      if (closed || reply.raw.writableEnded) {
-        return;
-      }
-
-      reply.raw.write(": heartbeat\n\n");
-    }, 25_000);
-
-    try {
-      await emitLatest();
-
-      for await (const notification of notifications) {
-        if (notification.graphId !== graph.id) {
-          continue;
-        }
-
-        await emitLatest();
-      }
-    } catch (error) {
-      request.log.warn({ error }, "failed to publish supergraph schema SSE update");
-      await teardown();
-      if (!reply.raw.writableEnded) {
-        reply.raw.end();
-      }
-    }
-
+  if (acceptsServerSentEvents(request.headers.accept)) {
+    await handleSupergraphSchemaSse(database, graph, request, reply);
     return;
   }
 
-  const ifNoneMatch = parseIfNoneMatchHeader(request.headers["if-none-match"]);
-
-  const supergraphSchema = await selectCurrentSupergraphSchemaRevision(database, graph.id);
-  if (!supergraphSchema) {
-    return reply.problemDetails({ status: 404 });
-  }
-
-  const currentEtag = formatStrongETag(
-    supergraphSchema.graphId,
-    supergraphSchema.compositionRevision,
-  );
-
-  reply.header("ETag", currentEtag);
-
-  if (!etagSatisfiesIfNoneMatch(ifNoneMatch, currentEtag)) {
-    return reply.code(304).send();
-  }
-
-  reply.header("Content-Type", "text/plain; charset=utf-8");
-  return reply.code(200).send(supergraphSchema.supergraphSdl);
+  await handleSupergraphSchemaGet(database, graph, request, reply);
 };
