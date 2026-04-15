@@ -34,6 +34,16 @@ type RouteDependencies = {
 };
 
 type RouteGraph = NonNullable<Awaited<ReturnType<typeof selectActiveGraphBySlug>>>;
+type StreamSnapshotTrigger = "initial_snapshot" | "update_notification";
+type StreamSnapshotState = "emitted" | "skipped_empty" | "skipped_unchanged";
+type StreamState = {
+  closed: boolean;
+  heartbeatTimer: NodeJS.Timeout | undefined;
+  lastSeenRevision: bigint | undefined;
+  lastSentEtag: string | undefined;
+  teardownPromise: Promise<void> | undefined;
+  writeTransition: Promise<void>;
+};
 
 function formatLoggedRevision(revision: bigint | undefined): string | undefined {
   return revision === undefined ? undefined : String(revision);
@@ -73,6 +83,89 @@ async function selectCurrentSupergraphSchemaSnapshot(
   return formatSupergraphSchemaSnapshot(currentSupergraphSchemaRevision);
 }
 
+function logOpenedSupergraphSchemaSseStream(
+  request: FastifyRequest,
+  graphId: string,
+  initialSnapshotState: StreamSnapshotState,
+  state: StreamState,
+): void {
+  request.log.debug(
+    {
+      graphId,
+      initialSnapshotState,
+      lastSeenRevision: formatLoggedRevision(state.lastSeenRevision),
+      resumedFromEtag: state.lastSentEtag,
+    },
+    "opened supergraph schema SSE stream",
+  );
+}
+
+function logClosedSupergraphSchemaSseStream(
+  request: FastifyRequest,
+  graphId: string,
+  state: StreamState,
+): void {
+  request.log.info(
+    {
+      graphId,
+      lastSeenRevision: formatLoggedRevision(state.lastSeenRevision),
+    },
+    "closed supergraph schema SSE stream",
+  );
+}
+
+function logSupergraphSchemaSseFailure(
+  request: FastifyRequest,
+  graphId: string,
+  error: unknown,
+): void {
+  if (error instanceof SupergraphSchemaUpdateBrokerFailure) {
+    request.log.warn(
+      {
+        error,
+        graphId,
+      },
+      "supergraph schema SSE stream ended after broker failure",
+    );
+    return;
+  }
+
+  request.log.warn(
+    { error, graphId },
+    "failed to publish supergraph schema SSE update",
+  );
+}
+
+function shouldIgnoreNotification(
+  notification: SupergraphSchemaUpdatedNotification,
+  graphId: string,
+  lastSeenRevision: bigint | undefined,
+): boolean {
+  return notification.graphId !== graphId || (
+    lastSeenRevision !== undefined && notification.compositionRevision <= lastSeenRevision
+  );
+}
+
+function logIgnoredNotification(
+  request: FastifyRequest,
+  graphId: string,
+  lastSeenRevision: bigint | undefined,
+  notification: SupergraphSchemaUpdatedNotification,
+): void {
+  if (notification.graphId !== graphId) {
+    return;
+  }
+
+  request.log.debug(
+    {
+      graphId,
+      lastSeenRevision: formatLoggedRevision(lastSeenRevision),
+      notificationRevision: String(notification.compositionRevision),
+    },
+    "ignored stale supergraph schema update notification",
+  );
+}
+
 async function handleSupergraphSchemaSse(
   database: PostgresJsDatabase,
   supergraphSchemaUpdateBroker: SupergraphSchemaUpdateBroker | undefined,
@@ -80,70 +173,72 @@ async function handleSupergraphSchemaSse(
   request: FastifyRequest,
   reply: FastifyReply,
 ): Promise<void> {
-  let closed = false;
-  let endReason:
-    | "broker_closed"
-    | "broker_failed"
-    | "client_disconnect"
-    | "publish_failed"
-    | undefined;
-  let heartbeatTimer: NodeJS.Timeout | undefined;
-  let notifications: AsyncGenerator<SupergraphSchemaUpdatedNotification, void, void> | undefined;
-  let teardownPromise: Promise<void> | undefined;
-  let streamStarted = false;
-  let writeTransition = Promise.resolve();
-  let { lastSeenRevision, lastSentEtag } = {
-    lastSeenRevision: undefined as bigint | undefined,
-    lastSentEtag: undefined as string | undefined,
-  };
-
+  let cursor: ReturnType<typeof resolveSupergraphSchemaStreamCursor>;
   try {
-    ({ lastSeenRevision, lastSentEtag } = resolveSupergraphSchemaStreamCursor(
-      request.headers["last-event-id"],
-      graph.id,
-    ));
+    cursor = resolveSupergraphSchemaStreamCursor(request.headers["last-event-id"], graph.id);
   } catch {
     await reply.problemDetails({ status: 400 });
     return;
   }
 
-  const teardown = async ({ endResponse }: { endResponse: boolean }): Promise<void> => {
-    if (teardownPromise) {
-      await teardownPromise;
+  if (!supergraphSchemaUpdateBroker) {
+    await reply.problemDetails({ status: 503 });
+    return;
+  }
+
+  let notifications: AsyncGenerator<SupergraphSchemaUpdatedNotification, void, void>;
+  try {
+    notifications = await supergraphSchemaUpdateBroker.subscribe(graph.id);
+  } catch (error) {
+    request.log.warn({ error }, "failed to listen for supergraph schema updates");
+    await reply.problemDetails({ status: 503 });
+    return;
+  }
+
+  const state: StreamState = {
+    closed: false,
+    heartbeatTimer: undefined,
+    lastSeenRevision: cursor.lastSeenRevision,
+    lastSentEtag: cursor.lastSentEtag,
+    teardownPromise: undefined,
+    writeTransition: Promise.resolve(),
+  };
+
+  async function closeStream({ endResponse }: { endResponse: boolean }): Promise<void> {
+    if (state.teardownPromise) {
+      await state.teardownPromise;
       return;
     }
 
-    teardownPromise = (async () => {
-      if (closed) {
+    state.teardownPromise = (async () => {
+      if (state.closed) {
         return;
       }
 
-      closed = true;
+      state.closed = true;
 
-      if (heartbeatTimer) {
-        clearInterval(heartbeatTimer);
+      if (state.heartbeatTimer) {
+        clearInterval(state.heartbeatTimer);
       }
 
-      if (notifications) {
-        try {
-          await notifications.return();
-        } catch (error) {
-          request.log.warn({ error }, "failed to unlisten supergraph schema updates");
-        }
+      try {
+        await notifications.return();
+      } catch (error) {
+        request.log.warn({ error }, "failed to unlisten supergraph schema updates");
       }
 
-      if (endResponse && streamStarted && !reply.raw.destroyed && !reply.raw.writableEnded) {
+      if (endResponse && !reply.raw.destroyed && !reply.raw.writableEnded) {
         reply.raw.end();
       }
     })();
 
-    await teardownPromise;
-  };
+    await state.teardownPromise;
+  }
 
-  const serializeWrite = async (fn: () => Promise<void>): Promise<void> => {
-    const previousTransition = writeTransition;
+  async function serializeWrite(fn: () => Promise<void>): Promise<void> {
+    const previousTransition = state.writeTransition;
     let releaseTransition!: () => void;
-    writeTransition = new Promise<void>((resolve) => {
+    state.writeTransition = new Promise<void>((resolve) => {
       releaseTransition = resolve;
     });
 
@@ -153,17 +248,15 @@ async function handleSupergraphSchemaSse(
     } finally {
       releaseTransition();
     }
-  };
+  }
 
-  const emitLatest = async (
-    trigger: "initial_snapshot" | "update_notification",
-  ): Promise<"emitted" | "skipped_empty" | "skipped_unchanged"> => {
+  async function emitLatestSnapshot(trigger: StreamSnapshotTrigger): Promise<StreamSnapshotState> {
     const currentSupergraphSchema = await selectCurrentSupergraphSchemaSnapshot(database, graph.id);
     if (!currentSupergraphSchema) {
       return "skipped_empty";
     }
 
-    if (currentSupergraphSchema.etag === lastSentEtag || closed) {
+    if (state.closed || currentSupergraphSchema.etag === state.lastSentEtag) {
       return "skipped_unchanged";
     }
 
@@ -174,8 +267,9 @@ async function handleSupergraphSchemaSse(
         currentSupergraphSchema.supergraphSdl,
       );
     });
-    lastSentEtag = currentSupergraphSchema.etag;
-    lastSeenRevision = currentSupergraphSchema.compositionRevision;
+
+    state.lastSentEtag = currentSupergraphSchema.etag;
+    state.lastSeenRevision = currentSupergraphSchema.compositionRevision;
     request.log.debug(
       {
         etag: currentSupergraphSchema.etag,
@@ -185,24 +279,41 @@ async function handleSupergraphSchemaSse(
       },
       "emitted supergraph schema SSE snapshot",
     );
-    return "emitted";
-  };
 
-  if (!supergraphSchemaUpdateBroker) {
-    await reply.problemDetails({ status: 503 });
-    return;
+    return "emitted";
   }
 
-  try {
-    notifications = await supergraphSchemaUpdateBroker.subscribe(graph.id);
-  } catch (error) {
-    request.log.warn({ error }, "failed to listen for supergraph schema updates");
-    await reply.problemDetails({ status: 503 });
-    return;
+  function handleClientDisconnect(): void {
+    // oxlint-disable-next-line eslint(no-void)
+    void closeStream({ endResponse: false });
+  }
+
+  function startHeartbeat(): void {
+    state.heartbeatTimer = setInterval(() => {
+      if (state.closed || reply.raw.writableEnded) {
+        return;
+      }
+
+      // oxlint-disable-next-line eslint(no-void)
+      void serializeWrite(async () => {
+        try {
+          await writeSupergraphSchemaSseHeartbeat(reply.raw);
+        } catch (error) {
+          if (state.closed) {
+            return;
+          }
+
+          request.log.warn(
+            { error, graphId: graph.id },
+            "failed to write supergraph schema SSE heartbeat",
+          );
+          await closeStream({ endResponse: true });
+        }
+      });
+    }, 25_000);
   }
 
   reply.hijack();
-  streamStarted = true;
   reply.raw.writeHead(200, {
     "Cache-Control": "no-cache",
     Connection: "keep-alive",
@@ -210,94 +321,27 @@ async function handleSupergraphSchemaSse(
   });
 
   request.raw.once("close", () => {
-    endReason ??= "client_disconnect";
-    // oxlint-disable-next-line eslint(no-void)
-    void teardown({ endResponse: false });
+    handleClientDisconnect();
   });
-
-  heartbeatTimer = setInterval(() => {
-    if (closed || reply.raw.writableEnded) {
-      return;
-    }
-
-    // oxlint-disable-next-line eslint(no-void)
-    void serializeWrite(async () => {
-      try {
-        await writeSupergraphSchemaSseHeartbeat(reply.raw);
-      } catch (error) {
-        if (closed) {
-          return;
-        }
-
-        endReason ??= "publish_failed";
-        request.log.warn(
-          { error, graphId: graph.id },
-          "failed to write supergraph schema SSE heartbeat",
-        );
-        await teardown({ endResponse: true });
-      }
-    });
-  }, 25_000);
+  startHeartbeat();
 
   try {
-    const initialSnapshotState = await emitLatest("initial_snapshot");
-    request.log.debug(
-      {
-        graphId: graph.id,
-        initialSnapshotState,
-        lastSeenRevision: formatLoggedRevision(lastSeenRevision),
-        resumedFromEtag: lastSentEtag,
-      },
-      "opened supergraph schema SSE stream",
-    );
+    const initialSnapshotState = await emitLatestSnapshot("initial_snapshot");
+    logOpenedSupergraphSchemaSseStream(request, graph.id, initialSnapshotState, state);
 
     for await (const notification of notifications) {
-      if (notification.graphId !== graph.id) {
+      if (shouldIgnoreNotification(notification, graph.id, state.lastSeenRevision)) {
+        logIgnoredNotification(request, graph.id, state.lastSeenRevision, notification);
         continue;
       }
 
-      if (lastSeenRevision !== undefined && notification.compositionRevision <= lastSeenRevision) {
-        request.log.debug(
-          {
-            graphId: graph.id,
-            lastSeenRevision: String(lastSeenRevision),
-            notificationRevision: String(notification.compositionRevision),
-          },
-          "ignored stale supergraph schema update notification",
-        );
-        continue;
-      }
-
-      await emitLatest("update_notification");
+      await emitLatestSnapshot("update_notification");
     }
-    endReason ??= "broker_closed";
   } catch (error) {
-    if (error instanceof SupergraphSchemaUpdateBrokerFailure) {
-      endReason ??= "broker_failed";
-      request.log.warn(
-        {
-          error,
-          graphId: graph.id,
-        },
-        "supergraph schema SSE stream ended after broker failure",
-      );
-    } else {
-      endReason ??= "publish_failed";
-      request.log.warn(
-        { error, graphId: graph.id },
-        "failed to publish supergraph schema SSE update",
-      );
-    }
+    logSupergraphSchemaSseFailure(request, graph.id, error);
   } finally {
-    await teardown({ endResponse: true });
-    request.log.info(
-      {
-        endReason: endReason ?? "broker_closed",
-        graphId: graph.id,
-        lastSeenRevision: formatLoggedRevision(lastSeenRevision),
-      },
-      "closed supergraph schema SSE stream",
-    );
+    await closeStream({ endResponse: true });
+    logClosedSupergraphSchemaSseStream(request, graph.id, state);
   }
 }
 
