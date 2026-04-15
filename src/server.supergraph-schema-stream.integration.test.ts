@@ -27,6 +27,12 @@ const conflictingProductsSchemaSdl = `
   }
 `;
 
+const reviewsSchemaSdl = `
+  type Query {
+    reviews: [String!]!
+  }
+`;
+
 type IntegrationFixture = Awaited<ReturnType<typeof createIntegrationServerFixture>>;
 
 type SseEvent = {
@@ -527,6 +533,91 @@ await test("supergraph schema SSE stream integration with postgres", async (t) =
       }
     },
   );
+
+  await t.test("multiple subscribers on one server process do not interfere", async () => {
+    const fixture = await createIntegrationServerFixture({
+      databaseUrl: integrationDatabaseUrl,
+      jwtVerification,
+    });
+
+    let firstController: AbortController | undefined;
+    let secondController: AbortController | undefined;
+
+    try {
+      const graph = await createGraph(fixture, graphManageToken, "catalog");
+      const inventorySubgraph = await createSubgraph(
+        fixture,
+        graphManageToken,
+        graph.slug,
+        "inventory",
+        "https://inventory.example.com/graphql",
+      );
+      const graphReadToken = createGraphReadGrantToken(createToken, graph.id);
+
+      const address = await fixture.server.listen({ host: "127.0.0.1", port: 0 });
+      const streamUrl = `${address}/v1/graphs/${graph.slug}/supergraph.graphqls`;
+
+      firstController = new AbortController();
+      const firstResponse = await fetch(streamUrl, {
+        headers: {
+          ...authorizationHeaders(graphReadToken),
+          accept: "text/event-stream",
+        },
+        signal: firstController.signal,
+      });
+
+      secondController = new AbortController();
+      const secondResponse = await fetch(streamUrl, {
+        headers: {
+          ...authorizationHeaders(graphReadToken),
+          accept: "text/event-stream",
+        },
+        signal: secondController.signal,
+      });
+
+      assert.equal(firstResponse.status, 200);
+      assert.equal(secondResponse.status, 200);
+      assert.ok(firstResponse.body);
+      assert.ok(secondResponse.body);
+
+      const firstReader = createSseReader(firstResponse.body);
+      const secondReader = createSseReader(secondResponse.body);
+
+      await publishSubgraphSchema(
+        fixture,
+        createToken,
+        graph,
+        inventorySubgraph,
+        inventorySchemaSdl,
+      );
+
+      const firstEvent = await firstReader.readDataEvent();
+      const secondEvent = await secondReader.readDataEvent();
+
+      assert.equal(firstEvent.id, formatStrongETag(graph.id, 1));
+      assert.equal(secondEvent.id, formatStrongETag(graph.id, 1));
+
+      firstController.abort();
+
+      const reviewsSubgraph = await createSubgraph(
+        fixture,
+        graphManageToken,
+        graph.slug,
+        "reviews",
+        "https://reviews.example.com/graphql",
+      );
+      await publishSubgraphSchema(fixture, createToken, graph, reviewsSubgraph, reviewsSchemaSdl);
+
+      const secondUpdate = await secondReader.readDataEvent();
+      assert.equal(secondUpdate.event, "schema");
+      assert.equal(secondUpdate.id, formatStrongETag(graph.id, 2));
+      assert.match(secondUpdate.data, /reviews/);
+    } finally {
+      firstController?.abort();
+      secondController?.abort();
+      await fixture.close();
+    }
+  });
 
   await t.test("returns 400 for invalid Last-Event-ID values", async () => {
     const fixture = await createIntegrationServerFixture({

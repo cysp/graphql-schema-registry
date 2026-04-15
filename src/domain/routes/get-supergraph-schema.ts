@@ -19,12 +19,8 @@ import {
   parseIfMatchHeader,
   parseIfNoneMatchHeader,
 } from "../etag.ts";
-import {
-  type SupergraphSchemaUpdatedNotification,
-  decodeSupergraphSchemaUpdatedNotification,
-  supergraphSchemaUpdatesChannel,
-} from "../supergraph-schema-updates.ts";
-import { createAsyncNotificationGenerator } from "./async-notification-generator.ts";
+import type { SupergraphSchemaUpdateBroker } from "../supergraph-schema-update-broker.ts";
+import type { SupergraphSchemaUpdatedNotification } from "../supergraph-schema-updates.ts";
 
 type OperationHandlers = OpenApiOperationHandlers<
   keyof typeof operationRouteDefinitions,
@@ -33,6 +29,7 @@ type OperationHandlers = OpenApiOperationHandlers<
 
 type RouteDependencies = {
   database: PostgresJsDatabase | undefined;
+  supergraphSchemaUpdateBroker: SupergraphSchemaUpdateBroker | undefined;
 };
 
 type RouteGraph = NonNullable<Awaited<ReturnType<typeof selectActiveGraphBySlug>>>;
@@ -146,6 +143,7 @@ async function selectCurrentSupergraphSchemaDescriptor(
 
 async function handleSupergraphSchemaSse(
   database: PostgresJsDatabase,
+  supergraphSchemaUpdateBroker: SupergraphSchemaUpdateBroker | undefined,
   graph: RouteGraph,
   request: FastifyRequest,
   reply: FastifyReply,
@@ -216,12 +214,13 @@ async function handleSupergraphSchemaSse(
     lastSeenRevision = currentSupergraphSchema.compositionRevision;
   };
 
+  if (!supergraphSchemaUpdateBroker) {
+    await reply.problemDetails({ status: 503 });
+    return;
+  }
+
   try {
-    notifications = await createAsyncNotificationGenerator(
-      async (channel, onnotify) => database.$client.listen(channel, onnotify),
-      supergraphSchemaUpdatesChannel,
-      decodeSupergraphSchemaUpdatedNotification,
-    );
+    notifications = await supergraphSchemaUpdateBroker.subscribe(graph.id);
   } catch (error) {
     request.log.warn({ error }, "failed to listen for supergraph schema updates");
     await reply.problemDetails({ status: 503 });
@@ -308,7 +307,7 @@ async function handleSupergraphSchemaGet(
 export const getSupergraphSchemaHandler: DependencyInjectedHandler<
   OperationHandlers["getSupergraphSchema"],
   RouteDependencies
-> = async ({ dependencies: { database }, request, reply }) => {
+> = async ({ dependencies: { database, supergraphSchemaUpdateBroker }, request, reply }) => {
   const user = requireAuthenticatedUser(request, reply);
   if (!user) {
     return;
@@ -329,7 +328,7 @@ export const getSupergraphSchemaHandler: DependencyInjectedHandler<
   }
 
   if (acceptsServerSentEvents(request.headers.accept)) {
-    await handleSupergraphSchemaSse(database, graph, request, reply);
+    await handleSupergraphSchemaSse(database, supergraphSchemaUpdateBroker, graph, request, reply);
     return;
   }
 
