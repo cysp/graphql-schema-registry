@@ -619,6 +619,44 @@ await test("supergraph schema SSE stream integration with postgres", async (t) =
     }
   });
 
+  await t.test("server shutdown ends open SSE streams", async () => {
+    const fixture = await createIntegrationServerFixture({
+      databaseUrl: integrationDatabaseUrl,
+      jwtVerification,
+    });
+
+    let controller: AbortController | undefined;
+
+    try {
+      const graph = await createGraph(fixture, graphManageToken, "catalog");
+      const graphReadToken = createGraphReadGrantToken(createToken, graph.id);
+
+      const address = await fixture.server.listen({ host: "127.0.0.1", port: 0 });
+      const streamUrl = `${address}/v1/graphs/${graph.slug}/supergraph.graphqls`;
+
+      controller = new AbortController();
+      const response = await fetch(streamUrl, {
+        headers: {
+          ...authorizationHeaders(graphReadToken),
+          accept: "text/event-stream",
+        },
+        signal: controller.signal,
+      });
+
+      assert.equal(response.status, 200);
+      assert.ok(response.body);
+
+      const sseReader = createSseReader(response.body);
+      const closePromise = fixture.server.close();
+
+      await assert.rejects(async () => sseReader.readDataEvent(2_000), /SSE stream ended unexpectedly/);
+      await closePromise;
+    } finally {
+      controller?.abort();
+      await fixture.close();
+    }
+  });
+
   await t.test("returns 400 for invalid Last-Event-ID values", async () => {
     const fixture = await createIntegrationServerFixture({
       databaseUrl: integrationDatabaseUrl,

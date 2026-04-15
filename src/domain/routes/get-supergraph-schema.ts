@@ -8,16 +8,13 @@ import type { OpenApiOperationHandlers } from "../../lib/fastify/openapi/plugin.
 import { requireDatabase } from "../../lib/fastify/require-database.ts";
 import { canReadSupergraphSchema } from "../authorization/policy.ts";
 import { selectActiveGraphBySlug } from "../database/graphs/repository.ts";
-import {
-  selectCurrentSupergraphSchemaVersion,
-  selectSupergraphSchemaRevision,
-} from "../database/supergraph-schemas/repository.ts";
+import { selectCurrentSupergraphSchemaRevision } from "../database/supergraph-schemas/repository.ts";
 import {
   etagSatisfiesIfNoneMatch,
   formatStrongETag,
-  parseResourceRevisionEntityTag,
   parseIfMatchHeader,
   parseIfNoneMatchHeader,
+  parseResourceRevisionEntityTag,
 } from "../etag.ts";
 import type { SupergraphSchemaUpdateBroker } from "../supergraph-schema-update-broker.ts";
 import type { SupergraphSchemaUpdatedNotification } from "../supergraph-schema-updates.ts";
@@ -34,10 +31,11 @@ type RouteDependencies = {
 
 type RouteGraph = NonNullable<Awaited<ReturnType<typeof selectActiveGraphBySlug>>>;
 
-type CurrentSupergraphSchemaDescriptor = {
+type CurrentSupergraphSchemaSnapshot = {
   etag: string;
   graphId: string;
   compositionRevision: bigint;
+  supergraphSdl: string;
 };
 
 function acceptsServerSentEvents(acceptHeader: string | string[] | undefined): boolean {
@@ -59,10 +57,19 @@ function acceptsServerSentEvents(acceptHeader: string | string[] | undefined): b
   return false;
 }
 
-function parseLastEventIdHeader(value: string | string[] | undefined): string | undefined {
-  const condition = parseIfMatchHeader(value);
+function resolveSchemaStreamCursor(
+  lastEventIdHeader: string | string[] | undefined,
+  graphId: string,
+): {
+  lastSeenRevision: bigint | undefined;
+  lastSentEtag: string | undefined;
+} {
+  const condition = parseIfMatchHeader(lastEventIdHeader);
   if (condition === undefined) {
-    return undefined;
+    return {
+      lastSeenRevision: undefined,
+      lastSentEtag: undefined,
+    };
   }
 
   if (condition.kind === "wildcard" || condition.entityTags.length !== 1) {
@@ -79,7 +86,17 @@ function parseLastEventIdHeader(value: string | string[] | undefined): string | 
     throw new Error("Last-Event-ID must be a single strong entity-tag value.");
   }
 
-  return entityTag;
+  if (parsedEntityTag.resourceId !== graphId) {
+    return {
+      lastSeenRevision: undefined,
+      lastSentEtag: undefined,
+    };
+  }
+
+  return {
+    lastSeenRevision: parsedEntityTag.revision,
+    lastSentEtag: entityTag,
+  };
 }
 
 function writeSseEvent(response: NodeJS.WritableStream, eventId: string, sdl: string): void {
@@ -91,53 +108,23 @@ function writeSseEvent(response: NodeJS.WritableStream, eventId: string, sdl: st
   response.write("\n");
 }
 
-function resolveLastEventCursor(
-  lastEventId: string | undefined,
-  graphId: string,
-): {
-  lastSeenRevision: bigint | undefined;
-  lastSentEtag: string | undefined;
-} {
-  if (lastEventId === undefined) {
-    return {
-      lastSeenRevision: undefined,
-      lastSentEtag: undefined,
-    };
-  }
-
-  const parsedEntityTag = parseResourceRevisionEntityTag(lastEventId);
-  if (!parsedEntityTag || parsedEntityTag.resourceId !== graphId) {
-    return {
-      lastSeenRevision: undefined,
-      lastSentEtag: undefined,
-    };
-  }
-
-  return {
-    lastSeenRevision: parsedEntityTag.revision,
-    lastSentEtag: lastEventId,
-  };
-}
-
-async function selectCurrentSupergraphSchemaDescriptor(
+async function selectCurrentSupergraphSchemaSnapshot(
   database: PostgresJsDatabase,
   graphId: string,
-): Promise<CurrentSupergraphSchemaDescriptor | undefined> {
-  const currentSupergraphSchemaVersion = await selectCurrentSupergraphSchemaVersion(
-    database,
-    graphId,
-  );
-  if (!currentSupergraphSchemaVersion) {
+): Promise<CurrentSupergraphSchemaSnapshot | undefined> {
+  const currentSupergraphSchemaRevision = await selectCurrentSupergraphSchemaRevision(database, graphId);
+  if (!currentSupergraphSchemaRevision) {
     return undefined;
   }
 
   return {
-    compositionRevision: currentSupergraphSchemaVersion.compositionRevision,
+    compositionRevision: currentSupergraphSchemaRevision.compositionRevision,
     etag: formatStrongETag(
-      currentSupergraphSchemaVersion.graphId,
-      currentSupergraphSchemaVersion.compositionRevision,
+      currentSupergraphSchemaRevision.graphId,
+      currentSupergraphSchemaRevision.compositionRevision,
     ),
-    graphId: currentSupergraphSchemaVersion.graphId,
+    graphId: currentSupergraphSchemaRevision.graphId,
+    supergraphSdl: currentSupergraphSchemaRevision.supergraphSdl,
   };
 }
 
@@ -148,46 +135,66 @@ async function handleSupergraphSchemaSse(
   request: FastifyRequest,
   reply: FastifyReply,
 ): Promise<void> {
-  let lastEventId: string | undefined;
+  let closed = false;
+  let heartbeatTimer: NodeJS.Timeout | undefined;
+  let notifications: AsyncGenerator<SupergraphSchemaUpdatedNotification, void, void> | undefined;
+  let teardownPromise: Promise<void> | undefined;
+  let streamStarted = false;
+  let { lastSeenRevision, lastSentEtag } = {
+    lastSeenRevision: undefined as bigint | undefined,
+    lastSentEtag: undefined as string | undefined,
+  };
+
   try {
-    lastEventId = parseLastEventIdHeader(request.headers["last-event-id"]);
+    ({ lastSeenRevision, lastSentEtag } = resolveSchemaStreamCursor(
+      request.headers["last-event-id"],
+      graph.id,
+    ));
   } catch {
     await reply.problemDetails({ status: 400 });
     return;
   }
 
-  let closed = false;
-  let heartbeatTimer: NodeJS.Timeout | undefined;
-  let { lastSeenRevision, lastSentEtag } = resolveLastEventCursor(lastEventId, graph.id);
-  let notifications: AsyncGenerator<SupergraphSchemaUpdatedNotification, void, void> | undefined;
-
-  const teardown = async (): Promise<void> => {
-    if (closed) {
+  const teardown = async ({ endResponse }: { endResponse: boolean }): Promise<void> => {
+    if (teardownPromise) {
+      await teardownPromise;
       return;
     }
 
-    closed = true;
+    teardownPromise = (async () => {
+      if (closed) {
+        return;
+      }
 
-    if (heartbeatTimer) {
-      clearInterval(heartbeatTimer);
-    }
+      closed = true;
 
-    if (!notifications) {
-      return;
-    }
+      if (heartbeatTimer) {
+        clearInterval(heartbeatTimer);
+      }
 
-    try {
-      await notifications.return();
-    } catch (error) {
-      request.log.warn({ error }, "failed to unlisten supergraph schema updates");
-    }
+      if (notifications) {
+        try {
+          await notifications.return();
+        } catch (error) {
+          request.log.warn({ error }, "failed to unlisten supergraph schema updates");
+        }
+      }
+
+      if (
+        endResponse &&
+        streamStarted &&
+        !reply.raw.destroyed &&
+        !reply.raw.writableEnded
+      ) {
+        reply.raw.end();
+      }
+    })();
+
+    await teardownPromise;
   };
 
   const emitLatest = async (): Promise<void> => {
-    const currentSupergraphSchema = await selectCurrentSupergraphSchemaDescriptor(
-      database,
-      graph.id,
-    );
+    const currentSupergraphSchema = await selectCurrentSupergraphSchemaSnapshot(database, graph.id);
     if (!currentSupergraphSchema) {
       return;
     }
@@ -196,20 +203,7 @@ async function handleSupergraphSchemaSse(
       return;
     }
 
-    const currentSupergraphSchemaRevision = await selectSupergraphSchemaRevision(
-      database,
-      currentSupergraphSchema.graphId,
-      currentSupergraphSchema.compositionRevision,
-    );
-    if (!currentSupergraphSchemaRevision) {
-      return;
-    }
-
-    writeSseEvent(
-      reply.raw,
-      currentSupergraphSchema.etag,
-      currentSupergraphSchemaRevision.supergraphSdl,
-    );
+    writeSseEvent(reply.raw, currentSupergraphSchema.etag, currentSupergraphSchema.supergraphSdl);
     lastSentEtag = currentSupergraphSchema.etag;
     lastSeenRevision = currentSupergraphSchema.compositionRevision;
   };
@@ -228,6 +222,7 @@ async function handleSupergraphSchemaSse(
   }
 
   reply.hijack();
+  streamStarted = true;
   reply.raw.writeHead(200, {
     "Cache-Control": "no-cache",
     Connection: "keep-alive",
@@ -236,7 +231,7 @@ async function handleSupergraphSchemaSse(
 
   request.raw.once("close", () => {
     // oxlint-disable-next-line eslint(no-void)
-    void teardown();
+    void teardown({ endResponse: false });
   });
 
   heartbeatTimer = setInterval(() => {
@@ -256,6 +251,14 @@ async function handleSupergraphSchemaSse(
       }
 
       if (lastSeenRevision !== undefined && notification.compositionRevision <= lastSeenRevision) {
+        request.log.debug(
+          {
+            graphId: graph.id,
+            lastSeenRevision: String(lastSeenRevision),
+            notificationRevision: String(notification.compositionRevision),
+          },
+          "ignored stale supergraph schema update notification",
+        );
         continue;
       }
 
@@ -263,10 +266,8 @@ async function handleSupergraphSchemaSse(
     }
   } catch (error) {
     request.log.warn({ error }, "failed to publish supergraph schema SSE update");
-    await teardown();
-    if (!reply.raw.writableEnded) {
-      reply.raw.end();
-    }
+  } finally {
+    await teardown({ endResponse: true });
   }
 }
 
@@ -277,7 +278,7 @@ async function handleSupergraphSchemaGet(
   reply: FastifyReply,
 ): Promise<void> {
   const ifNoneMatch = parseIfNoneMatchHeader(request.headers["if-none-match"]);
-  const currentSupergraphSchema = await selectCurrentSupergraphSchemaDescriptor(database, graph.id);
+  const currentSupergraphSchema = await selectCurrentSupergraphSchemaSnapshot(database, graph.id);
   if (!currentSupergraphSchema) {
     await reply.problemDetails({ status: 404 });
     return;
@@ -290,18 +291,8 @@ async function handleSupergraphSchemaGet(
     return;
   }
 
-  const supergraphSchema = await selectSupergraphSchemaRevision(
-    database,
-    currentSupergraphSchema.graphId,
-    currentSupergraphSchema.compositionRevision,
-  );
-  if (!supergraphSchema) {
-    await reply.problemDetails({ status: 404 });
-    return;
-  }
-
   reply.header("Content-Type", "text/plain; charset=utf-8");
-  await reply.code(200).send(supergraphSchema.supergraphSdl);
+  await reply.code(200).send(currentSupergraphSchema.supergraphSdl);
 }
 
 export const getSupergraphSchemaHandler: DependencyInjectedHandler<

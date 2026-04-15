@@ -97,13 +97,16 @@ export function createFastifyServer({
 
   server.register((server, _options, done) => {
     const supergraphSchemaUpdateBroker = database
-      ? createSupergraphSchemaUpdateBroker(async (channel, onnotify) =>
-          database.$client.listen(channel, onnotify),
+      ? createSupergraphSchemaUpdateBroker(
+          async (channel, onnotify) => database.$client.listen(channel, onnotify),
+          {
+            logger: server.log,
+          },
         )
       : undefined;
 
     if (supergraphSchemaUpdateBroker) {
-      server.addHook("onClose", async () => {
+      server.addHook("preClose", async () => {
         await supergraphSchemaUpdateBroker.close();
       });
     }

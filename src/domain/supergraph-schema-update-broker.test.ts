@@ -5,11 +5,15 @@ import {
   createSupergraphSchemaUpdateBroker,
   type SupergraphSchemaUpdateBroker,
 } from "./supergraph-schema-update-broker.ts";
-import { encodeSupergraphSchemaUpdatedNotification } from "./supergraph-schema-updates.ts";
+import {
+  encodeSupergraphSchemaUpdatedNotification,
+  type SupergraphSchemaUpdatedNotification,
+} from "./supergraph-schema-updates.ts";
 
 function createBrokerHarness(): {
   broker: SupergraphSchemaUpdateBroker;
   emit: (graphId: string, revision: bigint) => void;
+  emitRaw: (payload: string) => void;
   listenCalls: () => number;
   unlistenCalls: () => number;
 } {
@@ -38,8 +42,127 @@ function createBrokerHarness(): {
         }),
       );
     },
+    emitRaw(payload) {
+      onnotify?.(payload);
+    },
     listenCalls: () => listenCallCount,
     unlistenCalls: () => unlistenCallCount,
+  };
+}
+
+function createFailingNotificationsHarness(): {
+  broker: SupergraphSchemaUpdateBroker;
+  emit: (notification: SupergraphSchemaUpdatedNotification) => void;
+  fail: (error: Error) => void;
+} {
+  const queue: SupergraphSchemaUpdatedNotification[] = [];
+  let closed = false;
+  let nextError: Error | undefined;
+  let waiter:
+    | {
+        reject: (error: Error) => void;
+        resolve: (result: IteratorResult<SupergraphSchemaUpdatedNotification, void>) => void;
+      }
+    | undefined;
+
+  const iterator: AsyncGenerator<SupergraphSchemaUpdatedNotification, void, void> = {
+    [Symbol.asyncIterator]() {
+      return iterator;
+    },
+    async [Symbol.asyncDispose](): Promise<void> {
+      await iterator.return();
+    },
+    async next(): Promise<IteratorResult<SupergraphSchemaUpdatedNotification, void>> {
+      if (queue.length > 0) {
+        const notification = queue.shift();
+        if (!notification) {
+          throw new Error("Notification queue unexpectedly returned no value.");
+        }
+
+        return {
+          done: false,
+          value: notification,
+        };
+      }
+
+      if (nextError) {
+        const error = nextError;
+        nextError = undefined;
+        throw new Error(error.message, { cause: error });
+      }
+
+      if (closed) {
+        return {
+          done: true,
+          value: undefined,
+        };
+      }
+
+      return new Promise<IteratorResult<SupergraphSchemaUpdatedNotification, void>>(
+        (resolve, reject) => {
+          waiter = { reject, resolve };
+        },
+      );
+    },
+    async return(): Promise<IteratorResult<SupergraphSchemaUpdatedNotification, void>> {
+      closed = true;
+      if (waiter) {
+        waiter.resolve({
+          done: true,
+          value: undefined,
+        });
+        waiter = undefined;
+      }
+
+      return {
+        done: true,
+        value: undefined,
+      };
+    },
+    async throw(error: unknown): Promise<IteratorResult<SupergraphSchemaUpdatedNotification, void>> {
+      closed = true;
+      if (waiter) {
+        waiter.reject(error instanceof Error ? error : new Error(String(error)));
+        waiter = undefined;
+      }
+
+      throw error instanceof Error ? error : new Error(String(error));
+    },
+  };
+
+  const broker = createSupergraphSchemaUpdateBroker(async () => {
+    return {
+      async unlisten() {
+        closed = true;
+      },
+    };
+  }, {
+    createNotifications: async () => iterator,
+  });
+
+  return {
+    broker,
+    emit(notification) {
+      if (waiter) {
+        waiter.resolve({
+          done: false,
+          value: notification,
+        });
+        waiter = undefined;
+        return;
+      }
+
+      queue.push(notification);
+    },
+    fail(error) {
+      if (waiter) {
+        waiter.reject(error);
+        waiter = undefined;
+        return;
+      }
+
+      nextError = error;
+    },
   };
 }
 
@@ -60,8 +183,8 @@ await test("supergraph schema update broker", async (t) => {
     assert.equal(unlistenCalls(), 1);
   });
 
-  await t.test("routes notifications by graph id", async () => {
-    const { broker, emit } = createBrokerHarness();
+  await t.test("routes notifications by graph id and ignores malformed payloads", async () => {
+    const { broker, emit, emitRaw } = createBrokerHarness();
 
     const alpha = await broker.subscribe("alpha");
     const beta = await broker.subscribe("beta");
@@ -69,6 +192,7 @@ await test("supergraph schema update broker", async (t) => {
     const alphaNext = alpha.next();
     const betaNext = beta.next();
 
+    emitRaw("not-json");
     emit("alpha", 2n);
     emit("beta", 3n);
 
@@ -130,6 +254,8 @@ await test("supergraph schema update broker", async (t) => {
 
       const fastThird = fast.next();
       emit("graph-1", 3n);
+      emit("graph-1", 2n);
+      emit("graph-1", 3n);
 
       assert.deepEqual(await fastThird, {
         done: false,
@@ -180,5 +306,21 @@ await test("supergraph schema update broker", async (t) => {
     assert.deepEqual(await firstNext, { done: true, value: undefined });
     assert.deepEqual(await secondNext, { done: true, value: undefined });
     assert.equal(unlistenCalls(), 1);
+  });
+
+  await t.test("unexpected listener failure ends active subscribers and future subscriptions", async () => {
+    const { broker, fail } = createFailingNotificationsHarness();
+
+    const first = await broker.subscribe("graph-1");
+    const second = await broker.subscribe("graph-2");
+
+    const firstNext = first.next();
+    const secondNext = second.next();
+
+    fail(new Error("listener failed"));
+
+    assert.deepEqual(await firstNext, { done: true, value: undefined });
+    assert.deepEqual(await secondNext, { done: true, value: undefined });
+    await assert.rejects(async () => broker.subscribe("graph-3"), /listener failed/);
   });
 });
