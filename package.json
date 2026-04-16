@@ -25,7 +25,7 @@
     "@fastify/jwt": "10.0.0",
     "@fastify/sensible": "6.0.4",
     "drizzle-orm": "1.0.0-beta.20",
-    "fastify": "5.8.4",
+    "fastify": "5.8.5",
     "fastify-plugin": "5.1.0",
     "graphql": "16.13.2",
     "postgres": "3.4.9",
