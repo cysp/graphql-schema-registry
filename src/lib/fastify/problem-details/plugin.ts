@@ -1,6 +1,6 @@
 import { STATUS_CODES, type OutgoingHttpHeaders } from "node:http";
 
-import type { FastifyPluginAsync, FastifyReply } from "fastify";
+import type { FastifyPluginCallback, FastifyReply } from "fastify";
 import fastifyPlugin from "fastify-plugin";
 
 import { requireProblemDetailsStatusCode, type ProblemDetailsStatusCode } from "./status-code.ts";
@@ -41,8 +41,10 @@ function replyProblemDetails<Reply extends FastifyReply>(
   return this;
 }
 
-const problemDetailsPluginDefinition: FastifyPluginAsync = async (server) => {
+const problemDetailsPluginDefinition: FastifyPluginCallback = (server, _options, done) => {
   server.decorateReply("problemDetails", replyProblemDetails);
+
+  done();
 };
 
 export const problemDetailsPlugin = fastifyPlugin(problemDetailsPluginDefinition, {
