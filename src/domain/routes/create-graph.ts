@@ -29,8 +29,7 @@ export const createGraphHandler: DependencyInjectedHandler<
   }
 
   if (!canCreateGraph(user.grants)) {
-    reply.problemDetails({ status: 403 });
-    return;
+    return reply.problemDetails({ status: 403 });
   }
 
   if (!requireDatabase(database, reply)) {
