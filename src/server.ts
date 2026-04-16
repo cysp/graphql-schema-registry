@@ -94,7 +94,7 @@ export function createFastifyServer({
     });
   }
 
-  server.register(async function (server) {
+  server.register((server, _options, done) => {
     if (jwtVerification) {
       server.addHook("onRequest", async (request, reply) => {
         const authorizationHeader = request.headers.authorization;
@@ -164,6 +164,8 @@ export function createFastifyServer({
         updateSubgraph: fastifyHandlerWithDependencies(updateSubgraphHandler, routeDependencies),
       },
     });
+
+    done();
   });
 
   return server;

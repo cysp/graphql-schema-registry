@@ -1,5 +1,5 @@
 import type { JsonSchemaToTsProvider } from "@fastify/type-provider-json-schema-to-ts";
-import type { FastifyPluginAsync, RawServerDefault } from "fastify";
+import type { FastifyPluginCallback, RawServerDefault } from "fastify";
 
 import type { FastifyRouteDefinition, FastifyRouteHandlerFromDefinition } from "./route-types.ts";
 
@@ -15,14 +15,14 @@ export function openApiRoutesPlugin<
   Routes extends Record<OperationId, FastifyRouteDefinition>,
 >(
   routeDefinitions: Routes,
-): FastifyPluginAsync<
+): FastifyPluginCallback<
   {
     operationHandlers: OpenApiOperationHandlers<OperationId, Routes>;
   },
   RawServerDefault,
   JsonSchemaToTsProvider
 > {
-  return async (server, { operationHandlers }) => {
+  return (server, { operationHandlers }, done) => {
     for (const operationId in routeDefinitions) {
       const routeDefinition = routeDefinitions[operationId];
       const handler = operationHandlers[operationId];
@@ -32,5 +32,7 @@ export function openApiRoutesPlugin<
         handler,
       });
     }
+
+    done();
   };
 }
