@@ -81,7 +81,7 @@ jobs:
         env:
           PGPASSWORD: postgres
 
-      - uses: ./.github/actions/pgschema-apply
+      - uses: ./.github/actions/pgschema
         env:
           PGHOST: localhost
           PGPORT: "5432"
