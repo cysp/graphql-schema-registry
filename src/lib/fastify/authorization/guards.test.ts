@@ -6,18 +6,21 @@ import { bearerAuthenticateHeaders } from "./bearer-authenticate-headers.ts";
 import { requireAuthenticatedUser } from "./guards.ts";
 
 type GuardRequest = Parameters<typeof requireAuthenticatedUser>[0];
-type GuardReply = Parameters<typeof requireAuthenticatedUser>[1];
-type ProblemDetailsCall = Parameters<GuardReply["problemDetails"]>[0];
+type ProblemDetailsCall = Parameters<
+  Parameters<typeof requireAuthenticatedUser<ReplySpy>>[1]["problemDetails"]
+>[0];
 
-type ReplySpy = GuardReply & {
+type ReplySpy = {
   calls: ProblemDetailsCall[];
+  problemDetails(options: ProblemDetailsCall): ReplySpy;
 };
 
 function createReplySpy(): ReplySpy {
   return {
     calls: [],
-    problemDetails(options): void {
+    problemDetails(this: ReplySpy, options): ReplySpy {
       this.calls.push(options);
+      return this;
     },
   };
 }

@@ -4,13 +4,13 @@ import type { RequestUser } from "../../../domain/authorization/user.ts";
 import { bearerAuthenticateHeaders } from "./bearer-authenticate-headers.ts";
 
 type GuardRequest = Pick<FastifyRequest, "user">;
-type GuardReply = {
-  problemDetails(options: Parameters<FastifyReply["problemDetails"]>[0]): void;
+type GuardReply<Reply> = {
+  problemDetails(options: Parameters<FastifyReply["problemDetails"]>[0]): Reply;
 };
 
-export function requireAuthenticatedUser(
+export function requireAuthenticatedUser<Reply>(
   request: GuardRequest,
-  reply: GuardReply,
+  reply: GuardReply<Reply>,
 ): RequestUser | undefined {
   const user = request.user;
   if (!user) {
