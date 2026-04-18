@@ -13,7 +13,7 @@ import {
 } from "../database/subgraph-schemas/repository.ts";
 import { selectActiveSubgraphByGraphIdAndSlugForUpdate } from "../database/subgraphs/repository.ts";
 import { etagSatisfiesIfMatch, formatStrongETag, parseIfMatchHeader } from "../etag.ts";
-import { attemptGraphComposition } from "../graph-composition.ts";
+import { attemptGraphComposition } from "../graph-composition/index.ts";
 import { normalizeSchemaSdl, sha256NormalizedSchemaSdl } from "../subgraph-schema.ts";
 
 type OperationHandlers = OpenApiOperationHandlers<
