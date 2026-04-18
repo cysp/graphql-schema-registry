@@ -20,11 +20,15 @@ export type IntegrationServerFixture = Readonly<{
   sql: IntegrationDatabase["sql"];
 }>;
 
-type CreateIntegrationServerFixtureOptions = Readonly<{
+export type CreateIntegrationServerFixtureOptions = Readonly<{
   databaseFactory?: (database: PostgresJsDatabase) => PostgresJsDatabase;
   databaseUrl: string;
   jwtVerification: JwtVerification;
 }>;
+
+type IntegrationSkippableContext = {
+  skip: (message: string) => void;
+};
 
 export function authorizationHeaders(token: string): Record<string, string> {
   return {
@@ -41,6 +45,19 @@ export function authorizationIfMatchHeaders(token: string, etag: string): Record
 
 export function parseJson(response: { json: () => unknown }): unknown {
   return response.json();
+}
+
+export function requireIntegrationDatabaseUrl(
+  testContext: IntegrationSkippableContext,
+): string | undefined {
+  // oxlint-disable-next-line eslint-plugin-node/no-process-env
+  const integrationDatabaseUrl = process.env["INTEGRATION_TEST_DATABASE_URL"]?.trim();
+  if (!integrationDatabaseUrl) {
+    testContext.skip("INTEGRATION_TEST_DATABASE_URL is not configured");
+    return;
+  }
+
+  return integrationDatabaseUrl;
 }
 
 export function createGraphManageIntegrationAuth(): Readonly<{
@@ -108,24 +125,7 @@ export async function createIntegrationServerFixture({
   };
 }
 
-export async function withIntegrationServer(
-  databaseUrl: string,
-  jwtVerification: JwtVerification,
-  run: (server: FastifyInstance) => Promise<void>,
-): Promise<void> {
-  const fixture = await createIntegrationServerFixture({
-    databaseUrl,
-    jwtVerification,
-  });
-
-  try {
-    await run(fixture.server);
-  } finally {
-    await fixture.close();
-  }
-}
-
-export async function withConcurrentIntegrationServer(
+export async function withIntegrationFixture(
   options: CreateIntegrationServerFixtureOptions,
   run: (fixture: IntegrationServerFixture) => Promise<void>,
 ): Promise<void> {
@@ -136,4 +136,21 @@ export async function withConcurrentIntegrationServer(
   } finally {
     await fixture.close();
   }
+}
+
+export async function withIntegrationServer(
+  databaseUrl: string,
+  jwtVerification: JwtVerification,
+  run: (server: FastifyInstance) => Promise<void>,
+): Promise<void> {
+  await withIntegrationFixture({ databaseUrl, jwtVerification }, async (fixture) => {
+    await run(fixture.server);
+  });
+}
+
+export async function withConcurrentIntegrationServer(
+  options: CreateIntegrationServerFixtureOptions,
+  run: (fixture: IntegrationServerFixture) => Promise<void>,
+): Promise<void> {
+  await withIntegrationFixture(options, run);
 }

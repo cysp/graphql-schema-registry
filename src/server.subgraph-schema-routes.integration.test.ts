@@ -1,5 +1,3 @@
-// oxlint-disable eslint-plugin-node/no-process-env
-
 import assert from "node:assert/strict";
 import test from "node:test";
 
@@ -11,6 +9,7 @@ import {
   authorizationHeaders,
   authorizationIfMatchHeaders,
   parseJson,
+  requireIntegrationDatabaseUrl,
   withIntegrationServer,
 } from "./test-support/integration-server.ts";
 import { requireGraphPayload, requireSubgraphPayload } from "./test-support/payloads.ts";
@@ -71,9 +70,8 @@ function createWildcardSubgraphSchemaGrantToken(
 }
 
 await test("[integration] subgraph schema routes integration with postgres", async (t) => {
-  const integrationDatabaseUrl = process.env["INTEGRATION_TEST_DATABASE_URL"]?.trim();
+  const integrationDatabaseUrl = requireIntegrationDatabaseUrl(t);
   if (!integrationDatabaseUrl) {
-    t.skip("INTEGRATION_TEST_DATABASE_URL is not configured");
     return;
   }
 

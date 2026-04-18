@@ -1,17 +1,21 @@
-// oxlint-disable eslint-plugin-node/no-process-env
-
 import assert from "node:assert/strict";
 import test from "node:test";
 
-import { authorizationDetailsType } from "./domain/authorization/details.ts";
-import { createAuthJwtSigner } from "./domain/jwt-signer.ts";
 import { normalizeSchemaSdl } from "./domain/subgraph-schema.ts";
 import {
-  authorizationHeaders,
+  createGraph,
+  createSubgraph,
+  deleteSubgraph,
+  deleteSubgraphSchema,
+  publishSubgraphSchema,
+  updateSubgraphRoutingUrl,
+} from "./test-support/integration-scenarios.ts";
+import {
+  createGraphManageIntegrationAuth,
   createIntegrationServerFixture,
-  parseJson,
+  requireIntegrationDatabaseUrl,
+  type IntegrationServerFixture,
 } from "./test-support/integration-server.ts";
-import { requireGraphPayload, requireSubgraphPayload } from "./test-support/payloads.ts";
 
 const inventorySchemaSdl = `
   type Query {
@@ -25,7 +29,7 @@ const conflictingProductsSchemaSdl = `
   }
 `;
 
-type IntegrationFixture = Awaited<ReturnType<typeof createIntegrationServerFixture>>;
+type IntegrationFixture = IntegrationServerFixture;
 type GraphCompositionSnapshot = {
   currentCompositionRevision: string | null;
   currentSupergraphSchemaRevision: string | null;
@@ -47,120 +51,6 @@ function sortGraphCompositionMembers(
       Number(left.compositionRevision) - Number(right.compositionRevision) ||
       left.subgraphId.localeCompare(right.subgraphId),
   );
-}
-
-function createSubgraphSchemaGrantToken(
-  createToken: ReturnType<typeof createAuthJwtSigner>["createToken"],
-  graphId: string,
-  subgraphId: string,
-): string {
-  return createToken({
-    authorization_details: [
-      {
-        graph_id: graphId,
-        scope: "subgraph_schema:write",
-        subgraph_id: subgraphId,
-        type: authorizationDetailsType,
-      },
-    ],
-  });
-}
-
-async function createGraph(
-  fixture: IntegrationFixture,
-  graphManageToken: string,
-  slug: string,
-): Promise<ReturnType<typeof requireGraphPayload>> {
-  const response = await fixture.server.inject({
-    headers: authorizationHeaders(graphManageToken),
-    method: "POST",
-    payload: { slug },
-    url: "/v1/graphs",
-  });
-  assert.equal(response.statusCode, 201);
-  return requireGraphPayload(parseJson(response));
-}
-
-async function createSubgraph(
-  fixture: IntegrationFixture,
-  graphManageToken: string,
-  graphSlug: string,
-  slug: string,
-  routingUrl: string,
-): Promise<ReturnType<typeof requireSubgraphPayload>> {
-  const response = await fixture.server.inject({
-    headers: authorizationHeaders(graphManageToken),
-    method: "POST",
-    payload: { routingUrl, slug },
-    url: `/v1/graphs/${graphSlug}/subgraphs`,
-  });
-  assert.equal(response.statusCode, 201);
-  return requireSubgraphPayload(parseJson(response));
-}
-
-async function publishSubgraphSchema(
-  fixture: IntegrationFixture,
-  createToken: ReturnType<typeof createAuthJwtSigner>["createToken"],
-  graph: ReturnType<typeof requireGraphPayload>,
-  subgraph: ReturnType<typeof requireSubgraphPayload>,
-  schemaSdl: string,
-): Promise<void> {
-  const schemaWriteToken = createSubgraphSchemaGrantToken(createToken, graph.id, subgraph.id);
-  const response = await fixture.server.inject({
-    headers: {
-      ...authorizationHeaders(schemaWriteToken),
-      "content-type": "text/plain",
-    },
-    method: "POST",
-    payload: schemaSdl,
-    url: `/v1/graphs/${graph.slug}/subgraphs/${subgraph.slug}/schema.graphqls`,
-  });
-  assert.equal(response.statusCode, 204);
-}
-
-async function updateSubgraphRoutingUrl(
-  fixture: IntegrationFixture,
-  graphManageToken: string,
-  graphSlug: string,
-  subgraphSlug: string,
-  routingUrl: string,
-): Promise<void> {
-  const response = await fixture.server.inject({
-    headers: authorizationHeaders(graphManageToken),
-    method: "PUT",
-    payload: { routingUrl },
-    url: `/v1/graphs/${graphSlug}/subgraphs/${subgraphSlug}`,
-  });
-  assert.equal(response.statusCode, 200);
-}
-
-async function deleteSubgraph(
-  fixture: IntegrationFixture,
-  graphManageToken: string,
-  graphSlug: string,
-  subgraphSlug: string,
-): Promise<void> {
-  const response = await fixture.server.inject({
-    headers: authorizationHeaders(graphManageToken),
-    method: "DELETE",
-    url: `/v1/graphs/${graphSlug}/subgraphs/${subgraphSlug}`,
-  });
-  assert.equal(response.statusCode, 204);
-}
-
-async function deleteSubgraphSchema(
-  fixture: IntegrationFixture,
-  createToken: ReturnType<typeof createAuthJwtSigner>["createToken"],
-  graph: ReturnType<typeof requireGraphPayload>,
-  subgraph: ReturnType<typeof requireSubgraphPayload>,
-): Promise<void> {
-  const schemaWriteToken = createSubgraphSchemaGrantToken(createToken, graph.id, subgraph.id);
-  const response = await fixture.server.inject({
-    headers: authorizationHeaders(schemaWriteToken),
-    method: "DELETE",
-    url: `/v1/graphs/${graph.slug}/subgraphs/${subgraph.slug}/schema.graphqls`,
-  });
-  assert.equal(response.statusCode, 204);
 }
 
 async function selectGraphCompositionSnapshot(
@@ -242,27 +132,17 @@ async function selectGraphCompositionSnapshot(
 }
 
 await test("[integration] graph composition integration with postgres", async (t) => {
-  const integrationDatabaseUrl = process.env["INTEGRATION_TEST_DATABASE_URL"]?.trim();
+  const integrationDatabaseUrl = requireIntegrationDatabaseUrl(t);
   if (!integrationDatabaseUrl) {
-    t.skip("INTEGRATION_TEST_DATABASE_URL is not configured");
     return;
   }
 
-  const jwtSigner = createAuthJwtSigner();
-  const graphManageToken = jwtSigner.createToken({
-    authorization_details: [
-      {
-        graph_id: "*",
-        scope: "graph:manage",
-        type: authorizationDetailsType,
-      },
-    ],
-  });
+  const { createToken, graphManageToken, jwtVerification } = createGraphManageIntegrationAuth();
 
   await t.test("stores a successful composition after schema publish", async () => {
     const fixture = await createIntegrationServerFixture({
       databaseUrl: integrationDatabaseUrl,
-      jwtVerification: jwtSigner.jwtVerification,
+      jwtVerification,
     });
 
     try {
@@ -276,7 +156,7 @@ await test("[integration] graph composition integration with postgres", async (t
       );
       await publishSubgraphSchema(
         fixture,
-        jwtSigner.createToken,
+        createToken,
         createdGraph,
         createdSubgraph,
         inventorySchemaSdl,
@@ -319,7 +199,7 @@ await test("[integration] graph composition integration with postgres", async (t
     async () => {
       const fixture = await createIntegrationServerFixture({
         databaseUrl: integrationDatabaseUrl,
-        jwtVerification: jwtSigner.jwtVerification,
+        jwtVerification,
       });
 
       try {
@@ -333,7 +213,7 @@ await test("[integration] graph composition integration with postgres", async (t
         );
         await publishSubgraphSchema(
           fixture,
-          jwtSigner.createToken,
+          createToken,
           createdGraph,
           inventorySubgraph,
           inventorySchemaSdl,
@@ -347,7 +227,7 @@ await test("[integration] graph composition integration with postgres", async (t
         );
         await publishSubgraphSchema(
           fixture,
-          jwtSigner.createToken,
+          createToken,
           createdGraph,
           warehouseSubgraph,
           conflictingProductsSchemaSdl,
@@ -411,7 +291,7 @@ await test("[integration] graph composition integration with postgres", async (t
     async () => {
       const fixture = await createIntegrationServerFixture({
         databaseUrl: integrationDatabaseUrl,
-        jwtVerification: jwtSigner.jwtVerification,
+        jwtVerification,
       });
 
       try {
@@ -425,7 +305,7 @@ await test("[integration] graph composition integration with postgres", async (t
         );
         await publishSubgraphSchema(
           fixture,
-          jwtSigner.createToken,
+          createToken,
           createdGraph,
           createdSubgraph,
           inventorySchemaSdl,
@@ -457,7 +337,7 @@ await test("[integration] graph composition integration with postgres", async (t
     async () => {
       const fixture = await createIntegrationServerFixture({
         databaseUrl: integrationDatabaseUrl,
-        jwtVerification: jwtSigner.jwtVerification,
+        jwtVerification,
       });
 
       try {
@@ -471,12 +351,12 @@ await test("[integration] graph composition integration with postgres", async (t
         );
         await publishSubgraphSchema(
           fixture,
-          jwtSigner.createToken,
+          createToken,
           createdGraph,
           createdSubgraph,
           inventorySchemaSdl,
         );
-        await deleteSubgraphSchema(fixture, jwtSigner.createToken, createdGraph, createdSubgraph);
+        await deleteSubgraphSchema(fixture, createToken, createdGraph, createdSubgraph);
 
         assert.deepEqual(await selectGraphCompositionSnapshot(fixture, createdGraph.id), {
           currentCompositionRevision: null,
@@ -503,7 +383,7 @@ await test("[integration] graph composition integration with postgres", async (t
     async () => {
       const fixture = await createIntegrationServerFixture({
         databaseUrl: integrationDatabaseUrl,
-        jwtVerification: jwtSigner.jwtVerification,
+        jwtVerification,
       });
 
       try {
@@ -517,7 +397,7 @@ await test("[integration] graph composition integration with postgres", async (t
         );
         await publishSubgraphSchema(
           fixture,
-          jwtSigner.createToken,
+          createToken,
           createdGraph,
           inventorySubgraph,
           inventorySchemaSdl,
@@ -531,7 +411,7 @@ await test("[integration] graph composition integration with postgres", async (t
         );
         await publishSubgraphSchema(
           fixture,
-          jwtSigner.createToken,
+          createToken,
           createdGraph,
           warehouseSubgraph,
           conflictingProductsSchemaSdl,
@@ -588,7 +468,7 @@ await test("[integration] graph composition integration with postgres", async (t
     async () => {
       const fixture = await createIntegrationServerFixture({
         databaseUrl: integrationDatabaseUrl,
-        jwtVerification: jwtSigner.jwtVerification,
+        jwtVerification,
       });
 
       try {
@@ -602,7 +482,7 @@ await test("[integration] graph composition integration with postgres", async (t
         );
         await publishSubgraphSchema(
           fixture,
-          jwtSigner.createToken,
+          createToken,
           createdGraph,
           firstSubgraph,
           inventorySchemaSdl,
@@ -618,7 +498,7 @@ await test("[integration] graph composition integration with postgres", async (t
         );
         await publishSubgraphSchema(
           fixture,
-          jwtSigner.createToken,
+          createToken,
           createdGraph,
           secondSubgraph,
           inventorySchemaSdl,
@@ -655,7 +535,7 @@ await test("[integration] graph composition integration with postgres", async (t
     async () => {
       const fixture = await createIntegrationServerFixture({
         databaseUrl: integrationDatabaseUrl,
-        jwtVerification: jwtSigner.jwtVerification,
+        jwtVerification,
       });
 
       try {
@@ -669,12 +549,12 @@ await test("[integration] graph composition integration with postgres", async (t
         );
         await publishSubgraphSchema(
           fixture,
-          jwtSigner.createToken,
+          createToken,
           createdGraph,
           firstSubgraph,
           inventorySchemaSdl,
         );
-        await deleteSubgraphSchema(fixture, jwtSigner.createToken, createdGraph, firstSubgraph);
+        await deleteSubgraphSchema(fixture, createToken, createdGraph, firstSubgraph);
 
         const secondSubgraph = await createSubgraph(
           fixture,
@@ -685,7 +565,7 @@ await test("[integration] graph composition integration with postgres", async (t
         );
         await publishSubgraphSchema(
           fixture,
-          jwtSigner.createToken,
+          createToken,
           createdGraph,
           secondSubgraph,
           inventorySchemaSdl,
