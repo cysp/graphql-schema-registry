@@ -12,7 +12,7 @@ import {
 } from "../database/subgraphs/repository.ts";
 import type { ActiveSubgraph } from "../database/types.ts";
 import { etagSatisfiesIfMatch, formatStrongETag, parseIfMatchHeader } from "../etag.ts";
-import { attemptGraphComposition } from "../graph-composition.ts";
+import { attemptGraphComposition } from "../graph-composition/index.ts";
 import { toSubgraphPayload } from "./payloads.ts";
 
 type OperationHandlers = OpenApiOperationHandlers<

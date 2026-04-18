@@ -11,7 +11,7 @@ import {
   softDeleteSubgraphById,
 } from "../database/subgraphs/repository.ts";
 import { etagSatisfiesIfMatch, formatStrongETag, parseIfMatchHeader } from "../etag.ts";
-import { attemptGraphComposition } from "../graph-composition.ts";
+import { attemptGraphComposition } from "../graph-composition/index.ts";
 
 type OperationHandlers = OpenApiOperationHandlers<
   keyof typeof operationRouteDefinitions,
