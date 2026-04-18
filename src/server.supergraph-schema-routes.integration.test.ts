@@ -1,17 +1,20 @@
-// oxlint-disable eslint-plugin-node/no-process-env
-
 import assert from "node:assert/strict";
 import test from "node:test";
 
-import { authorizationDetailsType } from "./domain/authorization/details.ts";
 import { formatStrongETag } from "./domain/etag.ts";
-import { createAuthJwtSigner } from "./domain/jwt-signer.ts";
+import {
+  createGraph,
+  createSubgraph,
+  createSupergraphSchemaReadGrantToken,
+  createWildcardSupergraphSchemaReadGrantToken,
+  publishSubgraphSchema,
+} from "./test-support/integration-scenarios.ts";
 import {
   authorizationHeaders,
+  createGraphManageIntegrationAuth,
   createIntegrationServerFixture,
-  parseJson,
+  requireIntegrationDatabaseUrl,
 } from "./test-support/integration-server.ts";
-import { requireGraphPayload, requireSubgraphPayload } from "./test-support/payloads.ts";
 
 const inventorySchemaSdl = `
   type Query {
@@ -25,133 +28,23 @@ const conflictingProductsSchemaSdl = `
   }
 `;
 
-type IntegrationFixture = Awaited<ReturnType<typeof createIntegrationServerFixture>>;
-
-function createSupergraphSchemaReadGrantToken(
-  createToken: ReturnType<typeof createAuthJwtSigner>["createToken"],
-  graphId: string,
-): string {
-  return createToken({
-    authorization_details: [
-      {
-        graph_id: graphId,
-        scope: "supergraph_schema:read",
-        type: authorizationDetailsType,
-      },
-    ],
-  });
-}
-
-function createWildcardSupergraphSchemaReadGrantToken(
-  createToken: ReturnType<typeof createAuthJwtSigner>["createToken"],
-): string {
-  return createToken({
-    authorization_details: [
-      {
-        graph_id: "*",
-        scope: "supergraph_schema:read",
-        type: authorizationDetailsType,
-      },
-    ],
-  });
-}
-
-function createSubgraphSchemaGrantToken(
-  createToken: ReturnType<typeof createAuthJwtSigner>["createToken"],
-  graphId: string,
-  subgraphId: string,
-): string {
-  return createToken({
-    authorization_details: [
-      {
-        graph_id: graphId,
-        scope: "subgraph_schema:write",
-        subgraph_id: subgraphId,
-        type: authorizationDetailsType,
-      },
-    ],
-  });
-}
-
-async function createGraph(
-  fixture: IntegrationFixture,
-  graphManageToken: string,
-  slug: string,
-): Promise<ReturnType<typeof requireGraphPayload>> {
-  const response = await fixture.server.inject({
-    headers: authorizationHeaders(graphManageToken),
-    method: "POST",
-    payload: { slug },
-    url: "/v1/graphs",
-  });
-  assert.equal(response.statusCode, 201);
-  return requireGraphPayload(parseJson(response));
-}
-
-async function createSubgraph(
-  fixture: IntegrationFixture,
-  graphManageToken: string,
-  graphSlug: string,
-  slug: string,
-  routingUrl: string,
-): Promise<ReturnType<typeof requireSubgraphPayload>> {
-  const response = await fixture.server.inject({
-    headers: authorizationHeaders(graphManageToken),
-    method: "POST",
-    payload: { routingUrl, slug },
-    url: `/v1/graphs/${graphSlug}/subgraphs`,
-  });
-  assert.equal(response.statusCode, 201);
-  return requireSubgraphPayload(parseJson(response));
-}
-
-async function publishSubgraphSchema(
-  fixture: IntegrationFixture,
-  createToken: ReturnType<typeof createAuthJwtSigner>["createToken"],
-  graph: ReturnType<typeof requireGraphPayload>,
-  subgraph: ReturnType<typeof requireSubgraphPayload>,
-  schemaSdl: string,
-): Promise<void> {
-  const schemaWriteToken = createSubgraphSchemaGrantToken(createToken, graph.id, subgraph.id);
-  const response = await fixture.server.inject({
-    headers: {
-      ...authorizationHeaders(schemaWriteToken),
-      "content-type": "text/plain",
-    },
-    method: "POST",
-    payload: schemaSdl,
-    url: `/v1/graphs/${graph.slug}/subgraphs/${subgraph.slug}/schema.graphqls`,
-  });
-  assert.equal(response.statusCode, 204);
-}
-
 await test("[integration] supergraph schema routes integration with postgres", async (t) => {
-  const integrationDatabaseUrl = process.env["INTEGRATION_TEST_DATABASE_URL"]?.trim();
+  const integrationDatabaseUrl = requireIntegrationDatabaseUrl(t);
   if (!integrationDatabaseUrl) {
-    t.skip("INTEGRATION_TEST_DATABASE_URL is not configured");
     return;
   }
 
-  const jwtSigner = createAuthJwtSigner();
-  const graphManageToken = jwtSigner.createToken({
-    authorization_details: [
-      {
-        graph_id: "*",
-        scope: "graph:manage",
-        type: authorizationDetailsType,
-      },
-    ],
-  });
+  const { createToken, graphManageToken, jwtVerification } = createGraphManageIntegrationAuth();
 
   await t.test("returns 404 when no current supergraph schema exists", async () => {
     const fixture = await createIntegrationServerFixture({
       databaseUrl: integrationDatabaseUrl,
-      jwtVerification: jwtSigner.jwtVerification,
+      jwtVerification,
     });
 
     try {
       const graph = await createGraph(fixture, graphManageToken, "catalog");
-      const graphReadToken = createSupergraphSchemaReadGrantToken(jwtSigner.createToken, graph.id);
+      const graphReadToken = createSupergraphSchemaReadGrantToken(createToken, graph.id);
 
       const response = await fixture.server.inject({
         headers: authorizationHeaders(graphReadToken),
@@ -179,7 +72,7 @@ await test("[integration] supergraph schema routes integration with postgres", a
   await t.test("returns 403 for graph:manage users", async () => {
     const fixture = await createIntegrationServerFixture({
       databaseUrl: integrationDatabaseUrl,
-      jwtVerification: jwtSigner.jwtVerification,
+      jwtVerification,
     });
 
     try {
@@ -201,14 +94,14 @@ await test("[integration] supergraph schema routes integration with postgres", a
     async () => {
       const fixture = await createIntegrationServerFixture({
         databaseUrl: integrationDatabaseUrl,
-        jwtVerification: jwtSigner.jwtVerification,
+        jwtVerification,
       });
 
       try {
         const visibleGraph = await createGraph(fixture, graphManageToken, "catalog");
         const hiddenGraph = await createGraph(fixture, graphManageToken, "reviews");
         const visibleGraphReadToken = createSupergraphSchemaReadGrantToken(
-          jwtSigner.createToken,
+          createToken,
           visibleGraph.id,
         );
 
@@ -236,13 +129,11 @@ await test("[integration] supergraph schema routes integration with postgres", a
     async () => {
       const fixture = await createIntegrationServerFixture({
         databaseUrl: integrationDatabaseUrl,
-        jwtVerification: jwtSigner.jwtVerification,
+        jwtVerification,
       });
 
       try {
-        const wildcardGraphReadToken = createWildcardSupergraphSchemaReadGrantToken(
-          jwtSigner.createToken,
-        );
+        const wildcardGraphReadToken = createWildcardSupergraphSchemaReadGrantToken(createToken);
         const response = await fixture.server.inject({
           headers: authorizationHeaders(wildcardGraphReadToken),
           method: "GET",
@@ -259,7 +150,7 @@ await test("[integration] supergraph schema routes integration with postgres", a
   await t.test("returns 401 regardless of graph slug when unauthenticated", async () => {
     const fixture = await createIntegrationServerFixture({
       databaseUrl: integrationDatabaseUrl,
-      jwtVerification: jwtSigner.jwtVerification,
+      jwtVerification,
     });
 
     try {
@@ -284,7 +175,7 @@ await test("[integration] supergraph schema routes integration with postgres", a
   await t.test("serves the current supergraph schema to supergraph_schema:read users", async () => {
     const fixture = await createIntegrationServerFixture({
       databaseUrl: integrationDatabaseUrl,
-      jwtVerification: jwtSigner.jwtVerification,
+      jwtVerification,
     });
 
     try {
@@ -296,15 +187,9 @@ await test("[integration] supergraph schema routes integration with postgres", a
         "inventory",
         "https://inventory.example.com/graphql",
       );
-      await publishSubgraphSchema(
-        fixture,
-        jwtSigner.createToken,
-        graph,
-        subgraph,
-        inventorySchemaSdl,
-      );
+      await publishSubgraphSchema(fixture, createToken, graph, subgraph, inventorySchemaSdl);
 
-      const graphReadToken = createSupergraphSchemaReadGrantToken(jwtSigner.createToken, graph.id);
+      const graphReadToken = createSupergraphSchemaReadGrantToken(createToken, graph.id);
       const response = await fixture.server.inject({
         headers: authorizationHeaders(graphReadToken),
         method: "GET",
@@ -324,7 +209,7 @@ await test("[integration] supergraph schema routes integration with postgres", a
   await t.test("returns 304 for exact, weak, and wildcard If-None-Match matches", async () => {
     const fixture = await createIntegrationServerFixture({
       databaseUrl: integrationDatabaseUrl,
-      jwtVerification: jwtSigner.jwtVerification,
+      jwtVerification,
     });
 
     try {
@@ -336,15 +221,9 @@ await test("[integration] supergraph schema routes integration with postgres", a
         "inventory",
         "https://inventory.example.com/graphql",
       );
-      await publishSubgraphSchema(
-        fixture,
-        jwtSigner.createToken,
-        graph,
-        subgraph,
-        inventorySchemaSdl,
-      );
+      await publishSubgraphSchema(fixture, createToken, graph, subgraph, inventorySchemaSdl);
 
-      const graphReadToken = createSupergraphSchemaReadGrantToken(jwtSigner.createToken, graph.id);
+      const graphReadToken = createSupergraphSchemaReadGrantToken(createToken, graph.id);
       const currentEtag = formatStrongETag(graph.id, 1);
 
       for (const ifNoneMatch of [currentEtag, `W/${currentEtag}`, "*"]) {
@@ -369,7 +248,7 @@ await test("[integration] supergraph schema routes integration with postgres", a
   await t.test("returns 400 for an invalid If-None-Match header", async () => {
     const fixture = await createIntegrationServerFixture({
       databaseUrl: integrationDatabaseUrl,
-      jwtVerification: jwtSigner.jwtVerification,
+      jwtVerification,
     });
 
     try {
@@ -381,15 +260,9 @@ await test("[integration] supergraph schema routes integration with postgres", a
         "inventory",
         "https://inventory.example.com/graphql",
       );
-      await publishSubgraphSchema(
-        fixture,
-        jwtSigner.createToken,
-        graph,
-        subgraph,
-        inventorySchemaSdl,
-      );
+      await publishSubgraphSchema(fixture, createToken, graph, subgraph, inventorySchemaSdl);
 
-      const graphReadToken = createSupergraphSchemaReadGrantToken(jwtSigner.createToken, graph.id);
+      const graphReadToken = createSupergraphSchemaReadGrantToken(createToken, graph.id);
       const response = await fixture.server.inject({
         headers: {
           ...authorizationHeaders(graphReadToken),
@@ -410,7 +283,7 @@ await test("[integration] supergraph schema routes integration with postgres", a
     async () => {
       const fixture = await createIntegrationServerFixture({
         databaseUrl: integrationDatabaseUrl,
-        jwtVerification: jwtSigner.jwtVerification,
+        jwtVerification,
       });
 
       try {
@@ -424,7 +297,7 @@ await test("[integration] supergraph schema routes integration with postgres", a
         );
         await publishSubgraphSchema(
           fixture,
-          jwtSigner.createToken,
+          createToken,
           graph,
           inventorySubgraph,
           inventorySchemaSdl,
@@ -439,16 +312,13 @@ await test("[integration] supergraph schema routes integration with postgres", a
         );
         await publishSubgraphSchema(
           fixture,
-          jwtSigner.createToken,
+          createToken,
           graph,
           warehouseSubgraph,
           conflictingProductsSchemaSdl,
         );
 
-        const graphReadToken = createSupergraphSchemaReadGrantToken(
-          jwtSigner.createToken,
-          graph.id,
-        );
+        const graphReadToken = createSupergraphSchemaReadGrantToken(createToken, graph.id);
         const response = await fixture.server.inject({
           headers: authorizationHeaders(graphReadToken),
           method: "GET",

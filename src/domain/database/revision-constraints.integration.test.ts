@@ -1,15 +1,13 @@
-// oxlint-disable eslint-plugin-node/no-process-env
-
 import assert from "node:assert/strict";
 import { randomUUID } from "node:crypto";
 import test from "node:test";
 
 import { connectIntegrationDatabase } from "../../test-support/database.ts";
+import { requireIntegrationDatabaseUrl } from "../../test-support/integration-server.ts";
 
 await test("[integration] revision foreign keys", async (t) => {
-  const integrationDatabaseUrl = process.env["INTEGRATION_TEST_DATABASE_URL"]?.trim();
+  const integrationDatabaseUrl = requireIntegrationDatabaseUrl(t);
   if (!integrationDatabaseUrl) {
-    t.skip("INTEGRATION_TEST_DATABASE_URL is not configured");
     return;
   }
 

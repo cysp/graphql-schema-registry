@@ -1,4 +1,4 @@
-// oxlint-disable eslint-plugin-node/no-process-env,eslint-plugin-promise/prefer-await-to-callbacks,typescript-eslint/no-unsafe-assignment,typescript-eslint/no-unsafe-call,typescript-eslint/no-unsafe-member-access,typescript-eslint/no-unsafe-return
+// oxlint-disable eslint-plugin-promise/prefer-await-to-callbacks,typescript-eslint/no-unsafe-assignment,typescript-eslint/no-unsafe-call,typescript-eslint/no-unsafe-member-access,typescript-eslint/no-unsafe-return
 
 import assert from "node:assert/strict";
 import test from "node:test";
@@ -17,6 +17,7 @@ import {
   authorizationHeaders,
   authorizationIfMatchHeaders,
   parseJson,
+  requireIntegrationDatabaseUrl,
   withConcurrentIntegrationServer,
 } from "./test-support/integration-server.ts";
 import { requireGraphPayload, requireSubgraphPayload } from "./test-support/payloads.ts";
@@ -108,9 +109,8 @@ function createPostCallbackFailingDatabase(
 }
 
 await test("[integration] route handler concurrency and rollback integration with postgres", async (t) => {
-  const integrationDatabaseUrl = process.env["INTEGRATION_TEST_DATABASE_URL"]?.trim();
+  const integrationDatabaseUrl = requireIntegrationDatabaseUrl(t);
   if (!integrationDatabaseUrl) {
-    t.skip("INTEGRATION_TEST_DATABASE_URL is not configured");
     return;
   }
 
