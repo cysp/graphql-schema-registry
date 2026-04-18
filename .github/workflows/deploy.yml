@@ -42,7 +42,7 @@ jobs:
         with:
           ref: ${{ github.event.workflow_run.head_sha }}
 
-      - uses: ./.github/actions/pgschema-apply
+      - uses: ./.github/actions/pgschema
         env:
           PGHOST: ${{ vars.NEON_HOST }}
           PGPORT: "5432"

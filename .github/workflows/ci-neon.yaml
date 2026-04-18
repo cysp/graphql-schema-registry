@@ -40,7 +40,9 @@ jobs:
           NEON_EXPIRES_AT: ${{ steps.neon_compute_branch_expires_at.outputs.expires_at }}
         run: node .github/scripts/create-neon-branch.mjs
 
-      - uses: ./.github/actions/pgschema-apply
+      - name: Plan schema changes
+        id: pgschema_plan
+        uses: ./.github/actions/pgschema
         env:
           PGHOST: ${{ steps.neon_create_branch.outputs.db_host }}
           PGPORT: "5432"
@@ -48,9 +50,38 @@ jobs:
           PGUSER: ${{ env.NEON_ROLE_NAME }}
           PGPASSWORD: ${{ steps.neon_create_branch.outputs.password }}
         with:
+          mode: plan
           pgschema-package-version: v1.9.0
           pgschema-package: github.com/pgplex/pgschema
           file: db/neon.sql
+
+      - name: Analyze migration safety with pgfence
+        env:
+          PLAN_SQL: ${{ steps.pgschema_plan.outputs.plan_sql }}
+        run: |
+          if [[ ! -s "${PLAN_SQL}" ]]; then
+            echo "pgschema plan produced no DDL, skipping pgfence analysis."
+            exit 0
+          fi
+
+          npx --yes @flvmnt/pgfence@0.4.1 analyze \
+            --ci \
+            --max-risk high \
+            "${PLAN_SQL}"
+
+      - name: Apply reviewed schema plan
+        uses: ./.github/actions/pgschema
+        env:
+          PGHOST: ${{ steps.neon_create_branch.outputs.db_host }}
+          PGPORT: "5432"
+          PGDATABASE: ${{ env.NEON_DATABASE_NAME }}
+          PGUSER: ${{ env.NEON_ROLE_NAME }}
+          PGPASSWORD: ${{ steps.neon_create_branch.outputs.password }}
+        with:
+          mode: apply
+          pgschema-package-version: v1.9.0
+          pgschema-package: github.com/pgplex/pgschema
+          plan: ${{ steps.pgschema_plan.outputs.plan_json }}
 
       - if: ${{ always() && steps.neon_create_branch.outputs.branch_id != '' }}
         uses: neondatabase/delete-branch-action@4468d825d5a88ef4012f1705a82f02ec3072f776 # v3.2.1
