@@ -48,12 +48,6 @@ export type GraphCompositionSubgraphReference = {
   subgraphSchemaRevision: bigint;
 };
 
-export type StoredGraphCompositionAttempt = {
-  graphId: string;
-  revision: bigint;
-  createdAt: Date;
-};
-
 export type StoredSupergraphSchema = {
   graphId: string;
   compositionRevision: bigint;
