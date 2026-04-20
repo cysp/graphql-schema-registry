@@ -18,8 +18,8 @@ importers:
         specifier: 6.0.4
         version: 6.0.4
       drizzle-orm:
-        specifier: 1.0.0-beta.20
-        version: 1.0.0-beta.20(postgres@3.4.9)(zod@4.3.6)
+        specifier: 1.0.0-beta.22
+        version: 1.0.0-beta.22(postgres@3.4.9)(zod@4.3.6)
       fastify:
         specifier: 5.8.5
         version: 5.8.5
@@ -705,8 +705,8 @@ packages:
     resolution: {integrity: sha512-qMUBnrOQIU+H32aF80BSn7lT1IQuKmofCypmkrKMuOMqvM0bhz5hjCHim1bLcXUzXYRtTSr6U2pe0MSV79WbAg==}
     hasBin: true
 
-  drizzle-orm@1.0.0-beta.20:
-    resolution: {integrity: sha512-7qiuw+Z6yGr+ywt3PS5dP6UCfdymIuFT/ni6GnPGzLhkBIolNBTo4ByMBWTxJ7dW/Ya6d73GtkeuKfcVcriVHA==}
+  drizzle-orm@1.0.0-beta.22:
+    resolution: {integrity: sha512-F+DZyVIvH0oVKa/w08Cle1xfoH+pc+htIXHG/frnMLG72aby9NYYr9oc+9XvghnoO4umxFItduz0OMmQJMnenw==}
     peerDependencies:
       '@aws-sdk/client-rds-data': '>=3'
       '@cloudflare/workers-types': '>=4'
@@ -783,6 +783,8 @@ packages:
         optional: true
       '@types/better-sqlite3':
         optional: true
+      '@types/mssql':
+        optional: true
       '@types/pg':
         optional: true
       '@types/sql.js':
@@ -802,6 +804,8 @@ packages:
       expo-sqlite:
         optional: true
       gel:
+        optional: true
+      mssql:
         optional: true
       mysql2:
         optional: true
@@ -1768,7 +1772,7 @@ snapshots:
       get-tsconfig: 4.14.0
       jiti: 2.6.1
 
-  drizzle-orm@1.0.0-beta.20(postgres@3.4.9)(zod@4.3.6):
+  drizzle-orm@1.0.0-beta.22(postgres@3.4.9)(zod@4.3.6):
     optionalDependencies:
       postgres: 3.4.9
       zod: 4.3.6
