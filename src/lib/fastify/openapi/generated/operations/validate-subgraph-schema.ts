@@ -43,18 +43,12 @@ export const validateSubgraphSchemaRouteDefinition = {
         "additionalProperties": false,
         "required": [
           "composed",
-          "baselineAvailable",
           "summary",
           "changes",
-          "breakingChanges",
-          "dangerousChanges",
           "compositionErrors"
         ],
         "properties": {
           "composed": {
-            "type": "boolean"
-          },
-          "baselineAvailable": {
             "type": "boolean"
           },
           "summary": {
@@ -96,11 +90,15 @@ export const validateSubgraphSchemaRouteDefinition = {
               "type": "object",
               "additionalProperties": false,
               "required": [
+                "coordinate",
                 "severity",
                 "type",
                 "message"
               ],
               "properties": {
+                "coordinate": {
+                  "type": "string"
+                },
                 "severity": {
                   "type": "string",
                   "enum": [
@@ -109,44 +107,6 @@ export const validateSubgraphSchemaRouteDefinition = {
                     "safe"
                   ]
                 },
-                "type": {
-                  "type": "string"
-                },
-                "message": {
-                  "type": "string"
-                }
-              }
-            }
-          },
-          "breakingChanges": {
-            "type": "array",
-            "items": {
-              "type": "object",
-              "additionalProperties": false,
-              "required": [
-                "type",
-                "message"
-              ],
-              "properties": {
-                "type": {
-                  "type": "string"
-                },
-                "message": {
-                  "type": "string"
-                }
-              }
-            }
-          },
-          "dangerousChanges": {
-            "type": "array",
-            "items": {
-              "type": "object",
-              "additionalProperties": false,
-              "required": [
-                "type",
-                "message"
-              ],
-              "properties": {
                 "type": {
                   "type": "string"
                 },

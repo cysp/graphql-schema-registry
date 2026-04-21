@@ -10,7 +10,7 @@ import {
 } from "./subgraph-schema-change-analysis.ts";
 
 await test("subgraph schema change analysis", async (t) => {
-  await t.test("reports breaking, dangerous, and safe changes when a baseline exists", () => {
+  await t.test("reports coordinate-based changes when a baseline exists", () => {
     const baselineSchema = buildSchema(`
       directive @trace(enabled: Boolean) on FIELD_DEFINITION
 
@@ -58,48 +58,91 @@ await test("subgraph schema change analysis", async (t) => {
     });
 
     assert.equal(analysis.composed, true);
-    assert.equal(analysis.baselineAvailable, true);
     assert.equal(analysis.summary.breakingChanges, 2);
     assert.equal(analysis.summary.dangerousChanges, 1);
     assert.equal(analysis.summary.safeChanges, 5);
     assert.equal(analysis.summary.totalChanges, 8);
 
-    assert.deepEqual(
-      analysis.breakingChanges.map((change) => change.type),
-      ["FIELD_REMOVED", "FIELD_REMOVED"],
-    );
-    assert.deepEqual(
-      analysis.dangerousChanges.map((change) => change.type),
-      ["VALUE_ADDED_TO_ENUM"],
-    );
-
     assert.ok(
       analysis.changes.some(
         (change) =>
-          change.severity === "safe" &&
-          change.type === "TYPE_ADDED" &&
-          change.message === "Review was added.",
+          change.coordinate === "Product.name" &&
+          change.severity === "breaking" &&
+          change.type === "FIELD_REMOVED",
       ),
     );
     assert.ok(
       analysis.changes.some(
         (change) =>
-          change.severity === "safe" &&
-          change.type === "FIELD_ADDED" &&
-          change.message === "Query.reviews was added.",
+          change.coordinate === "Query.status" &&
+          change.severity === "breaking" &&
+          change.type === "FIELD_REMOVED",
       ),
     );
     assert.ok(
       analysis.changes.some(
         (change) =>
+          change.coordinate === "SortDirection.DESC" &&
+          change.severity === "dangerous" &&
+          change.type === "VALUE_ADDED_TO_ENUM",
+      ),
+    );
+    assert.ok(
+      analysis.changes.some(
+        (change) =>
+          change.coordinate === "Review" &&
           change.severity === "safe" &&
-          change.type === "DIRECTIVE_ARG_ADDED" &&
-          change.message === "sample was added to trace.",
+          change.type === "TYPE_ADDED",
+      ),
+    );
+    assert.ok(
+      analysis.changes.some(
+        (change) =>
+          change.coordinate === "Query.reviews" &&
+          change.severity === "safe" &&
+          change.type === "FIELD_ADDED",
+      ),
+    );
+    assert.ok(
+      analysis.changes.some(
+        (change) =>
+          change.coordinate === "@trace(sample:)" &&
+          change.severity === "safe" &&
+          change.type === "DIRECTIVE_ARG_ADDED",
       ),
     );
   });
 
-  await t.test("treats missing baseline as additive-only changes", () => {
+  await t.test("orders change output by coordinate, then severity, then type", () => {
+    const baselineSchema = buildSchema(`
+      type Query {
+        c: String
+        b: String
+        a: String
+      }
+    `);
+    const candidateSchema = buildSchema(`
+      type Query {
+        c(arg: String): String
+        b: Int
+      }
+    `);
+
+    const analysis = analyzeComposedSchemaChanges({ baselineSchema, candidateSchema });
+
+    assert.deepEqual(
+      analysis.changes.map((change) =>
+        `${change.coordinate}|${change.severity}|${change.type}`,
+      ),
+      [
+        "Query.a|breaking|FIELD_REMOVED",
+        "Query.b|breaking|FIELD_CHANGED_KIND",
+        "Query.c(arg:)|dangerous|OPTIONAL_ARG_ADDED",
+      ],
+    );
+  });
+
+  await t.test("treats missing baseline as additive-only changes with coordinates", () => {
     const candidateSchema = buildSchema(`
       directive @trace(enabled: Boolean) on FIELD_DEFINITION
 
@@ -118,50 +161,22 @@ await test("subgraph schema change analysis", async (t) => {
     });
 
     assert.equal(analysis.composed, true);
-    assert.equal(analysis.baselineAvailable, false);
     assert.equal(analysis.summary.breakingChanges, 0);
     assert.equal(analysis.summary.dangerousChanges, 0);
-    assert.equal(analysis.breakingChanges.length, 0);
-    assert.equal(analysis.dangerousChanges.length, 0);
     assert.ok(
       analysis.changes.every((change) => change.severity === "safe"),
       "all additive baseline-less changes should be marked safe",
     );
     assert.ok(
       analysis.changes.some(
-        (change) => change.type === "TYPE_ADDED" && change.message === "Product was added.",
+        (change) => change.coordinate === "Product" && change.type === "TYPE_ADDED",
       ),
     );
     assert.ok(
       analysis.changes.some(
-        (change) =>
-          change.type === "FIELD_ADDED" && change.message === "Query.hello was added.",
+        (change) => change.coordinate === "Query.hello" && change.type === "FIELD_ADDED",
       ),
     );
-  });
-
-  await t.test("orders change output deterministically", () => {
-    const baselineSchema = buildSchema(`
-      type Query {
-        b: String
-        a: String
-      }
-    `);
-    const candidateSchema = buildSchema(`
-      type Query {
-        c: String
-        b: String
-      }
-
-      type Zed {
-        id: ID!
-      }
-    `);
-
-    const first = analyzeComposedSchemaChanges({ baselineSchema, candidateSchema });
-    const second = analyzeComposedSchemaChanges({ baselineSchema, candidateSchema });
-
-    assert.deepEqual(first, second);
   });
 
   await t.test("normalizes composition errors to stable fields", () => {
@@ -186,15 +201,11 @@ await test("subgraph schema change analysis", async (t) => {
 
   await t.test("returns an empty diff envelope for composition failures", () => {
     const analysis = createCompositionFailureAnalysis({
-      baselineAvailable: true,
       compositionErrors: [{ message: "boom" }],
     });
 
     assert.equal(analysis.composed, false);
-    assert.equal(analysis.baselineAvailable, true);
     assert.deepEqual(analysis.changes, []);
-    assert.deepEqual(analysis.breakingChanges, []);
-    assert.deepEqual(analysis.dangerousChanges, []);
     assert.deepEqual(analysis.compositionErrors, [{ message: "boom" }]);
     assert.deepEqual(analysis.summary, {
       totalChanges: 0,
