@@ -13,7 +13,7 @@ export type SupergraphSchemaReadAuthorizationGrant = {
 };
 
 export type SubgraphSchemaAuthorizationGrant = {
-  scope: "subgraph_schema:read" | "subgraph_schema:write";
+  scope: "subgraph_schema:read" | "subgraph_schema:validate" | "subgraph_schema:write";
   graphId: string;
   subgraphId: string;
 };

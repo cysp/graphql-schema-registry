@@ -48,7 +48,7 @@ export function createWildcardSupergraphSchemaReadGrantToken(createToken: Create
 
 export function createSubgraphSchemaGrantToken(
   createToken: CreateToken,
-  scope: "subgraph_schema:read" | "subgraph_schema:write",
+  scope: "subgraph_schema:read" | "subgraph_schema:validate" | "subgraph_schema:write",
   graphId: string,
   subgraphId: string,
 ): string {
@@ -66,7 +66,7 @@ export function createSubgraphSchemaGrantToken(
 
 export function createWildcardSubgraphSchemaGrantToken(
   createToken: CreateToken,
-  scope: "subgraph_schema:read" | "subgraph_schema:write",
+  scope: "subgraph_schema:read" | "subgraph_schema:validate" | "subgraph_schema:write",
 ): string {
   return createToken({
     authorization_details: [

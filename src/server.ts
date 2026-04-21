@@ -26,6 +26,7 @@ import { listSubgraphsHandler } from "./domain/routes/list-subgraphs.ts";
 import { publishSubgraphSchemaHandler } from "./domain/routes/publish-subgraph-schema.ts";
 import { updateGraphHandler } from "./domain/routes/update-graph.ts";
 import { updateSubgraphHandler } from "./domain/routes/update-subgraph.ts";
+import { validateSubgraphSchemaHandler } from "./domain/routes/validate-subgraph-schema.ts";
 import type { PostgresJsDatabase } from "./drizzle/types.ts";
 import { bearerAuthenticateHeaders } from "./lib/fastify/authorization/bearer-authenticate-headers.ts";
 import { fastifyHandlerWithDependencies } from "./lib/fastify/handler-with-dependencies.ts";
@@ -162,6 +163,10 @@ export function createFastifyServer({
         ),
         updateGraph: fastifyHandlerWithDependencies(updateGraphHandler, routeDependencies),
         updateSubgraph: fastifyHandlerWithDependencies(updateSubgraphHandler, routeDependencies),
+        validateSubgraphSchema: fastifyHandlerWithDependencies(
+          validateSubgraphSchemaHandler,
+          routeDependencies,
+        ),
       },
     });
 
