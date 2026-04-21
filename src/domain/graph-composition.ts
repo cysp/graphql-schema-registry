@@ -1,7 +1,5 @@
-import { composeServices } from "@apollo/composition";
-import { parse } from "graphql";
-
 import type { PostgresJsTransaction } from "../drizzle/types.ts";
+import { composeSubgraphServices } from "./compose-subgraph-services.ts";
 import {
   clearGraphCompositionPointers,
   insertGraphCompositionAttempt,
@@ -60,16 +58,6 @@ function graphHasCompositionPointers(
   );
 }
 
-function composeEligibleSubgraphs(subgraphs: ReadonlyArray<GraphCompositionEligibleSubgraph>) {
-  return composeServices(
-    subgraphs.map((member) => ({
-      name: member.slug,
-      typeDefs: parse(member.normalizedSdl),
-      url: member.routingUrl,
-    })),
-  );
-}
-
 export async function attemptGraphComposition(
   transaction: PostgresJsTransaction,
   graph: Pick<ActiveGraph, "id" | "currentCompositionRevision" | "currentSupergraphSchemaRevision">,
@@ -103,7 +91,7 @@ export async function attemptGraphComposition(
 
   const latestRevision = await selectLatestGraphCompositionRevision(transaction, graph.id);
   const nextRevision = (latestRevision ?? 0n) + 1n;
-  const compositionResult = composeEligibleSubgraphs(eligibleSubgraphs);
+  const compositionResult = composeSubgraphServices(eligibleSubgraphs);
 
   const storedGraphCompositionAttempt = await insertGraphCompositionAttempt(transaction, {
     createdAt,

@@ -1,6 +1,3 @@
-import { composeServices } from "@apollo/composition";
-import { parse } from "graphql";
-
 import type { PostgresJsDatabase } from "../../drizzle/types.ts";
 import { requireAuthenticatedUser } from "../../lib/fastify/authorization/guards.ts";
 import type { DependencyInjectedHandler } from "../../lib/fastify/handler-with-dependencies.ts";
@@ -8,6 +5,7 @@ import type { operationRouteDefinitions } from "../../lib/fastify/openapi/genera
 import type { OpenApiOperationHandlers } from "../../lib/fastify/openapi/plugin.ts";
 import { requireDatabase } from "../../lib/fastify/require-database.ts";
 import { canValidateSubgraphSchema } from "../authorization/policy.ts";
+import { composeSubgraphServices } from "../compose-subgraph-services.ts";
 import {
   selectGraphCompositionServiceDefinitions,
   selectSubgraphsEligibleForGraphComposition,
@@ -15,10 +13,12 @@ import {
 import { selectActiveGraphBySlug } from "../database/graphs/repository.ts";
 import { selectCurrentSubgraphSchemaRevision } from "../database/subgraph-schemas/repository.ts";
 import { selectActiveSubgraphByGraphIdAndSlug } from "../database/subgraphs/repository.ts";
+import type { GraphCompositionServiceDefinition } from "../database/types.ts";
 import {
   analyzeComposedSchemaChanges,
   createCompositionFailureAnalysis,
   normalizeCompositionErrors,
+  SchemaCoordinateDerivationError,
   type ValidateSubgraphSchemaAnalysis,
 } from "../subgraph-schema-change-analysis.ts";
 import { etagSatisfiesIfMatch, formatStrongETag, parseIfMatchHeader } from "../etag.ts";
@@ -33,32 +33,15 @@ type RouteDependencies = {
   database: PostgresJsDatabase | undefined;
 };
 
-type SubgraphServiceDefinition = {
-  subgraphId: string;
-  slug: string;
-  routingUrl: string;
-  normalizedSdl: string;
-};
-
-function composeSubgraphServices(subgraphDefinitions: ReadonlyArray<SubgraphServiceDefinition>) {
-  return composeServices(
-    subgraphDefinitions.map((definition) => ({
-      name: definition.slug,
-      typeDefs: parse(definition.normalizedSdl),
-      url: definition.routingUrl,
-    })),
-  );
-}
-
 function createCandidateServiceDefinitions({
   eligibleSubgraphs,
   proposedNormalizedSdl,
   targetSubgraph,
 }: {
-  eligibleSubgraphs: ReadonlyArray<SubgraphServiceDefinition>;
+  eligibleSubgraphs: ReadonlyArray<GraphCompositionServiceDefinition>;
   proposedNormalizedSdl: string;
-  targetSubgraph: Pick<SubgraphServiceDefinition, "subgraphId" | "slug" | "routingUrl">;
-}): SubgraphServiceDefinition[] {
+  targetSubgraph: Pick<GraphCompositionServiceDefinition, "subgraphId" | "slug" | "routingUrl">;
+}): GraphCompositionServiceDefinition[] {
   const replacedSubgraphDefinitions = eligibleSubgraphs.map((subgraph) =>
     subgraph.subgraphId === targetSubgraph.subgraphId
       ? {
@@ -88,8 +71,8 @@ function createCandidateServiceDefinitions({
 }
 
 function createBaselineServiceDefinitions(
-  baselineSubgraphs: ReadonlyArray<SubgraphServiceDefinition>,
-): SubgraphServiceDefinition[] {
+  baselineSubgraphs: ReadonlyArray<GraphCompositionServiceDefinition>,
+): GraphCompositionServiceDefinition[] {
   return baselineSubgraphs.toSorted(
     (left, right) => left.slug.localeCompare(right.slug) || left.subgraphId.localeCompare(right.subgraphId),
   );
@@ -200,10 +183,32 @@ export const validateSubgraphSchemaHandler: DependencyInjectedHandler<
 
   const candidateAnalysisSchema = candidateComposition.schema.toAPISchema().toGraphQLJSSchema();
 
-  const analysis = analyzeComposedSchemaChanges({
-    baselineSchema: baselineAnalysisSchema,
-    candidateSchema: candidateAnalysisSchema,
-  });
+  let analysis: ValidateSubgraphSchemaAnalysis;
+  try {
+    analysis = analyzeComposedSchemaChanges({
+      baselineSchema: baselineAnalysisSchema,
+      candidateSchema: candidateAnalysisSchema,
+    });
+  } catch (error) {
+    if (error instanceof SchemaCoordinateDerivationError) {
+      request.log.error(
+        {
+          error,
+          changeDescription: error.changeDescription,
+          changeType: error.changeType,
+          coordinate: error.coordinate,
+          graphId: graph.id,
+          graphSlug: graph.slug,
+          subgraphId: subgraph.id,
+          subgraphSlug: subgraph.slug,
+        },
+        "failed to derive resolvable schema coordinate during subgraph validation analysis",
+      );
+      return reply.problemDetails({ status: 500 });
+    }
+
+    throw error;
+  }
 
   return reply.code(200).send(analysis);
 };
