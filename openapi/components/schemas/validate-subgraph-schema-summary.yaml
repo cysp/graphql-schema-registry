@@ -1,0 +1,24 @@
+type: object
+additionalProperties: false
+required:
+  - totalChanges
+  - breakingChanges
+  - dangerousChanges
+  - safeChanges
+  - compositionErrors
+properties:
+  totalChanges:
+    type: integer
+    minimum: 0
+  breakingChanges:
+    type: integer
+    minimum: 0
+  dangerousChanges:
+    type: integer
+    minimum: 0
+  safeChanges:
+    type: integer
+    minimum: 0
+  compositionErrors:
+    type: integer
+    minimum: 0

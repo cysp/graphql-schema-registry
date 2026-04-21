@@ -11,6 +11,7 @@ import {
 } from "../../../drizzle/schema.ts";
 import type { PostgresJsExecutor, PostgresJsTransaction } from "../../../drizzle/types.ts";
 import type {
+  GraphCompositionServiceDefinition,
   GraphCompositionSubgraphReference,
   GraphCompositionEligibleSubgraph,
   StoredGraphCompositionAttempt,
@@ -50,6 +51,46 @@ export async function selectGraphCompositionSubgraphs(
       ),
     )
     .orderBy(asc(graphCompositionSubgraphs.subgraphId));
+}
+
+export async function selectGraphCompositionServiceDefinitions(
+  database: PostgresJsExecutor,
+  graphId: string,
+  graphCompositionRevision: bigint,
+): Promise<GraphCompositionServiceDefinition[]> {
+  return database
+    .select({
+      subgraphId: subgraphs.id,
+      slug: subgraphs.slug,
+      routingUrl: subgraphRevisions.routingUrl,
+      normalizedSdl: subgraphSchemaRevisions.normalizedSdl,
+    })
+    .from(graphCompositionSubgraphs)
+    .innerJoin(subgraphs, eq(subgraphs.id, graphCompositionSubgraphs.subgraphId))
+    .innerJoin(
+      subgraphRevisions,
+      and(
+        eq(subgraphRevisions.subgraphId, graphCompositionSubgraphs.subgraphId),
+        eq(subgraphRevisions.revision, graphCompositionSubgraphs.subgraphRevision),
+      ),
+    )
+    .innerJoin(
+      subgraphSchemaRevisions,
+      and(
+        eq(subgraphSchemaRevisions.subgraphId, graphCompositionSubgraphs.subgraphId),
+        eq(
+          subgraphSchemaRevisions.revision,
+          graphCompositionSubgraphs.subgraphSchemaRevision,
+        ),
+      ),
+    )
+    .where(
+      and(
+        eq(graphCompositionSubgraphs.graphId, graphId),
+        eq(graphCompositionSubgraphs.compositionRevision, graphCompositionRevision),
+      ),
+    )
+    .orderBy(asc(subgraphs.slug), asc(subgraphs.id));
 }
 
 export async function selectSubgraphsEligibleForGraphComposition(

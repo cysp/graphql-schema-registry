@@ -373,6 +373,7 @@ paths:
           $ref: "#/components/responses/InternalServerError"
         "503":
           $ref: "#/components/responses/ServiceUnavailable"
+
     post:
       operationId: publishSubgraphSchema
       summary: Publish a subgraph schema SDL
@@ -431,6 +432,44 @@ paths:
         "503":
           $ref: "#/components/responses/ServiceUnavailable"
 
+  /v1/graphs/{graphSlug}/subgraphs/{subgraphSlug}/validate-schema:
+    post:
+      operationId: validateSubgraphSchema
+      summary: Validate a proposed subgraph schema against composed supergraph impact
+      parameters:
+        - $ref: "#/components/parameters/GraphSlug"
+        - $ref: "#/components/parameters/SubgraphSlug"
+        - $ref: "#/components/parameters/IfMatch"
+      requestBody:
+        required: true
+        content:
+          text/plain:
+            schema:
+              type: string
+      responses:
+        "200":
+          description: Validation analysis
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ValidateSubgraphSchemaResponse"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "412":
+          $ref: "#/components/responses/PreconditionFailed"
+        "422":
+          $ref: "#/components/responses/UnprocessableEntity"
+        "500":
+          $ref: "#/components/responses/InternalServerError"
+        "503":
+          $ref: "#/components/responses/ServiceUnavailable"
+
 components:
   securitySchemes:
     bearerAuth:
@@ -468,6 +507,16 @@ components:
       $ref: "./components/schemas/create-subgraph-request.yaml"
     UpdateSubgraphRequest:
       $ref: "./components/schemas/update-subgraph-request.yaml"
+    ValidateSubgraphSchemaResponse:
+      $ref: "./components/schemas/validate-subgraph-schema-response.yaml"
+    ValidateSubgraphSchemaSummary:
+      $ref: "./components/schemas/validate-subgraph-schema-summary.yaml"
+    SchemaChange:
+      $ref: "./components/schemas/schema-change.yaml"
+    ClassifiedSchemaChange:
+      $ref: "./components/schemas/classified-schema-change.yaml"
+    CompositionError:
+      $ref: "./components/schemas/composition-error.yaml"
     Problem:
       $ref: "./components/schemas/problem-details.yaml"
   responses:

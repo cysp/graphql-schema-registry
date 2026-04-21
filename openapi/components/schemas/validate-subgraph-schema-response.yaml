@@ -1,0 +1,33 @@
+type: object
+additionalProperties: false
+required:
+  - composed
+  - baselineAvailable
+  - summary
+  - changes
+  - breakingChanges
+  - dangerousChanges
+  - compositionErrors
+properties:
+  composed:
+    type: boolean
+  baselineAvailable:
+    type: boolean
+  summary:
+    $ref: "./validate-subgraph-schema-summary.yaml"
+  changes:
+    type: array
+    items:
+      $ref: "./schema-change.yaml"
+  breakingChanges:
+    type: array
+    items:
+      $ref: "./classified-schema-change.yaml"
+  dangerousChanges:
+    type: array
+    items:
+      $ref: "./classified-schema-change.yaml"
+  compositionErrors:
+    type: array
+    items:
+      $ref: "./composition-error.yaml"

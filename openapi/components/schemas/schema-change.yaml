@@ -1,0 +1,17 @@
+type: object
+additionalProperties: false
+required:
+  - severity
+  - type
+  - message
+properties:
+  severity:
+    type: string
+    enum:
+      - breaking
+      - dangerous
+      - safe
+  type:
+    type: string
+  message:
+    type: string

@@ -34,7 +34,11 @@ const supergraphSchemaReadAuthorizationDetailSchema = z
 const subgraphSchemaAuthorizationDetailSchema = z
   .object({
     type: authorizationDetailsTypeSchema,
-    scope: z.enum(["subgraph_schema:read", "subgraph_schema:write"]),
+    scope: z.enum([
+      "subgraph_schema:read",
+      "subgraph_schema:validate",
+      "subgraph_schema:write",
+    ]),
     graph_id: resourceIdSchema,
     subgraph_id: resourceIdSchema,
   })
