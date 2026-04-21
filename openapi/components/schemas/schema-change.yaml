@@ -1,10 +1,13 @@
 type: object
 additionalProperties: false
 required:
+  - coordinate
   - severity
   - type
   - message
 properties:
+  coordinate:
+    type: string
   severity:
     type: string
     enum:

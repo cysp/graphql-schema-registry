@@ -192,7 +192,6 @@ export const validateSubgraphSchemaHandler: DependencyInjectedHandler<
   if (candidateComposition.errors) {
     const compositionErrors = normalizeCompositionErrors(candidateComposition.errors);
     const analysis: ValidateSubgraphSchemaAnalysis = createCompositionFailureAnalysis({
-      baselineAvailable: baselineAnalysisSchema !== undefined,
       compositionErrors,
     });
 

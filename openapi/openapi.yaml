@@ -513,8 +513,6 @@ components:
       $ref: "./components/schemas/validate-subgraph-schema-summary.yaml"
     SchemaChange:
       $ref: "./components/schemas/schema-change.yaml"
-    ClassifiedSchemaChange:
-      $ref: "./components/schemas/classified-schema-change.yaml"
     CompositionError:
       $ref: "./components/schemas/composition-error.yaml"
     Problem:
