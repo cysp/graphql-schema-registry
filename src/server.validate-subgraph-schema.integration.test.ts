@@ -370,45 +370,37 @@ await test("[integration] validate subgraph schema route integration with postgr
       const payload = parseJson(response);
       assertObjectRecord(payload);
       assert.equal(payload["composed"], true);
-      assert.equal(payload["baselineAvailable"], true);
 
       const summary = payload["summary"];
       assertObjectRecord(summary);
+      assert.equal(summary["totalChanges"], 3);
       assert.equal(summary["breakingChanges"], 1);
       assert.equal(summary["dangerousChanges"], 1);
       assert.equal(summary["safeChanges"], 1);
-
-      const breakingChanges = payload["breakingChanges"];
-      assert.ok(Array.isArray(breakingChanges));
-      assert.deepEqual(
-        breakingChanges.map((change) => {
-          assertObjectRecord(change);
-          return change["type"];
-        }),
-        ["FIELD_CHANGED_KIND"],
-      );
-
-      const dangerousChanges = payload["dangerousChanges"];
-      assert.ok(Array.isArray(dangerousChanges));
-      assert.deepEqual(
-        dangerousChanges.map((change) => {
-          assertObjectRecord(change);
-          return change["type"];
-        }),
-        ["VALUE_ADDED_TO_ENUM"],
-      );
+      assert.equal(summary["compositionErrors"], 0);
 
       const changes = payload["changes"];
       assert.ok(Array.isArray(changes));
-      assert.ok(
-        changes.some((change) => {
+      assert.deepEqual(
+        changes.map((change) => {
           assertObjectRecord(change);
-          return (
-            change["severity"] === "safe" &&
-            change["type"] === "FIELD_ADDED" &&
-            change["message"] === "Query.product was added."
-          );
+          const coordinate = change["coordinate"];
+          const severity = change["severity"];
+          const type = change["type"];
+          if (
+            typeof coordinate !== "string" ||
+            typeof severity !== "string" ||
+            typeof type !== "string"
+          ) {
+            throw new TypeError("change entries must include string coordinate, severity, and type");
+          }
+          return `${coordinate}|${severity}|${type}`;
         }),
+        [
+          "Query.product|safe|FIELD_ADDED",
+          "Query.products|breaking|FIELD_CHANGED_KIND",
+          "SortDirection.DESC|dangerous|VALUE_ADDED_TO_ENUM",
+        ],
       );
     } finally {
       await fixture.close();
@@ -462,10 +454,14 @@ await test("[integration] validate subgraph schema route integration with postgr
       assertObjectRecord(payload);
 
       assert.equal(payload["composed"], false);
-      assert.equal(payload["baselineAvailable"], true);
       assert.deepEqual(payload["changes"], []);
-      assert.deepEqual(payload["breakingChanges"], []);
-      assert.deepEqual(payload["dangerousChanges"], []);
+      const summary = payload["summary"];
+      assertObjectRecord(summary);
+      assert.equal(summary["totalChanges"], 0);
+      assert.equal(summary["breakingChanges"], 0);
+      assert.equal(summary["dangerousChanges"], 0);
+      assert.equal(summary["safeChanges"], 0);
+      assert.equal(summary["compositionErrors"], 1);
 
       const compositionErrors = payload["compositionErrors"];
       assert.ok(Array.isArray(compositionErrors));
