@@ -7,6 +7,7 @@ import {
   canManageGraph,
   canReadSubgraphSchema,
   canReadSupergraphSchema,
+  canValidateSubgraphSchema,
   canWriteSubgraphSchema,
 } from "./policy.ts";
 import type { AuthorizationGrant } from "./user.ts";
@@ -133,5 +134,24 @@ await test("schema policy", async (t) => {
     assert.equal(canWriteSubgraphSchema(grant, undefined, "inventory"), true);
     assert.equal(canWriteSubgraphSchema(grant, "alpha", undefined), true);
     assert.equal(canWriteSubgraphSchema(grant, undefined, undefined), true);
+  });
+
+  await t.test("canValidateSubgraphSchema allows validate and write grants", () => {
+    const validateGrant = createGrants({
+      graphId: "alpha",
+      scope: "subgraph_schema:validate",
+      subgraphId: "inventory",
+    });
+    const writeGrant = createGrants({
+      graphId: "*",
+      scope: "subgraph_schema:write",
+      subgraphId: "*",
+    });
+
+    assert.equal(canValidateSubgraphSchema(validateGrant, "alpha", "inventory"), true);
+    assert.equal(canValidateSubgraphSchema(validateGrant, "alpha", "products"), false);
+    assert.equal(canValidateSubgraphSchema(writeGrant, "alpha", "products"), true);
+    assert.equal(canValidateSubgraphSchema(validateGrant, undefined, "inventory"), false);
+    assert.equal(canValidateSubgraphSchema(writeGrant, undefined, undefined), true);
   });
 });

@@ -1,0 +1,20 @@
+type: object
+additionalProperties: false
+required:
+  - composed
+  - summary
+  - changes
+  - compositionErrors
+properties:
+  composed:
+    type: boolean
+  summary:
+    $ref: "./validate-subgraph-schema-summary.yaml"
+  changes:
+    type: array
+    items:
+      $ref: "./schema-change.yaml"
+  compositionErrors:
+    type: array
+    items:
+      $ref: "./composition-error.yaml"
