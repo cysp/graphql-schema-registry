@@ -322,50 +322,11 @@ function collectAdditionsFromEmptySchema(candidateSchema: GraphQLSchema): Schema
   return uniqueSchemaChangeBases(changes);
 }
 
-function createSummary({
-  breakingChanges,
-  dangerousChanges,
-  safeChanges,
-  compositionErrors,
-}: {
-  breakingChanges: number;
-  dangerousChanges: number;
-  safeChanges: number;
-  compositionErrors: number;
-}): ValidateSubgraphSchemaSummary {
-  return {
-    totalChanges: breakingChanges + dangerousChanges + safeChanges,
-    breakingChanges,
-    dangerousChanges,
-    safeChanges,
-    compositionErrors,
-  };
-}
-
-function createSchemaCoordinateDerivationError({
-  change,
-  coordinate,
-  message,
-  cause,
-}: {
-  change: GraphqlSchemaChange;
-  coordinate?: string;
-  message: string;
-  cause?: unknown;
-}): SchemaCoordinateDerivationError {
-  return new SchemaCoordinateDerivationError({
-    changeType: change.type,
-    changeDescription: change.description,
-    message,
-    cause,
-    ...(coordinate === undefined ? {} : { coordinate }),
-  });
-}
-
 function mustMatch(match: RegExpMatchArray | null, change: GraphqlSchemaChange): RegExpMatchArray {
   if (!match) {
-    throw createSchemaCoordinateDerivationError({
-      change,
+    throw new SchemaCoordinateDerivationError({
+      changeType: change.type,
+      changeDescription: change.description,
       message: `Unable to derive schema coordinate for ${change.type}: ${change.description}`,
     });
   }
@@ -381,8 +342,9 @@ function requireGroup(
 ): string {
   const value = match.groups?.[groupName];
   if (!value) {
-    throw createSchemaCoordinateDerivationError({
-      change,
+    throw new SchemaCoordinateDerivationError({
+      changeType: change.type,
+      changeDescription: change.description,
       message: `Unable to derive ${context} coordinate for ${change.type}: ${change.description}`,
     });
   }
@@ -560,11 +522,6 @@ const coordinateDeriversByChangeType = {
   [DangerousChangeType.ARG_DEFAULT_VALUE_CHANGE]: toFieldArgumentCoordinateFromDescription,
 } as const satisfies Record<SupportedGraphqlSchemaChangeType, CoordinateDeriver>;
 
-function toSchemaCoordinateFromGraphqlChange(change: GraphqlSchemaChange): string {
-  const deriveCoordinate = coordinateDeriversByChangeType[change.type];
-  return deriveCoordinate(change);
-}
-
 function assertCoordinateIsParsableAndResolvable({
   baselineSchema,
   candidateSchema,
@@ -627,88 +584,6 @@ function assertCoordinateIsParsableAndResolvable({
   });
 }
 
-export function deriveAndValidateSchemaCoordinate({
-  baselineSchema,
-  candidateSchema,
-  change,
-  resolutionMode,
-}: {
-  baselineSchema: GraphQLSchema | undefined;
-  candidateSchema: GraphQLSchema;
-  change: GraphqlSchemaChange;
-  resolutionMode: CoordinateValidationMode;
-}): string {
-  const coordinate = toSchemaCoordinateFromGraphqlChange(change);
-  assertCoordinateIsParsableAndResolvable({
-    baselineSchema,
-    candidateSchema,
-    change,
-    coordinate,
-    resolutionMode,
-  });
-  return coordinate;
-}
-
-function validateSchemaChangeBasesCoordinates({
-  baselineSchema,
-  candidateSchema,
-  changes,
-  resolutionMode,
-}: {
-  baselineSchema: GraphQLSchema | undefined;
-  candidateSchema: GraphQLSchema;
-  changes: ReadonlyArray<SchemaChangeBase>;
-  resolutionMode: CoordinateValidationMode;
-}): SchemaChangeBase[] {
-  for (const change of changes) {
-    assertCoordinateIsParsableAndResolvable({
-      baselineSchema,
-      candidateSchema,
-      change: {
-        description: change.message,
-        type: change.type,
-      },
-      coordinate: change.coordinate,
-      resolutionMode,
-    });
-  }
-
-  return [...changes];
-}
-
-function mapToSchemaChangeBases({
-  baselineSchema,
-  candidateSchema,
-  changes,
-}: {
-  baselineSchema: GraphQLSchema | undefined;
-  candidateSchema: GraphQLSchema;
-  changes: ReadonlyArray<GraphqlSchemaChange>;
-}): SchemaChangeBase[] {
-  return changes
-    .map((change) => ({
-      coordinate: deriveAndValidateSchemaCoordinate({
-        baselineSchema,
-        candidateSchema,
-        change,
-        resolutionMode: "baseline_or_candidate",
-      }),
-      message: change.description,
-      type: change.type,
-    }))
-    .toSorted(compareSchemaChangeBase);
-}
-
-function withSeverity(
-  severity: SchemaChange["severity"],
-  changes: ReadonlyArray<SchemaChangeBase>,
-): SchemaChange[] {
-  return changes.map((change) => ({
-    severity,
-    ...change,
-  }));
-}
-
 export function normalizeCompositionErrors(
   errors: ReadonlyArray<GraphQLError>,
 ): CompositionError[] {
@@ -735,12 +610,13 @@ export function createCompositionFailureAnalysis({
 }): ValidateSubgraphSchemaAnalysis {
   return {
     composed: false,
-    summary: createSummary({
+    summary: {
+      totalChanges: 0,
       breakingChanges: 0,
       dangerousChanges: 0,
       safeChanges: 0,
       compositionErrors: compositionErrors.length,
-    }),
+    },
     changes: [],
     compositionErrors: [...compositionErrors],
   };
@@ -754,55 +630,109 @@ export function analyzeComposedSchemaChanges({
   candidateSchema: GraphQLSchema;
 }): ValidateSubgraphSchemaAnalysis {
   if (!baselineSchema) {
-    const safeChanges = validateSchemaChangeBasesCoordinates({
-      baselineSchema: undefined,
-      candidateSchema,
-      changes: collectAdditionsFromEmptySchema(candidateSchema),
-      resolutionMode: "candidate_only",
-    });
+    const safeChanges = collectAdditionsFromEmptySchema(candidateSchema);
+    for (const change of safeChanges) {
+      assertCoordinateIsParsableAndResolvable({
+        baselineSchema: undefined,
+        candidateSchema,
+        change: {
+          description: change.message,
+          type: change.type,
+        },
+        coordinate: change.coordinate,
+        resolutionMode: "candidate_only",
+      });
+    }
 
     return {
       composed: true,
-      summary: createSummary({
+      summary: {
+        totalChanges: safeChanges.length,
         breakingChanges: 0,
         dangerousChanges: 0,
         safeChanges: safeChanges.length,
         compositionErrors: 0,
-      }),
-      changes: withSeverity("safe", safeChanges).toSorted(compareSchemaChanges),
+      },
+      changes: safeChanges
+        .map((change) => ({
+          severity: "safe" as const,
+          ...change,
+        }))
+        .toSorted(compareSchemaChanges),
       compositionErrors: [],
     };
   }
 
-  const breakingChanges = mapToSchemaChangeBases({
-    baselineSchema,
-    candidateSchema,
-    changes: findBreakingChanges(baselineSchema, candidateSchema),
-  });
-  const dangerousChanges = mapToSchemaChangeBases({
-    baselineSchema,
-    candidateSchema,
-    changes: findDangerousChanges(baselineSchema, candidateSchema),
-  });
-  const safeChanges = validateSchemaChangeBasesCoordinates({
-    baselineSchema,
-    candidateSchema,
-    changes: collectSafeAdditionChanges(baselineSchema, candidateSchema),
-    resolutionMode: "candidate_only",
-  });
+  const breakingChanges = findBreakingChanges(baselineSchema, candidateSchema)
+    .map((change) => {
+      const coordinate = coordinateDeriversByChangeType[change.type](change);
+      assertCoordinateIsParsableAndResolvable({
+        baselineSchema,
+        candidateSchema,
+        change,
+        resolutionMode: "baseline_or_candidate",
+        coordinate,
+      });
+      return {
+        coordinate,
+        message: change.description,
+        type: change.type,
+      };
+    })
+    .toSorted(compareSchemaChangeBase);
+  const dangerousChanges = findDangerousChanges(baselineSchema, candidateSchema)
+    .map((change) => {
+      const coordinate = coordinateDeriversByChangeType[change.type](change);
+      assertCoordinateIsParsableAndResolvable({
+        baselineSchema,
+        candidateSchema,
+        change,
+        resolutionMode: "baseline_or_candidate",
+        coordinate,
+      });
+      return {
+        coordinate,
+        message: change.description,
+        type: change.type,
+      };
+    })
+    .toSorted(compareSchemaChangeBase);
+  const safeChanges = collectSafeAdditionChanges(baselineSchema, candidateSchema);
+  for (const change of safeChanges) {
+    assertCoordinateIsParsableAndResolvable({
+      baselineSchema,
+      candidateSchema,
+      change: {
+        description: change.message,
+        type: change.type,
+      },
+      coordinate: change.coordinate,
+      resolutionMode: "candidate_only",
+    });
+  }
 
   return {
     composed: true,
-    summary: createSummary({
+    summary: {
+      totalChanges: breakingChanges.length + dangerousChanges.length + safeChanges.length,
       breakingChanges: breakingChanges.length,
       dangerousChanges: dangerousChanges.length,
       safeChanges: safeChanges.length,
       compositionErrors: 0,
-    }),
+    },
     changes: [
-      ...withSeverity("breaking", breakingChanges),
-      ...withSeverity("dangerous", dangerousChanges),
-      ...withSeverity("safe", safeChanges),
+      ...breakingChanges.map((change) => ({
+        severity: "breaking" as const,
+        ...change,
+      })),
+      ...dangerousChanges.map((change) => ({
+        severity: "dangerous" as const,
+        ...change,
+      })),
+      ...safeChanges.map((change) => ({
+        severity: "safe" as const,
+        ...change,
+      })),
     ].toSorted(compareSchemaChanges),
     compositionErrors: [],
   };
