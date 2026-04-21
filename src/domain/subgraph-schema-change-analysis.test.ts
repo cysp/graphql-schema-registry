@@ -1,12 +1,14 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 
-import { GraphQLError, buildSchema } from "graphql";
+import { BreakingChangeType, GraphQLError, buildSchema } from "graphql";
 
 import {
   analyzeComposedSchemaChanges,
   createCompositionFailureAnalysis,
+  deriveAndValidateSchemaCoordinate,
   normalizeCompositionErrors,
+  SchemaCoordinateDerivationError,
 } from "./subgraph-schema-change-analysis.ts";
 
 await test("subgraph schema change analysis", async (t) => {
@@ -197,6 +199,70 @@ await test("subgraph schema change analysis", async (t) => {
       { code: "FST", message: "First" },
       { message: "Second" },
     ]);
+  });
+
+  await t.test("throws typed error when a change description cannot be mapped to a coordinate", () => {
+    const schema = buildSchema(`
+      type Query {
+        hello: String
+      }
+    `);
+
+    assert.throws(
+      () =>
+        deriveAndValidateSchemaCoordinate({
+          baselineSchema: schema,
+          candidateSchema: schema,
+          change: {
+            type: BreakingChangeType.FIELD_REMOVED,
+            description: "this does not match upstream field removal wording",
+          },
+          resolutionMode: "baseline_or_candidate",
+        }),
+      (error) => {
+        assert.ok(error instanceof SchemaCoordinateDerivationError);
+        assert.equal(
+          error.changeDescription,
+          "this does not match upstream field removal wording",
+        );
+        assert.equal(error.changeType, BreakingChangeType.FIELD_REMOVED);
+        assert.equal(error.coordinate, undefined);
+        return true;
+      },
+    );
+  });
+
+  await t.test("throws typed error when a derived coordinate is not resolvable", () => {
+    const baselineSchema = buildSchema(`
+      type Query {
+        hello: String
+      }
+    `);
+    const candidateSchema = buildSchema(`
+      type Query {
+        hello: String
+      }
+    `);
+
+    assert.throws(
+      () =>
+        deriveAndValidateSchemaCoordinate({
+          baselineSchema,
+          candidateSchema,
+          change: {
+            type: BreakingChangeType.FIELD_REMOVED,
+            description: "Ghost.field was removed.",
+          },
+          resolutionMode: "baseline_or_candidate",
+        }),
+      (error) => {
+        assert.ok(error instanceof SchemaCoordinateDerivationError);
+        assert.equal(error.changeType, BreakingChangeType.FIELD_REMOVED);
+        assert.equal(error.changeDescription, "Ghost.field was removed.");
+        assert.equal(error.coordinate, "Ghost.field");
+        return true;
+      },
+    );
   });
 
   await t.test("returns an empty diff envelope for composition failures", () => {

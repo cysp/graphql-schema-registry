@@ -1,4 +1,6 @@
 import {
+  BreakingChangeType,
+  DangerousChangeType,
   findBreakingChanges,
   findDangerousChanges,
   isEnumType,
@@ -9,6 +11,10 @@ import {
   isSpecifiedDirective,
   isSpecifiedScalarType,
   isUnionType,
+  parseSchemaCoordinate,
+  resolveSchemaCoordinate,
+  type BreakingChange,
+  type DangerousChange,
   type GraphQLError,
   type GraphQLNamedType,
   type GraphQLSchema,
@@ -42,6 +48,37 @@ export type ValidateSubgraphSchemaAnalysis = {
 };
 
 type SchemaChangeBase = Omit<SchemaChange, "severity">;
+type GraphqlSchemaChange = BreakingChange | DangerousChange;
+type SupportedGraphqlSchemaChangeType = BreakingChangeType | DangerousChangeType;
+type CoordinateDeriver = (change: GraphqlSchemaChange) => string;
+
+type CoordinateValidationMode = "baseline_or_candidate" | "candidate_only";
+
+export class SchemaCoordinateDerivationError extends Error {
+  readonly changeType: string;
+  readonly changeDescription: string;
+  readonly coordinate: string | undefined;
+
+  constructor({
+    changeType,
+    changeDescription,
+    coordinate,
+    message,
+    cause,
+  }: {
+    changeType: string;
+    changeDescription: string;
+    coordinate?: string;
+    message: string;
+    cause?: unknown;
+  }) {
+    super(message, { cause });
+    this.name = "SchemaCoordinateDerivationError";
+    this.changeType = changeType;
+    this.changeDescription = changeDescription;
+    this.coordinate = coordinate;
+  }
+}
 
 const severityRank: Record<SchemaChange["severity"], number> = {
   breaking: 0,
@@ -305,55 +342,36 @@ function createSummary({
   };
 }
 
-function mustMatch(match: RegExpMatchArray | null, description: string, type: string): RegExpMatchArray {
+function createSchemaCoordinateDerivationError({
+  change,
+  coordinate,
+  message,
+  cause,
+}: {
+  change: GraphqlSchemaChange;
+  coordinate?: string;
+  message: string;
+  cause?: unknown;
+}): SchemaCoordinateDerivationError {
+  return new SchemaCoordinateDerivationError({
+    changeType: change.type,
+    changeDescription: change.description,
+    message,
+    cause,
+    ...(coordinate === undefined ? {} : { coordinate }),
+  });
+}
+
+function mustMatch(match: RegExpMatchArray | null, change: GraphqlSchemaChange): RegExpMatchArray {
   if (!match) {
-    throw new Error(`Unable to derive schema coordinate for ${type}: ${description}`);
+    throw createSchemaCoordinateDerivationError({
+      change,
+      message: `Unable to derive schema coordinate for ${change.type}: ${change.description}`,
+    });
   }
 
   return match;
 }
-
-function toFieldCoordinateFromDescription(description: string, type: string): string {
-  const match = mustMatch(
-    description.match(/^(?<typeName>[_A-Za-z][_0-9A-Za-z]*)\.(?<fieldName>[_A-Za-z][_0-9A-Za-z]*)/),
-    description,
-    type,
-  );
-
-  const typeName = match.groups?.["typeName"];
-  const fieldName = match.groups?.["fieldName"];
-  if (!typeName || !fieldName) {
-    throw new Error(`Unable to derive field coordinate for ${type}: ${description}`);
-  }
-
-  return `${typeName}.${fieldName}`;
-}
-
-function toFieldArgumentCoordinateFromDescription(description: string, type: string): string {
-  const match = mustMatch(
-    description.match(
-      /^(?<typeName>[_A-Za-z][_0-9A-Za-z]*)\.(?<fieldName>[_A-Za-z][_0-9A-Za-z]*) arg (?<argName>[_A-Za-z][_0-9A-Za-z]*) /,
-    ),
-    description,
-    type,
-  );
-
-  const typeName = match.groups?.["typeName"];
-  const fieldName = match.groups?.["fieldName"];
-  const argName = match.groups?.["argName"];
-  if (!typeName || !fieldName || !argName) {
-    throw new Error(`Unable to derive field argument coordinate for ${type}: ${description}`);
-  }
-
-  return `${typeName}.${fieldName}(${argName}:)`;
-}
-
-type GraphqlSchemaChange = {
-  type: string;
-  description: string;
-};
-
-type CoordinateDeriver = (change: GraphqlSchemaChange) => string;
 
 function requireGroup(
   match: RegExpMatchArray,
@@ -363,10 +381,38 @@ function requireGroup(
 ): string {
   const value = match.groups?.[groupName];
   if (!value) {
-    throw new Error(`Unable to derive ${context} coordinate for ${change.type}: ${change.description}`);
+    throw createSchemaCoordinateDerivationError({
+      change,
+      message: `Unable to derive ${context} coordinate for ${change.type}: ${change.description}`,
+    });
   }
 
   return value;
+}
+
+function toFieldCoordinateFromDescription(change: GraphqlSchemaChange): string {
+  const match = mustMatch(
+    change.description.match(/^(?<typeName>[_A-Za-z][_0-9A-Za-z]*)\.(?<fieldName>[_A-Za-z][_0-9A-Za-z]*)/),
+    change,
+  );
+
+  const typeName = requireGroup(match, "typeName", change, "field");
+  const fieldName = requireGroup(match, "fieldName", change, "field");
+  return `${typeName}.${fieldName}`;
+}
+
+function toFieldArgumentCoordinateFromDescription(change: GraphqlSchemaChange): string {
+  const match = mustMatch(
+    change.description.match(
+      /^(?<typeName>[_A-Za-z][_0-9A-Za-z]*)\.(?<fieldName>[_A-Za-z][_0-9A-Za-z]*) arg (?<argName>[_A-Za-z][_0-9A-Za-z]*) /,
+    ),
+    change,
+  );
+
+  const typeName = requireGroup(match, "typeName", change, "field argument");
+  const fieldName = requireGroup(match, "fieldName", change, "field argument");
+  const argName = requireGroup(match, "argName", change, "field argument");
+  return `${typeName}.${fieldName}(${argName}:)`;
 }
 
 function deriveTypeRemovedCoordinate(change: GraphqlSchemaChange): string {
@@ -380,8 +426,7 @@ function deriveTypeRemovedCoordinate(change: GraphqlSchemaChange): string {
 
   const match = mustMatch(
     change.description.match(/^(?<typeName>[_A-Za-z][_0-9A-Za-z]*) was removed\.$/),
-    change.description,
-    change.type,
+    change,
   );
   return requireGroup(match, "typeName", change, "type");
 }
@@ -389,8 +434,7 @@ function deriveTypeRemovedCoordinate(change: GraphqlSchemaChange): string {
 function deriveTypeChangedKindCoordinate(change: GraphqlSchemaChange): string {
   const match = mustMatch(
     change.description.match(/^(?<typeName>[_A-Za-z][_0-9A-Za-z]*) changed from /),
-    change.description,
-    change.type,
+    change,
   );
   return requireGroup(match, "typeName", change, "type");
 }
@@ -400,8 +444,7 @@ function deriveUnionCoordinate(change: GraphqlSchemaChange): string {
     change.description.match(
       /^[^ ]+ was (?:removed from|added to) union type (?<unionName>[_A-Za-z][_0-9A-Za-z]*)\.$/,
     ),
-    change.description,
-    change.type,
+    change,
   );
   return requireGroup(match, "unionName", change, "union");
 }
@@ -411,8 +454,7 @@ function deriveEnumValueCoordinate(change: GraphqlSchemaChange): string {
     change.description.match(
       /^(?<valueName>[_A-Za-z][_0-9A-Za-z]*) was (?:removed from|added to) enum type (?<enumName>[_A-Za-z][_0-9A-Za-z]*)\.$/,
     ),
-    change.description,
-    change.type,
+    change,
   );
   const enumName = requireGroup(match, "enumName", change, "enum value");
   const valueName = requireGroup(match, "valueName", change, "enum value");
@@ -424,8 +466,7 @@ function deriveInputFieldCoordinate(change: GraphqlSchemaChange): string {
     change.description.match(
       /^An? (?:required|optional) field (?<fieldName>[_A-Za-z][_0-9A-Za-z]*) on input type (?<typeName>[_A-Za-z][_0-9A-Za-z]*) was added\.$/,
     ),
-    change.description,
-    change.type,
+    change,
   );
   const typeName = requireGroup(match, "typeName", change, "input field");
   const fieldName = requireGroup(match, "fieldName", change, "input field");
@@ -435,8 +476,7 @@ function deriveInputFieldCoordinate(change: GraphqlSchemaChange): string {
 function deriveImplementedInterfaceCoordinate(change: GraphqlSchemaChange): string {
   const match = mustMatch(
     change.description.match(/^(?<typeName>[_A-Za-z][_0-9A-Za-z]*) /),
-    change.description,
-    change.type,
+    change,
   );
   return requireGroup(match, "typeName", change, "interface implementation");
 }
@@ -446,8 +486,7 @@ function deriveFieldArgumentAddedCoordinate(change: GraphqlSchemaChange): string
     change.description.match(
       /^An? (?:required|optional) arg (?<argName>[_A-Za-z][_0-9A-Za-z]*) on (?<typeName>[_A-Za-z][_0-9A-Za-z]*)\.(?<fieldName>[_A-Za-z][_0-9A-Za-z]*) was added\.$/,
     ),
-    change.description,
-    change.type,
+    change,
   );
   const typeName = requireGroup(match, "typeName", change, "required arg");
   const fieldName = requireGroup(match, "fieldName", change, "required arg");
@@ -466,8 +505,7 @@ function deriveDirectiveCoordinate(change: GraphqlSchemaChange): string {
 
   const simpleDirectiveMatch = mustMatch(
     change.description.match(/^(?<directiveName>[_A-Za-z][_0-9A-Za-z]*) was removed\.$/),
-    change.description,
-    change.type,
+    change,
   );
   return `@${requireGroup(simpleDirectiveMatch, "directiveName", change, "directive")}`;
 }
@@ -477,8 +515,7 @@ function deriveDirectiveArgumentRemovedCoordinate(change: GraphqlSchemaChange): 
     change.description.match(
       /^(?<argName>[_A-Za-z][_0-9A-Za-z]*) was removed from (?<directiveName>[_A-Za-z][_0-9A-Za-z]*)\.$/,
     ),
-    change.description,
-    change.type,
+    change,
   );
   const directiveName = requireGroup(match, "directiveName", change, "directive arg");
   const argName = requireGroup(match, "argName", change, "directive arg");
@@ -490,54 +527,172 @@ function deriveRequiredDirectiveArgumentAddedCoordinate(change: GraphqlSchemaCha
     change.description.match(
       /^A required arg (?<argName>[_A-Za-z][_0-9A-Za-z]*) on directive (?<directiveName>[_A-Za-z][_0-9A-Za-z]*) was added\.$/,
     ),
-    change.description,
-    change.type,
+    change,
   );
   const directiveName = requireGroup(match, "directiveName", change, "directive arg");
   const argName = requireGroup(match, "argName", change, "directive arg");
   return `@${directiveName}(${argName}:)`;
 }
 
-const coordinateDeriversByChangeType: Readonly<Record<string, CoordinateDeriver>> = {
-  ARG_CHANGED_KIND: (change) =>
-    toFieldArgumentCoordinateFromDescription(change.description, change.type),
-  ARG_DEFAULT_VALUE_CHANGE: (change) =>
-    toFieldArgumentCoordinateFromDescription(change.description, change.type),
-  ARG_REMOVED: (change) => toFieldArgumentCoordinateFromDescription(change.description, change.type),
-  DIRECTIVE_ARG_REMOVED: deriveDirectiveArgumentRemovedCoordinate,
-  DIRECTIVE_LOCATION_REMOVED: deriveDirectiveCoordinate,
-  DIRECTIVE_REMOVED: deriveDirectiveCoordinate,
-  DIRECTIVE_REPEATABLE_REMOVED: deriveDirectiveCoordinate,
-  FIELD_CHANGED_KIND: (change) => toFieldCoordinateFromDescription(change.description, change.type),
-  FIELD_REMOVED: (change) => toFieldCoordinateFromDescription(change.description, change.type),
-  IMPLEMENTED_INTERFACE_ADDED: deriveImplementedInterfaceCoordinate,
-  IMPLEMENTED_INTERFACE_REMOVED: deriveImplementedInterfaceCoordinate,
-  OPTIONAL_ARG_ADDED: deriveFieldArgumentAddedCoordinate,
-  OPTIONAL_INPUT_FIELD_ADDED: deriveInputFieldCoordinate,
-  REQUIRED_ARG_ADDED: deriveFieldArgumentAddedCoordinate,
-  REQUIRED_DIRECTIVE_ARG_ADDED: deriveRequiredDirectiveArgumentAddedCoordinate,
-  REQUIRED_INPUT_FIELD_ADDED: deriveInputFieldCoordinate,
-  TYPE_ADDED_TO_UNION: deriveUnionCoordinate,
-  TYPE_CHANGED_KIND: deriveTypeChangedKindCoordinate,
-  TYPE_REMOVED: deriveTypeRemovedCoordinate,
-  TYPE_REMOVED_FROM_UNION: deriveUnionCoordinate,
-  VALUE_ADDED_TO_ENUM: deriveEnumValueCoordinate,
-  VALUE_REMOVED_FROM_ENUM: deriveEnumValueCoordinate,
-};
+const coordinateDeriversByChangeType = {
+  [BreakingChangeType.TYPE_REMOVED]: deriveTypeRemovedCoordinate,
+  [BreakingChangeType.TYPE_CHANGED_KIND]: deriveTypeChangedKindCoordinate,
+  [BreakingChangeType.TYPE_REMOVED_FROM_UNION]: deriveUnionCoordinate,
+  [BreakingChangeType.VALUE_REMOVED_FROM_ENUM]: deriveEnumValueCoordinate,
+  [BreakingChangeType.REQUIRED_INPUT_FIELD_ADDED]: deriveInputFieldCoordinate,
+  [BreakingChangeType.IMPLEMENTED_INTERFACE_REMOVED]: deriveImplementedInterfaceCoordinate,
+  [BreakingChangeType.FIELD_REMOVED]: toFieldCoordinateFromDescription,
+  [BreakingChangeType.FIELD_CHANGED_KIND]: toFieldCoordinateFromDescription,
+  [BreakingChangeType.REQUIRED_ARG_ADDED]: deriveFieldArgumentAddedCoordinate,
+  [BreakingChangeType.ARG_REMOVED]: toFieldArgumentCoordinateFromDescription,
+  [BreakingChangeType.ARG_CHANGED_KIND]: toFieldArgumentCoordinateFromDescription,
+  [BreakingChangeType.DIRECTIVE_REMOVED]: deriveDirectiveCoordinate,
+  [BreakingChangeType.DIRECTIVE_ARG_REMOVED]: deriveDirectiveArgumentRemovedCoordinate,
+  [BreakingChangeType.REQUIRED_DIRECTIVE_ARG_ADDED]:
+    deriveRequiredDirectiveArgumentAddedCoordinate,
+  [BreakingChangeType.DIRECTIVE_REPEATABLE_REMOVED]: deriveDirectiveCoordinate,
+  [BreakingChangeType.DIRECTIVE_LOCATION_REMOVED]: deriveDirectiveCoordinate,
+  [DangerousChangeType.VALUE_ADDED_TO_ENUM]: deriveEnumValueCoordinate,
+  [DangerousChangeType.TYPE_ADDED_TO_UNION]: deriveUnionCoordinate,
+  [DangerousChangeType.OPTIONAL_INPUT_FIELD_ADDED]: deriveInputFieldCoordinate,
+  [DangerousChangeType.OPTIONAL_ARG_ADDED]: deriveFieldArgumentAddedCoordinate,
+  [DangerousChangeType.IMPLEMENTED_INTERFACE_ADDED]: deriveImplementedInterfaceCoordinate,
+  [DangerousChangeType.ARG_DEFAULT_VALUE_CHANGE]: toFieldArgumentCoordinateFromDescription,
+} as const satisfies Record<SupportedGraphqlSchemaChangeType, CoordinateDeriver>;
 
 function toSchemaCoordinateFromGraphqlChange(change: GraphqlSchemaChange): string {
   const deriveCoordinate = coordinateDeriversByChangeType[change.type];
-  if (!deriveCoordinate) {
-    throw new Error(`Unsupported GraphQL change type for coordinate mapping: ${change.type}`);
-  }
-
   return deriveCoordinate(change);
 }
 
-function mapToSchemaChangeBases(changes: ReadonlyArray<GraphqlSchemaChange>): SchemaChangeBase[] {
+function assertCoordinateIsParsableAndResolvable({
+  baselineSchema,
+  candidateSchema,
+  change,
+  coordinate,
+  resolutionMode,
+}: {
+  baselineSchema: GraphQLSchema | undefined;
+  candidateSchema: GraphQLSchema;
+  change: { description: string; type: string };
+  coordinate: string;
+  resolutionMode: CoordinateValidationMode;
+}): void {
+  try {
+    parseSchemaCoordinate(coordinate);
+  } catch (cause) {
+    throw new SchemaCoordinateDerivationError({
+      cause,
+      changeDescription: change.description,
+      changeType: change.type,
+      coordinate,
+      message: `Derived coordinate is invalid for ${change.type}: ${coordinate}`,
+    });
+  }
+
+  const resolveInSchema = (schema: GraphQLSchema) => {
+    try {
+      return resolveSchemaCoordinate(schema, coordinate);
+    } catch {
+      return null;
+    }
+  };
+
+  if (resolutionMode === "candidate_only") {
+    const resolvedInCandidate = resolveInSchema(candidateSchema);
+    if (resolvedInCandidate) {
+      return;
+    }
+
+    throw new SchemaCoordinateDerivationError({
+      changeDescription: change.description,
+      changeType: change.type,
+      coordinate,
+      message: `Derived coordinate is not resolvable in candidate schema for ${change.type}: ${coordinate}`,
+    });
+  }
+
+  const resolvedInBaseline = baselineSchema ? resolveInSchema(baselineSchema) : undefined;
+  const resolvedInCandidate = resolveInSchema(candidateSchema);
+
+  if (resolvedInBaseline || resolvedInCandidate) {
+    return;
+  }
+
+  throw new SchemaCoordinateDerivationError({
+    changeDescription: change.description,
+    changeType: change.type,
+    coordinate,
+    message: `Derived coordinate is not resolvable in baseline or candidate schema for ${change.type}: ${coordinate}`,
+  });
+}
+
+export function deriveAndValidateSchemaCoordinate({
+  baselineSchema,
+  candidateSchema,
+  change,
+  resolutionMode,
+}: {
+  baselineSchema: GraphQLSchema | undefined;
+  candidateSchema: GraphQLSchema;
+  change: GraphqlSchemaChange;
+  resolutionMode: CoordinateValidationMode;
+}): string {
+  const coordinate = toSchemaCoordinateFromGraphqlChange(change);
+  assertCoordinateIsParsableAndResolvable({
+    baselineSchema,
+    candidateSchema,
+    change,
+    coordinate,
+    resolutionMode,
+  });
+  return coordinate;
+}
+
+function validateSchemaChangeBasesCoordinates({
+  baselineSchema,
+  candidateSchema,
+  changes,
+  resolutionMode,
+}: {
+  baselineSchema: GraphQLSchema | undefined;
+  candidateSchema: GraphQLSchema;
+  changes: ReadonlyArray<SchemaChangeBase>;
+  resolutionMode: CoordinateValidationMode;
+}): SchemaChangeBase[] {
+  for (const change of changes) {
+    assertCoordinateIsParsableAndResolvable({
+      baselineSchema,
+      candidateSchema,
+      change: {
+        description: change.message,
+        type: change.type,
+      },
+      coordinate: change.coordinate,
+      resolutionMode,
+    });
+  }
+
+  return [...changes];
+}
+
+function mapToSchemaChangeBases({
+  baselineSchema,
+  candidateSchema,
+  changes,
+}: {
+  baselineSchema: GraphQLSchema | undefined;
+  candidateSchema: GraphQLSchema;
+  changes: ReadonlyArray<GraphqlSchemaChange>;
+}): SchemaChangeBase[] {
   return changes
     .map((change) => ({
-      coordinate: toSchemaCoordinateFromGraphqlChange(change),
+      coordinate: deriveAndValidateSchemaCoordinate({
+        baselineSchema,
+        candidateSchema,
+        change,
+        resolutionMode: "baseline_or_candidate",
+      }),
       message: change.description,
       type: change.type,
     }))
@@ -599,7 +754,12 @@ export function analyzeComposedSchemaChanges({
   candidateSchema: GraphQLSchema;
 }): ValidateSubgraphSchemaAnalysis {
   if (!baselineSchema) {
-    const safeChanges = collectAdditionsFromEmptySchema(candidateSchema);
+    const safeChanges = validateSchemaChangeBasesCoordinates({
+      baselineSchema: undefined,
+      candidateSchema,
+      changes: collectAdditionsFromEmptySchema(candidateSchema),
+      resolutionMode: "candidate_only",
+    });
 
     return {
       composed: true,
@@ -614,13 +774,22 @@ export function analyzeComposedSchemaChanges({
     };
   }
 
-  const breakingChanges = mapToSchemaChangeBases(
-    findBreakingChanges(baselineSchema, candidateSchema),
-  );
-  const dangerousChanges = mapToSchemaChangeBases(
-    findDangerousChanges(baselineSchema, candidateSchema),
-  );
-  const safeChanges = collectSafeAdditionChanges(baselineSchema, candidateSchema);
+  const breakingChanges = mapToSchemaChangeBases({
+    baselineSchema,
+    candidateSchema,
+    changes: findBreakingChanges(baselineSchema, candidateSchema),
+  });
+  const dangerousChanges = mapToSchemaChangeBases({
+    baselineSchema,
+    candidateSchema,
+    changes: findDangerousChanges(baselineSchema, candidateSchema),
+  });
+  const safeChanges = validateSchemaChangeBasesCoordinates({
+    baselineSchema,
+    candidateSchema,
+    changes: collectSafeAdditionChanges(baselineSchema, candidateSchema),
+    resolutionMode: "candidate_only",
+  });
 
   return {
     composed: true,
@@ -634,8 +803,7 @@ export function analyzeComposedSchemaChanges({
       ...withSeverity("breaking", breakingChanges),
       ...withSeverity("dangerous", dangerousChanges),
       ...withSeverity("safe", safeChanges),
-    ]
-      .toSorted(compareSchemaChanges),
+    ].toSorted(compareSchemaChanges),
     compositionErrors: [],
   };
 }
