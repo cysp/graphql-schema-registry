@@ -63,6 +63,12 @@ await test("decodeAuthorizationDetailsClaim", async (t) => {
       },
       {
         graph_id: "*",
+        scope: "subgraph_schema:validate",
+        subgraph_id: "catalog",
+        type: authorizationDetailsType,
+      },
+      {
+        graph_id: "*",
         scope: "subgraph_schema:write",
         subgraph_id: "inventory",
         type: authorizationDetailsType,
@@ -74,6 +80,11 @@ await test("decodeAuthorizationDetailsClaim", async (t) => {
         graphId: "alpha",
         scope: "subgraph_schema:read",
         subgraphId: "*",
+      },
+      {
+        graphId: "*",
+        scope: "subgraph_schema:validate",
+        subgraphId: "catalog",
       },
       {
         graphId: "*",

@@ -35,6 +35,13 @@ export type GraphCompositionEligibleSubgraph = {
   normalizedSdl: string;
 };
 
+export type GraphCompositionServiceDefinition = {
+  subgraphId: string;
+  slug: string;
+  routingUrl: string;
+  normalizedSdl: string;
+};
+
 export type GraphCompositionSubgraphReference = {
   subgraphId: string;
   subgraphRevision: bigint;
