@@ -161,6 +161,7 @@ paths:
       parameters:
         - $ref: "#/components/parameters/GraphSlug"
         - $ref: "#/components/parameters/IfNoneMatch"
+        - $ref: "#/components/parameters/LastEventId"
       responses:
         "200":
           description: OK
@@ -169,6 +170,9 @@ paths:
               $ref: "#/components/headers/ETag"
           content:
             text/plain:
+              schema:
+                type: string
+            text/event-stream:
               schema:
                 type: string
         "304":
@@ -451,6 +455,8 @@ components:
       $ref: "./components/parameters/if-match.yaml"
     IfNoneMatch:
       $ref: "./components/parameters/if-none-match.yaml"
+    LastEventId:
+      $ref: "./components/parameters/last-event-id.yaml"
   schemas:
     Graph:
       $ref: "./components/schemas/graph.yaml"
