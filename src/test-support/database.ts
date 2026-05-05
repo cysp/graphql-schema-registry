@@ -1,5 +1,3 @@
-import { readFile } from "node:fs/promises";
-
 import postgres from "postgres";
 
 import { createDrizzleClient } from "../drizzle/client.ts";
@@ -11,10 +9,6 @@ export type IntegrationDatabase = Readonly<{
 }>;
 
 const integrationDatabaseLockKey = 32768012;
-const dropAllTablesSql =
-  "DROP TABLE IF EXISTS graph_composition_subgraphs, supergraph_schemas, graph_compositions, subgraph_schema_revisions, subgraph_revisions, subgraphs, graph_revisions, graphs CASCADE";
-const schemaConstraintsSqlPath = new URL("../../db/schema-constraints.sql", import.meta.url);
-const schemaSqlPath = new URL("../../db/schema.sql", import.meta.url);
 const truncateAllDataSql =
   "TRUNCATE TABLE graph_composition_subgraphs, supergraph_schemas, graph_compositions, subgraph_schema_revisions, subgraph_revisions, subgraphs, graph_revisions, graphs CASCADE";
 const defaultClientOptions: postgres.Options<Record<string, postgres.PostgresType>> = { max: 1 };
@@ -36,9 +30,6 @@ async function unlockDatabase(sql: postgres.Sql): Promise<void> {
 
 async function lockAndResetDatabase(sql: postgres.Sql): Promise<void> {
   await sql`SELECT pg_advisory_lock(${integrationDatabaseLockKey})`;
-  await sql.unsafe(dropAllTablesSql);
-  await sql.unsafe(await readFile(schemaSqlPath, "utf8"));
-  await sql.unsafe(await readFile(schemaConstraintsSqlPath, "utf8"));
   await sql.unsafe(truncateAllDataSql);
 }
 
@@ -80,13 +71,9 @@ export async function createIntegrationDatabaseEnvironment(
       try {
         await closeSecondaryClients();
         try {
-          await primary.sql.unsafe(truncateAllDataSql);
-        } finally {
-          try {
-            await unlockDatabase(primary.sql);
-          } catch {
-            // Best effort: release the advisory lock before ending the client when possible.
-          }
+          await unlockDatabase(primary.sql);
+        } catch {
+          // Best effort: release the advisory lock before ending the client when possible.
         }
       } finally {
         await primary.sql.end({ timeout: 5 });
