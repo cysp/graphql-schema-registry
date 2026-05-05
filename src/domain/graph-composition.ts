@@ -10,23 +10,14 @@ import {
   selectLatestGraphCompositionRevision,
   selectSubgraphsEligibleForGraphComposition,
 } from "./database/graph-compositions/repository.ts";
-import type {
+import type { ActiveGraph, GraphCompositionSubgraphReference } from "./database/types.ts";
+
+type GraphForComposition = Pick<
   ActiveGraph,
-  GraphCompositionSubgraphReference,
-  GraphCompositionEligibleSubgraph,
-} from "./database/types.ts";
+  "id" | "currentCompositionRevision" | "currentSupergraphSchemaRevision"
+>;
 
-function toCompositionSubgraphReferences(
-  subgraphs: ReadonlyArray<GraphCompositionEligibleSubgraph>,
-): GraphCompositionSubgraphReference[] {
-  return subgraphs.map((member) => ({
-    subgraphId: member.subgraphId,
-    subgraphRevision: member.subgraphRevision,
-    subgraphSchemaRevision: member.subgraphSchemaRevision,
-  }));
-}
-
-function subgraphReferenceListsAreEqual(
+function compositionMembersMatch(
   left: ReadonlyArray<GraphCompositionSubgraphReference>,
   right: ReadonlyArray<GraphCompositionSubgraphReference>,
 ): boolean {
@@ -34,92 +25,85 @@ function subgraphReferenceListsAreEqual(
     return false;
   }
 
-  const leftSorted = left.toSorted((first, second) =>
-    first.subgraphId.localeCompare(second.subgraphId),
-  );
-  const rightSorted = right.toSorted((first, second) =>
-    first.subgraphId.localeCompare(second.subgraphId),
-  );
+  const leftKeys = left
+    .map(
+      (member) =>
+        `${member.subgraphId}:${member.subgraphRevision}:${member.subgraphSchemaRevision}`,
+    )
+    .toSorted();
+  const rightKeys = right
+    .map(
+      (member) =>
+        `${member.subgraphId}:${member.subgraphRevision}:${member.subgraphSchemaRevision}`,
+    )
+    .toSorted();
 
-  return leftSorted.every((member, index) => {
-    const other = rightSorted[index];
-    return (
-      other !== undefined &&
-      member.subgraphId === other.subgraphId &&
-      member.subgraphRevision === other.subgraphRevision &&
-      member.subgraphSchemaRevision === other.subgraphSchemaRevision
-    );
-  });
-}
-
-function graphHasCompositionPointers(
-  graph: Pick<ActiveGraph, "currentCompositionRevision" | "currentSupergraphSchemaRevision">,
-): boolean {
-  return (
-    graph.currentCompositionRevision !== null || graph.currentSupergraphSchemaRevision !== null
-  );
-}
-
-function composeEligibleSubgraphs(subgraphs: ReadonlyArray<GraphCompositionEligibleSubgraph>) {
-  return composeServices(
-    subgraphs.map((member) => ({
-      name: member.slug,
-      typeDefs: parse(member.normalizedSdl),
-      url: member.routingUrl,
-    })),
-  );
+  return leftKeys.every((key, index) => key === rightKeys[index]);
 }
 
 export async function attemptGraphComposition(
   transaction: PostgresJsTransaction,
-  graph: Pick<ActiveGraph, "id" | "currentCompositionRevision" | "currentSupergraphSchemaRevision">,
+  graph: GraphForComposition,
   createdAt: Date,
 ): Promise<void> {
-  const eligibleSubgraphs = await selectSubgraphsEligibleForGraphComposition(transaction, graph.id);
-  const eligibleSubgraphReferences = toCompositionSubgraphReferences(eligibleSubgraphs);
+  const compositionCandidates = await selectSubgraphsEligibleForGraphComposition(
+    transaction,
+    graph.id,
+  );
+  const compositionMembers = compositionCandidates.map((candidate) => ({
+    subgraphId: candidate.subgraphId,
+    subgraphRevision: candidate.subgraphRevision,
+    subgraphSchemaRevision: candidate.subgraphSchemaRevision,
+  }));
 
-  if (eligibleSubgraphReferences.length === 0) {
-    if (graphHasCompositionPointers(graph)) {
+  if (compositionMembers.length === 0) {
+    if (
+      graph.currentCompositionRevision !== null ||
+      graph.currentSupergraphSchemaRevision !== null
+    ) {
       await clearGraphCompositionPointers(transaction, graph.id);
     }
     return;
   }
 
   if (graph.currentCompositionRevision !== null) {
-    const latestCompositionSubgraphReferences = await selectGraphCompositionSubgraphs(
+    const currentCompositionMembers = await selectGraphCompositionSubgraphs(
       transaction,
       graph.id,
       graph.currentCompositionRevision,
     );
-    if (
-      subgraphReferenceListsAreEqual(
-        latestCompositionSubgraphReferences,
-        eligibleSubgraphReferences,
-      )
-    ) {
+    if (compositionMembersMatch(currentCompositionMembers, compositionMembers)) {
       return;
     }
   }
 
-  const latestRevision = await selectLatestGraphCompositionRevision(transaction, graph.id);
-  const nextRevision = (latestRevision ?? 0n) + 1n;
-  const compositionResult = composeEligibleSubgraphs(eligibleSubgraphs);
-
-  const storedGraphCompositionAttempt = await insertGraphCompositionAttempt(transaction, {
+  const latestCompositionRevision = await selectLatestGraphCompositionRevision(
+    transaction,
+    graph.id,
+  );
+  const nextCompositionRevision = (latestCompositionRevision ?? 0n) + 1n;
+  const result = composeServices(
+    compositionCandidates.map((candidate) => ({
+      name: candidate.slug,
+      typeDefs: parse(candidate.normalizedSdl),
+      url: candidate.routingUrl,
+    })),
+  );
+  const compositionRevision = await insertGraphCompositionAttempt(transaction, {
     createdAt,
     graphId: graph.id,
-    nextRevision,
-    subgraphs: eligibleSubgraphReferences,
+    nextCompositionRevision,
+    compositionMembers,
   });
 
-  if (compositionResult.errors) {
+  if (result.errors) {
     return;
   }
 
   await insertSupergraphSchemaAndSetCurrentRevision(transaction, {
-    compositionRevision: storedGraphCompositionAttempt.revision,
+    compositionRevision,
     createdAt,
     graphId: graph.id,
-    supergraphSdl: compositionResult.supergraphSdl,
+    supergraphSdl: result.supergraphSdl,
   });
 }
