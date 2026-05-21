@@ -15,11 +15,6 @@ jobs:
     timeout-minutes: 10
 
     steps:
-      - name: Harden the runner (Audit all outbound calls)
-        uses: step-security/harden-runner@6c3c2f2c1c457b00c10c4848d6f5491db3b629df # v2.18.0
-        with:
-          egress-policy: audit
-
       - uses: cysp/cyspbot-action@d879d41c65cc2cc85387bc0f483f33f97d9001ae # v0.0.1
         id: cyspbot
 
