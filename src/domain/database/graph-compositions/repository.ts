@@ -13,8 +13,6 @@ import type { PostgresJsExecutor, PostgresJsTransaction } from "../../../drizzle
 import type {
   GraphCompositionSubgraphReference,
   GraphCompositionEligibleSubgraph,
-  StoredGraphCompositionAttempt,
-  StoredSupergraphSchema,
 } from "../types.ts";
 
 export async function selectLatestGraphCompositionRevision(
@@ -34,7 +32,7 @@ export async function selectLatestGraphCompositionRevision(
 export async function selectGraphCompositionSubgraphs(
   database: PostgresJsExecutor,
   graphId: string,
-  graphCompositionRevision: bigint,
+  compositionRevision: bigint,
 ): Promise<GraphCompositionSubgraphReference[]> {
   return database
     .select({
@@ -46,7 +44,7 @@ export async function selectGraphCompositionSubgraphs(
     .where(
       and(
         eq(graphCompositionSubgraphs.graphId, graphId),
-        eq(graphCompositionSubgraphs.compositionRevision, graphCompositionRevision),
+        eq(graphCompositionSubgraphs.compositionRevision, compositionRevision),
       ),
     )
     .orderBy(asc(graphCompositionSubgraphs.subgraphId));
@@ -89,27 +87,23 @@ export async function insertGraphCompositionAttempt(
   {
     createdAt,
     graphId,
-    nextRevision,
-    subgraphs,
+    nextCompositionRevision,
+    compositionMembers,
   }: {
     createdAt: Date;
     graphId: string;
-    nextRevision: bigint;
-    subgraphs: ReadonlyArray<GraphCompositionSubgraphReference>;
+    nextCompositionRevision: bigint;
+    compositionMembers: ReadonlyArray<GraphCompositionSubgraphReference>;
   },
-): Promise<StoredGraphCompositionAttempt> {
+): Promise<bigint> {
   const [storedGraphComposition] = await transaction
     .insert(graphCompositions)
     .values({
       graphId,
-      revision: nextRevision,
+      revision: nextCompositionRevision,
       createdAt,
     })
-    .returning({
-      graphId: graphCompositions.graphId,
-      revision: graphCompositions.revision,
-      createdAt: graphCompositions.createdAt,
-    });
+    .returning({ revision: graphCompositions.revision });
 
   if (!storedGraphComposition) {
     throw new Error("Graph composition insert did not return a row.");
@@ -128,7 +122,7 @@ export async function insertGraphCompositionAttempt(
   }
 
   await transaction.insert(graphCompositionSubgraphs).values(
-    subgraphs.map((subgraph) => ({
+    compositionMembers.map((subgraph) => ({
       graphId,
       compositionRevision: storedGraphComposition.revision,
       subgraphId: subgraph.subgraphId,
@@ -137,7 +131,7 @@ export async function insertGraphCompositionAttempt(
     })),
   );
 
-  return storedGraphComposition;
+  return storedGraphComposition.revision;
 }
 
 export async function insertSupergraphSchemaAndSetCurrentRevision(
@@ -153,7 +147,7 @@ export async function insertSupergraphSchemaAndSetCurrentRevision(
     graphId: string;
     supergraphSdl: string;
   },
-): Promise<StoredSupergraphSchema> {
+): Promise<void> {
   const [storedSupergraphSchema] = await transaction
     .insert(supergraphSchemas)
     .values({
@@ -162,13 +156,7 @@ export async function insertSupergraphSchemaAndSetCurrentRevision(
       graphId,
       supergraphSdl,
     })
-    .returning({
-      graphId: supergraphSchemas.graphId,
-      compositionRevision: supergraphSchemas.compositionRevision,
-      supergraphSdlSha256: supergraphSchemas.supergraphSdlSha256,
-      supergraphSdl: supergraphSchemas.supergraphSdl,
-      createdAt: supergraphSchemas.createdAt,
-    });
+    .returning({ compositionRevision: supergraphSchemas.compositionRevision });
 
   if (!storedSupergraphSchema) {
     throw new Error("Supergraph schema insert did not return a row.");
@@ -187,8 +175,6 @@ export async function insertSupergraphSchemaAndSetCurrentRevision(
       "Graph current supergraph schema pointer update did not return the locked row.",
     );
   }
-
-  return storedSupergraphSchema;
 }
 
 export async function clearGraphCompositionPointers(
