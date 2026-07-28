@@ -13,6 +13,7 @@ import { deleteSubgraphRouteDefinition } from "./delete-subgraph.ts";
 import { getSubgraphSchemaRouteDefinition } from "./get-subgraph-schema.ts";
 import { publishSubgraphSchemaRouteDefinition } from "./publish-subgraph-schema.ts";
 import { deleteSubgraphSchemaRouteDefinition } from "./delete-subgraph-schema.ts";
+import { validateSubgraphSchemaRouteDefinition } from "./validate-subgraph-schema.ts";
 import { getSupergraphSchemaRouteDefinition } from "./get-supergraph-schema.ts";
 
 export const operationRouteDefinitions = {
@@ -29,5 +30,6 @@ export const operationRouteDefinitions = {
   ["getSubgraphSchema"]: getSubgraphSchemaRouteDefinition,
   ["publishSubgraphSchema"]: publishSubgraphSchemaRouteDefinition,
   ["deleteSubgraphSchema"]: deleteSubgraphSchemaRouteDefinition,
+  ["validateSubgraphSchema"]: validateSubgraphSchemaRouteDefinition,
   ["getSupergraphSchema"]: getSupergraphSchemaRouteDefinition,
 };

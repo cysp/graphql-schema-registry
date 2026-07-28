@@ -60,3 +60,16 @@ export function canWriteSubgraphSchema(
       matchesResourceId(grant.subgraphId, subgraphId),
   );
 }
+
+export function canValidateSubgraphSchema(
+  grants: readonly AuthorizationGrant[],
+  graphId: string | undefined,
+  subgraphId: string | undefined,
+): boolean {
+  return grants.some(
+    (grant) =>
+      (grant.scope === "subgraph_schema:validate" || grant.scope === "subgraph_schema:write") &&
+      matchesResourceId(grant.graphId, graphId) &&
+      matchesResourceId(grant.subgraphId, subgraphId),
+  );
+}
