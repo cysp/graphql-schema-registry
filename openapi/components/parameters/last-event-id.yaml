@@ -1,0 +1,5 @@
+name: Last-Event-ID
+in: header
+schema:
+  type: string
+  pattern: '^(?:(?:W/)?"[\u0021\u0023-\u007E\u0080-\u00FF]*")$'

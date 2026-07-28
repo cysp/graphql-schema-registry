@@ -8,6 +8,7 @@ import {
   formatStrongETag,
   parseIfMatchHeader,
   parseIfNoneMatchHeader,
+  parseResourceRevisionEntityTag,
 } from "./etag.ts";
 
 type ParseHeader = (headerValue: string | string[] | undefined) => EntityTagCondition | undefined;
@@ -202,6 +203,38 @@ await test("formatStrongETag()", async (t) => {
       entityTags: [etag],
     });
     assert.equal(etagSatisfiesIfMatch(parseIfMatchHeader(etag), etag), true);
+  });
+});
+
+await test("parseResourceRevisionEntityTag()", async (t) => {
+  await t.test("parses a strong tag into resource id and revision", () => {
+    assert.deepEqual(parseResourceRevisionEntityTag('"graph-1:2"'), {
+      resourceId: "graph-1",
+      revision: 2n,
+      weak: false,
+    });
+  });
+
+  await t.test("parses a weak tag into resource id and revision", () => {
+    assert.deepEqual(parseResourceRevisionEntityTag('W/"graph-1:2"'), {
+      resourceId: "graph-1",
+      revision: 2n,
+      weak: true,
+    });
+  });
+
+  await t.test("decodes percent-encoded resource ids", () => {
+    assert.deepEqual(parseResourceRevisionEntityTag('"graph%2Fwith%20space:7"'), {
+      resourceId: "graph/with space",
+      revision: 7n,
+      weak: false,
+    });
+  });
+
+  await t.test("returns undefined for malformed structured tags", () => {
+    for (const value of ['"graph-1"', '"graph-1:not-a-number"', '"%E0%A4%A:3"', "graph-1:3"]) {
+      assert.equal(parseResourceRevisionEntityTag(value), undefined);
+    }
   });
 });
 

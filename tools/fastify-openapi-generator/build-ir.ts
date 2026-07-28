@@ -217,7 +217,7 @@ function readContentSchema(value: unknown, context: string): JsonSchema {
   const contentType =
     preferredJsonContentType ??
     (fallbackJsonContentTypes.length === 1 ? fallbackJsonContentTypes[0] : undefined) ??
-    (contentTypes.length === 1 ? plainTextContentType : undefined);
+    plainTextContentType;
 
   if (contentType === undefined) {
     throw new GeneratorError(
