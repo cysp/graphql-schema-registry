@@ -1,0 +1,106 @@
+name: pgschema
+description: Run pgschema in plan or apply mode.
+
+inputs:
+  mode:
+    description: Whether to run pgschema plan or apply.
+    required: false
+    default: apply
+  pgschema-package:
+    description: Go package path for pgschema.
+    required: false
+    default: github.com/pgplex/pgschema
+  pgschema-package-version:
+    description: pgschema package version.
+    required: false
+    default: latest
+  schema:
+    description: Target Postgres schema name.
+    required: false
+    default: public
+  file:
+    description: Path to the schema SQL file.
+    required: false
+  plan:
+    description: Path to an existing pgschema plan JSON file.
+    required: false
+  output-json:
+    description: Destination path for plan JSON output.
+    required: false
+  output-sql:
+    description: Destination path for plan SQL output.
+    required: false
+
+outputs:
+  plan_json:
+    description: Path to the generated pgschema plan JSON file.
+    value: ${{ steps.pgschema.outputs.plan_json }}
+  plan_sql:
+    description: Path to the generated pgschema plan SQL file.
+    value: ${{ steps.pgschema.outputs.plan_sql }}
+
+runs:
+  using: composite
+  steps:
+    - uses: actions/setup-go@4b73464bb391d4059bd26b0524d20df3927bd417 # v6.3.0
+      with:
+        go-version: "1.26.x"
+    - id: pgschema
+      shell: bash
+      env:
+        PGSCHEMA_FILE: ${{ inputs.file }}
+        PGSCHEMA_MODE: ${{ inputs.mode }}
+        PGSCHEMA_OUTPUT_JSON: ${{ inputs.output-json }}
+        PGSCHEMA_OUTPUT_SQL: ${{ inputs.output-sql }}
+        PGSCHEMA_PACKAGE: ${{ inputs.pgschema-package }}
+        PGSCHEMA_PACKAGE_VERSION: ${{ inputs.pgschema-package-version }}
+        PGSCHEMA_PLAN: ${{ inputs.plan }}
+        PGSCHEMA_SCHEMA: ${{ inputs.schema }}
+      run: |
+        set -euo pipefail
+
+        case "${PGSCHEMA_MODE}" in
+          plan)
+            if [[ -z "${PGSCHEMA_FILE}" ]]; then
+              echo "input 'file' is required when mode=plan" >&2
+              exit 1
+            fi
+
+            plan_json="${PGSCHEMA_OUTPUT_JSON:-${RUNNER_TEMP}/pgschema-plan.json}"
+            plan_sql="${PGSCHEMA_OUTPUT_SQL:-${RUNNER_TEMP}/pgschema-plan.sql}"
+
+            go run "${PGSCHEMA_PACKAGE}@${PGSCHEMA_PACKAGE_VERSION}" plan \
+              --schema "${PGSCHEMA_SCHEMA}" \
+              --file "${PGSCHEMA_FILE}" \
+              --output-human stdout \
+              --output-json "${plan_json}" \
+              --output-sql "${plan_sql}" \
+              --no-color
+
+            echo "plan_json=${plan_json}" >>"${GITHUB_OUTPUT}"
+            echo "plan_sql=${plan_sql}" >>"${GITHUB_OUTPUT}"
+            ;;
+          apply)
+            if [[ -n "${PGSCHEMA_PLAN}" ]]; then
+              go run "${PGSCHEMA_PACKAGE}@${PGSCHEMA_PACKAGE_VERSION}" apply \
+                --schema "${PGSCHEMA_SCHEMA}" \
+                --plan "${PGSCHEMA_PLAN}" \
+                --auto-approve
+              exit 0
+            fi
+
+            if [[ -z "${PGSCHEMA_FILE}" ]]; then
+              echo "input 'file' or 'plan' is required when mode=apply" >&2
+              exit 1
+            fi
+
+            go run "${PGSCHEMA_PACKAGE}@${PGSCHEMA_PACKAGE_VERSION}" apply \
+              --schema "${PGSCHEMA_SCHEMA}" \
+              --file "${PGSCHEMA_FILE}" \
+              --auto-approve
+            ;;
+          *)
+            echo "unsupported mode: ${PGSCHEMA_MODE}" >&2
+            exit 1
+            ;;
+        esac
