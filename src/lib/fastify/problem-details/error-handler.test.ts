@@ -155,11 +155,11 @@ await test("problemDetailsErrorHandler", async (t) => {
 
   await t.test("ignores header bags with custom prototypes", async () => {
     class HeaderBag {
-      constructor() {
+      public constructor() {
         this["www-authenticate"] = "Bearer";
       }
 
-      ["www-authenticate"]: string;
+      public ["www-authenticate"]: string;
     }
 
     server.get("/custom-header-bag", async () => {
