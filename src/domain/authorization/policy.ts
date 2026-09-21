@@ -66,10 +66,13 @@ export function canValidateSubgraphSchema(
   graphId: string | undefined,
   subgraphId: string | undefined,
 ): boolean {
-  return grants.some(
-    (grant) =>
-      (grant.scope === "subgraph_schema:validate" || grant.scope === "subgraph_schema:write") &&
-      matchesResourceId(grant.graphId, graphId) &&
-      matchesResourceId(grant.subgraphId, subgraphId),
+  return (
+    canReadSupergraphSchema(grants, graphId) &&
+    grants.some(
+      (grant) =>
+        (grant.scope === "subgraph_schema:validate" || grant.scope === "subgraph_schema:write") &&
+        matchesResourceId(grant.graphId, graphId) &&
+        matchesResourceId(grant.subgraphId, subgraphId),
+    )
   );
 }

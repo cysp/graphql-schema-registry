@@ -136,22 +136,46 @@ await test("schema policy", async (t) => {
     assert.equal(canWriteSubgraphSchema(grant, undefined, undefined), true);
   });
 
-  await t.test("canValidateSubgraphSchema allows validate and write grants", () => {
-    const validateGrant = createGrants({
-      graphId: "alpha",
-      scope: "subgraph_schema:validate",
-      subgraphId: "inventory",
-    });
-    const writeGrant = createGrants({
-      graphId: "*",
-      scope: "subgraph_schema:write",
-      subgraphId: "*",
-    });
-
-    assert.equal(canValidateSubgraphSchema(validateGrant, "alpha", "inventory"), true);
-    assert.equal(canValidateSubgraphSchema(validateGrant, "alpha", "products"), false);
-    assert.equal(canValidateSubgraphSchema(writeGrant, "alpha", "products"), true);
-    assert.equal(canValidateSubgraphSchema(validateGrant, undefined, "inventory"), false);
-    assert.equal(canValidateSubgraphSchema(writeGrant, undefined, undefined), true);
-  });
+  await t.test(
+    "validation requires matching supergraph read and subgraph validate or write grants",
+    () => {
+      for (const scope of ["subgraph_schema:validate", "subgraph_schema:write"] as const) {
+        const subgraphGrant = { graphId: "alpha", subgraphId: "inventory", scope };
+        assert.equal(canValidateSubgraphSchema([subgraphGrant], "alpha", "inventory"), false);
+        assert.equal(
+          canValidateSubgraphSchema(
+            [subgraphGrant, { graphId: "other", scope: "supergraph_schema:read" }],
+            "alpha",
+            "inventory",
+          ),
+          false,
+        );
+        for (const graphId of ["alpha", "*"]) {
+          const grants = createGrants(subgraphGrant, { graphId, scope: "supergraph_schema:read" });
+          assert.equal(canValidateSubgraphSchema(grants, "alpha", "inventory"), true);
+          assert.equal(canValidateSubgraphSchema(grants, "alpha", "products"), false);
+          assert.equal(canValidateSubgraphSchema(grants, undefined, "inventory"), false);
+        }
+      }
+      assert.equal(
+        canValidateSubgraphSchema(
+          [{ graphId: "*", scope: "supergraph_schema:read" }],
+          "alpha",
+          "inventory",
+        ),
+        false,
+      );
+      assert.equal(
+        canValidateSubgraphSchema(
+          [
+            { graphId: "*", scope: "supergraph_schema:read" },
+            { graphId: "*", subgraphId: "*", scope: "subgraph_schema:validate" },
+          ],
+          undefined,
+          undefined,
+        ),
+        true,
+      );
+    },
+  );
 });

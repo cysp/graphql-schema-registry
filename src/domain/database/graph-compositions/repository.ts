@@ -78,10 +78,7 @@ export async function selectGraphCompositionServiceDefinitions(
       subgraphSchemaRevisions,
       and(
         eq(subgraphSchemaRevisions.subgraphId, graphCompositionSubgraphs.subgraphId),
-        eq(
-          subgraphSchemaRevisions.revision,
-          graphCompositionSubgraphs.subgraphSchemaRevision,
-        ),
+        eq(subgraphSchemaRevisions.revision, graphCompositionSubgraphs.subgraphSchemaRevision),
       ),
     )
     .where(

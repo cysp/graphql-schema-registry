@@ -1,3 +1,5 @@
+import { isDeepStrictEqual } from "node:util";
+
 import {
   BreakingChangeType,
   DangerousChangeType,
@@ -7,6 +9,7 @@ import {
   isInputObjectType,
   isInterfaceType,
   isObjectType,
+  isRequiredInputField,
   isRequiredArgument,
   isSpecifiedDirective,
   isSpecifiedScalarType,
@@ -55,11 +58,11 @@ type CoordinateDeriver = (change: GraphqlSchemaChange) => string;
 type CoordinateValidationMode = "baseline_or_candidate" | "candidate_only";
 
 export class SchemaCoordinateDerivationError extends Error {
-  readonly changeType: string;
-  readonly changeDescription: string;
-  readonly coordinate: string | undefined;
+  public readonly changeType: string;
+  public readonly changeDescription: string;
+  public readonly coordinate: string | undefined;
 
-  constructor({
+  public constructor({
     changeType,
     changeDescription,
     coordinate,
@@ -354,7 +357,9 @@ function requireGroup(
 
 function toFieldCoordinateFromDescription(change: GraphqlSchemaChange): string {
   const match = mustMatch(
-    change.description.match(/^(?<typeName>[_A-Za-z][_0-9A-Za-z]*)\.(?<fieldName>[_A-Za-z][_0-9A-Za-z]*)/),
+    change.description.match(
+      /^(?<typeName>[_A-Za-z][_0-9A-Za-z]*)\.(?<fieldName>[_A-Za-z][_0-9A-Za-z]*)/,
+    ),
     change,
   );
 
@@ -510,8 +515,7 @@ const coordinateDeriversByChangeType = {
   [BreakingChangeType.ARG_CHANGED_KIND]: toFieldArgumentCoordinateFromDescription,
   [BreakingChangeType.DIRECTIVE_REMOVED]: deriveDirectiveCoordinate,
   [BreakingChangeType.DIRECTIVE_ARG_REMOVED]: deriveDirectiveArgumentRemovedCoordinate,
-  [BreakingChangeType.REQUIRED_DIRECTIVE_ARG_ADDED]:
-    deriveRequiredDirectiveArgumentAddedCoordinate,
+  [BreakingChangeType.REQUIRED_DIRECTIVE_ARG_ADDED]: deriveRequiredDirectiveArgumentAddedCoordinate,
   [BreakingChangeType.DIRECTIVE_REPEATABLE_REMOVED]: deriveDirectiveCoordinate,
   [BreakingChangeType.DIRECTIVE_LOCATION_REMOVED]: deriveDirectiveCoordinate,
   [DangerousChangeType.VALUE_ADDED_TO_ENUM]: deriveEnumValueCoordinate,
@@ -622,6 +626,33 @@ export function createCompositionFailureAnalysis({
   };
 }
 
+function collectInputDefaultChanges(
+  baselineSchema: GraphQLSchema,
+  candidateSchema: GraphQLSchema,
+): SchemaChange[] {
+  const changes: SchemaChange[] = [];
+  for (const candidateType of Object.values(candidateSchema.getTypeMap())) {
+    const baselineType = baselineSchema.getType(candidateType.name);
+    if (!isInputObjectType(candidateType) || !isInputObjectType(baselineType)) continue;
+    for (const field of Object.values(candidateType.getFields())) {
+      const baselineField = baselineType.getFields()[field.name];
+      if (!baselineField || isDeepStrictEqual(baselineField.defaultValue, field.defaultValue))
+        continue;
+      const coordinate = `${candidateType.name}.${field.name}`;
+      const newlyRequired = !isRequiredInputField(baselineField) && isRequiredInputField(field);
+      changes.push({
+        coordinate,
+        severity: newlyRequired ? "breaking" : "dangerous",
+        type: "INPUT_FIELD_DEFAULT_VALUE_CHANGE",
+        message: newlyRequired
+          ? `${coordinate} became required after its default value was removed.`
+          : `${coordinate} default value changed.`,
+      });
+    }
+  }
+  return changes;
+}
+
 export function analyzeComposedSchemaChanges({
   baselineSchema,
   candidateSchema,
@@ -663,6 +694,7 @@ export function analyzeComposedSchemaChanges({
     };
   }
 
+  const inputDefaultChanges = collectInputDefaultChanges(baselineSchema, candidateSchema);
   const breakingChanges = findBreakingChanges(baselineSchema, candidateSchema)
     .map((change) => {
       const coordinate = coordinateDeriversByChangeType[change.type](change);
@@ -697,6 +729,33 @@ export function analyzeComposedSchemaChanges({
       };
     })
     .toSorted(compareSchemaChangeBase);
+  const newlyRequiredArguments = new Set<string>();
+  for (const candidateType of Object.values(candidateSchema.getTypeMap())) {
+    const baselineType = baselineSchema.getType(candidateType.name);
+    if (
+      !(isObjectType(candidateType) || isInterfaceType(candidateType)) ||
+      !(isObjectType(baselineType) || isInterfaceType(baselineType))
+    )
+      continue;
+    for (const field of Object.values(candidateType.getFields())) {
+      const baselineField = baselineType.getFields()[field.name];
+      for (const argument of field.args) {
+        const baselineArgument = baselineField?.args.find((value) => value.name === argument.name);
+        if (
+          baselineArgument &&
+          !isRequiredArgument(baselineArgument) &&
+          isRequiredArgument(argument)
+        ) {
+          newlyRequiredArguments.add(`${candidateType.name}.${field.name}(${argument.name}:)`);
+        }
+      }
+    }
+  }
+  const promotedArgumentChanges = dangerousChanges.filter(
+    (change) =>
+      change.type === DangerousChangeType.ARG_DEFAULT_VALUE_CHANGE &&
+      newlyRequiredArguments.has(change.coordinate),
+  );
   const safeChanges = collectSafeAdditionChanges(baselineSchema, candidateSchema);
   for (const change of safeChanges) {
     assertCoordinateIsParsableAndResolvable({
@@ -714,19 +773,32 @@ export function analyzeComposedSchemaChanges({
   return {
     composed: true,
     summary: {
-      totalChanges: breakingChanges.length + dangerousChanges.length + safeChanges.length,
-      breakingChanges: breakingChanges.length,
-      dangerousChanges: dangerousChanges.length,
+      totalChanges:
+        breakingChanges.length +
+        dangerousChanges.length +
+        safeChanges.length +
+        inputDefaultChanges.length,
+      breakingChanges:
+        breakingChanges.length +
+        promotedArgumentChanges.length +
+        inputDefaultChanges.filter((change) => change.severity === "breaking").length,
+      dangerousChanges:
+        dangerousChanges.length -
+        promotedArgumentChanges.length +
+        inputDefaultChanges.filter((change) => change.severity === "dangerous").length,
       safeChanges: safeChanges.length,
       compositionErrors: 0,
     },
     changes: [
+      ...inputDefaultChanges,
       ...breakingChanges.map((change) => ({
         severity: "breaking" as const,
         ...change,
       })),
       ...dangerousChanges.map((change) => ({
-        severity: "dangerous" as const,
+        severity: promotedArgumentChanges.includes(change)
+          ? ("breaking" as const)
+          : ("dangerous" as const),
         ...change,
       })),
       ...safeChanges.map((change) => ({

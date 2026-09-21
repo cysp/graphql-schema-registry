@@ -436,6 +436,7 @@ paths:
     post:
       operationId: validateSubgraphSchema
       summary: Validate a proposed subgraph schema against composed supergraph impact
+      description: Requires supergraph_schema:read for the graph and subgraph_schema:validate or subgraph_schema:write for the target subgraph.
       parameters:
         - $ref: "#/components/parameters/GraphSlug"
         - $ref: "#/components/parameters/SubgraphSlug"

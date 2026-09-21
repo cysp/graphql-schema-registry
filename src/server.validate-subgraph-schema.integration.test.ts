@@ -1,12 +1,12 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 
+import { authorizationDetailsType } from "./domain/authorization/details.ts";
 import { formatStrongETag } from "./domain/etag.ts";
 import {
   createGraph,
   createSubgraph,
   createSubgraphSchemaGrantToken,
-  createWildcardSubgraphSchemaGrantToken,
   publishSubgraphSchema,
 } from "./test-support/integration-scenarios.ts";
 import {
@@ -17,6 +17,20 @@ import {
   parseJson,
   requireIntegrationDatabaseUrl,
 } from "./test-support/integration-server.ts";
+
+function createValidationGrantToken(
+  createToken: Parameters<typeof createSubgraphSchemaGrantToken>[0],
+  scope: "subgraph_schema:validate" | "subgraph_schema:write",
+  graphId: string,
+  subgraphId: string,
+): string {
+  return createToken({
+    authorization_details: [
+      { type: authorizationDetailsType, scope, graph_id: graphId, subgraph_id: subgraphId },
+      { type: authorizationDetailsType, scope: "supergraph_schema:read", graph_id: graphId },
+    ],
+  });
+}
 
 const baselineInventorySchemaSdl = `
   enum SortDirection {
@@ -83,7 +97,7 @@ await test("[integration] validate subgraph schema route integration with postgr
     }
   });
 
-  await t.test("allows subgraph_schema:validate and subgraph_schema:write but not graph:manage", async () => {
+  await t.test("requires supergraph read alongside subgraph validate or write", async () => {
     const fixture = await createIntegrationServerFixture({
       databaseUrl: integrationDatabaseUrl,
       jwtVerification,
@@ -107,7 +121,22 @@ await test("[integration] validate subgraph schema route integration with postgr
       );
       assert.equal(currentEtag, formatStrongETag(subgraph.id, 1));
 
-      const validateToken = createSubgraphSchemaGrantToken(
+      for (const scope of ["subgraph_schema:validate", "subgraph_schema:write"] as const) {
+        const denied = await fixture.server.inject({
+          method: "POST",
+          url: `/v1/graphs/${graph.slug}/subgraphs/${subgraph.slug}/validate-schema`,
+          payload: proposedInventorySchemaSdl,
+          headers: {
+            ...authorizationHeaders(
+              createSubgraphSchemaGrantToken(createToken, scope, graph.id, subgraph.id),
+            ),
+            "content-type": "text/plain",
+          },
+        });
+        assert.equal(denied.statusCode, 403);
+      }
+
+      const validateToken = createValidationGrantToken(
         createToken,
         "subgraph_schema:validate",
         graph.id,
@@ -124,7 +153,7 @@ await test("[integration] validate subgraph schema route integration with postgr
       });
       assert.equal(validateResponse.statusCode, 200);
 
-      const writeToken = createSubgraphSchemaGrantToken(
+      const writeToken = createValidationGrantToken(
         createToken,
         "subgraph_schema:write",
         graph.id,
@@ -175,7 +204,7 @@ await test("[integration] validate subgraph schema route integration with postgr
           "https://inventory.example.com/graphql",
         );
 
-        const scopedToken = createSubgraphSchemaGrantToken(
+        const scopedToken = createValidationGrantToken(
           createToken,
           "subgraph_schema:validate",
           visibleGraph.id,
@@ -204,9 +233,11 @@ await test("[integration] validate subgraph schema route integration with postgr
         });
         assert.equal(missingGraphResponse.statusCode, 403);
 
-        const wildcardToken = createWildcardSubgraphSchemaGrantToken(
+        const wildcardToken = createValidationGrantToken(
           createToken,
           "subgraph_schema:validate",
+          "*",
+          "*",
         );
 
         const wildcardMissingResponse = await fixture.server.inject({
@@ -241,7 +272,7 @@ await test("[integration] validate subgraph schema route integration with postgr
         "https://inventory.example.com/graphql",
       );
 
-      const validateToken = createSubgraphSchemaGrantToken(
+      const validateToken = createValidationGrantToken(
         createToken,
         "subgraph_schema:validate",
         graph.id,
@@ -288,7 +319,7 @@ await test("[integration] validate subgraph schema route integration with postgr
       );
       assert.equal(currentEtag, formatStrongETag(subgraph.id, 1));
 
-      const validateToken = createSubgraphSchemaGrantToken(
+      const validateToken = createValidationGrantToken(
         createToken,
         "subgraph_schema:validate",
         graph.id,
@@ -347,9 +378,15 @@ await test("[integration] validate subgraph schema route integration with postgr
         "inventory",
         "https://inventory.example.com/graphql",
       );
-      await publishSubgraphSchema(fixture, createToken, graph, subgraph, baselineInventorySchemaSdl);
+      await publishSubgraphSchema(
+        fixture,
+        createToken,
+        graph,
+        subgraph,
+        baselineInventorySchemaSdl,
+      );
 
-      const validateToken = createSubgraphSchemaGrantToken(
+      const validateToken = createValidationGrantToken(
         createToken,
         "subgraph_schema:validate",
         graph.id,
@@ -392,7 +429,9 @@ await test("[integration] validate subgraph schema route integration with postgr
             typeof severity !== "string" ||
             typeof type !== "string"
           ) {
-            throw new TypeError("change entries must include string coordinate, severity, and type");
+            throw new TypeError(
+              "change entries must include string coordinate, severity, and type",
+            );
           }
           return `${coordinate}|${severity}|${type}`;
         }),
@@ -407,73 +446,82 @@ await test("[integration] validate subgraph schema route integration with postgr
     }
   });
 
-  await t.test("returns composition errors with empty diff arrays when validation composition fails", async () => {
-    const fixture = await createIntegrationServerFixture({
-      databaseUrl: integrationDatabaseUrl,
-      jwtVerification,
-    });
-
-    try {
-      const graph = await createGraph(fixture, graphManageToken, "catalog");
-      const inventorySubgraph = await createSubgraph(
-        fixture,
-        graphManageToken,
-        graph.slug,
-        "inventory",
-        "https://inventory.example.com/graphql",
-      );
-      await publishSubgraphSchema(fixture, createToken, graph, inventorySubgraph, baselineInventorySchemaSdl);
-
-      const warehouseSubgraph = await createSubgraph(
-        fixture,
-        graphManageToken,
-        graph.slug,
-        "warehouse",
-        "https://warehouse.example.com/graphql",
-      );
-
-      const validateToken = createSubgraphSchemaGrantToken(
-        createToken,
-        "subgraph_schema:validate",
-        graph.id,
-        warehouseSubgraph.id,
-      );
-
-      const response = await fixture.server.inject({
-        headers: {
-          ...authorizationHeaders(validateToken),
-          "content-type": "text/plain",
-        },
-        method: "POST",
-        payload: conflictingWarehouseSchemaSdl,
-        url: `/v1/graphs/${graph.slug}/subgraphs/${warehouseSubgraph.slug}/validate-schema`,
+  await t.test(
+    "returns composition errors with empty diff arrays when validation composition fails",
+    async () => {
+      const fixture = await createIntegrationServerFixture({
+        databaseUrl: integrationDatabaseUrl,
+        jwtVerification,
       });
 
-      assert.equal(response.statusCode, 200);
-      const payload = parseJson(response);
-      assertObjectRecord(payload);
+      try {
+        const graph = await createGraph(fixture, graphManageToken, "catalog");
+        const inventorySubgraph = await createSubgraph(
+          fixture,
+          graphManageToken,
+          graph.slug,
+          "inventory",
+          "https://inventory.example.com/graphql",
+        );
+        await publishSubgraphSchema(
+          fixture,
+          createToken,
+          graph,
+          inventorySubgraph,
+          baselineInventorySchemaSdl,
+        );
 
-      assert.equal(payload["composed"], false);
-      assert.deepEqual(payload["changes"], []);
-      const summary = payload["summary"];
-      assertObjectRecord(summary);
-      assert.equal(summary["totalChanges"], 0);
-      assert.equal(summary["breakingChanges"], 0);
-      assert.equal(summary["dangerousChanges"], 0);
-      assert.equal(summary["safeChanges"], 0);
-      assert.equal(summary["compositionErrors"], 1);
+        const warehouseSubgraph = await createSubgraph(
+          fixture,
+          graphManageToken,
+          graph.slug,
+          "warehouse",
+          "https://warehouse.example.com/graphql",
+        );
 
-      const compositionErrors = payload["compositionErrors"];
-      assert.ok(Array.isArray(compositionErrors));
-      assert.ok(compositionErrors.length > 0);
-      assert.ok(
-        compositionErrors.every((error) => {
-          assertObjectRecord(error);
-          return typeof error["message"] === "string" && error["message"].length > 0;
-        }),
-      );
-    } finally {
-      await fixture.close();
-    }
-  });
+        const validateToken = createValidationGrantToken(
+          createToken,
+          "subgraph_schema:validate",
+          graph.id,
+          warehouseSubgraph.id,
+        );
+
+        const response = await fixture.server.inject({
+          headers: {
+            ...authorizationHeaders(validateToken),
+            "content-type": "text/plain",
+          },
+          method: "POST",
+          payload: conflictingWarehouseSchemaSdl,
+          url: `/v1/graphs/${graph.slug}/subgraphs/${warehouseSubgraph.slug}/validate-schema`,
+        });
+
+        assert.equal(response.statusCode, 200);
+        const payload = parseJson(response);
+        assertObjectRecord(payload);
+
+        assert.equal(payload["composed"], false);
+        assert.deepEqual(payload["changes"], []);
+        const summary = payload["summary"];
+        assertObjectRecord(summary);
+        assert.equal(summary["totalChanges"], 0);
+        assert.equal(summary["breakingChanges"], 0);
+        assert.equal(summary["dangerousChanges"], 0);
+        assert.equal(summary["safeChanges"], 0);
+        assert.equal(summary["compositionErrors"], 1);
+
+        const compositionErrors = payload["compositionErrors"];
+        assert.ok(Array.isArray(compositionErrors));
+        assert.ok(compositionErrors.length > 0);
+        assert.ok(
+          compositionErrors.every((error) => {
+            assertObjectRecord(error);
+            return typeof error["message"] === "string" && error["message"].length > 0;
+          }),
+        );
+      } finally {
+        await fixture.close();
+      }
+    },
+  );
 });
