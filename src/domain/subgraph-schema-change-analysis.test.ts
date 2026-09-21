@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 
-import { GraphQLError, buildSchema } from "graphql";
+import { GraphQLError, buildSchema, parse, validate } from "graphql";
 
 import {
   analyzeComposedSchemaChanges,
@@ -131,9 +131,7 @@ await test("subgraph schema change analysis", async (t) => {
     const analysis = analyzeComposedSchemaChanges({ baselineSchema, candidateSchema });
 
     assert.deepEqual(
-      analysis.changes.map((change) =>
-        `${change.coordinate}|${change.severity}|${change.type}`,
-      ),
+      analysis.changes.map((change) => `${change.coordinate}|${change.severity}|${change.type}`),
       [
         "Query.a|breaking|FIELD_REMOVED",
         "Query.b|breaking|FIELD_CHANGED_KIND",
@@ -193,10 +191,7 @@ await test("subgraph schema change analysis", async (t) => {
       }),
     ]);
 
-    assert.deepEqual(errors, [
-      { code: "FST", message: "First" },
-      { message: "Second" },
-    ]);
+    assert.deepEqual(errors, [{ code: "FST", message: "First" }, { message: "Second" }]);
   });
 
   await t.test("returns an empty diff envelope for composition failures", () => {
@@ -215,4 +210,40 @@ await test("subgraph schema change analysis", async (t) => {
       compositionErrors: 1,
     });
   });
+});
+
+await test("reports input default changes, including newly required inputs", () => {
+  const baselineSchema = buildSchema("type Query { x(i: I): String } input I { a: Int! = 1 }");
+  const candidateSchema = buildSchema("type Query { x(i: I): String } input I { a: Int! }");
+  assert.equal(validate(baselineSchema, parse("{ x(i: {}) }")).length, 0);
+  assert.equal(validate(candidateSchema, parse("{ x(i: {}) }")).length, 1);
+  const analysis = analyzeComposedSchemaChanges({ baselineSchema, candidateSchema });
+  assert.equal(analysis.summary.breakingChanges, 1);
+  assert.deepEqual(
+    analysis.changes.map(({ coordinate, severity }) => ({ coordinate, severity })),
+    [{ coordinate: "I.a", severity: "breaking" }],
+  );
+  for (const [before, after] of [
+    ["Int = 1", "Int = 2"],
+    ["Int", "Int = 1"],
+    ["Int = 1", "Int"],
+  ]) {
+    const changed = analyzeComposedSchemaChanges({
+      baselineSchema: buildSchema(`type Query { x(i: I): String } input I { a: ${before} }`),
+      candidateSchema: buildSchema(`type Query { x(i: I): String } input I { a: ${after} }`),
+    });
+    assert.equal(changed.summary.dangerousChanges, 1);
+    assert.equal(changed.changes[0]?.coordinate, "I.a");
+  }
+});
+
+await test("reports argument default removal as breaking when omission becomes invalid", () => {
+  const baselineSchema = buildSchema("type Query { x(a: Int! = 1): String }");
+  const candidateSchema = buildSchema("type Query { x(a: Int!): String }");
+  assert.equal(validate(baselineSchema, parse("{ x }")).length, 0);
+  assert.equal(validate(candidateSchema, parse("{ x }")).length, 1);
+  const analysis = analyzeComposedSchemaChanges({ baselineSchema, candidateSchema });
+  assert.equal(analysis.summary.breakingChanges, 1);
+  assert.equal(analysis.summary.dangerousChanges, 0);
+  assert.equal(analysis.changes[0]?.severity, "breaking");
 });

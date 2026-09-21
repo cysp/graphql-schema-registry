@@ -14,6 +14,7 @@ import { selectActiveGraphBySlug } from "../database/graphs/repository.ts";
 import { selectCurrentSubgraphSchemaRevision } from "../database/subgraph-schemas/repository.ts";
 import { selectActiveSubgraphByGraphIdAndSlug } from "../database/subgraphs/repository.ts";
 import type { GraphCompositionServiceDefinition } from "../database/types.ts";
+import { etagSatisfiesIfMatch, formatStrongETag, parseIfMatchHeader } from "../etag.ts";
 import {
   analyzeComposedSchemaChanges,
   createCompositionFailureAnalysis,
@@ -21,7 +22,6 @@ import {
   SchemaCoordinateDerivationError,
   type ValidateSubgraphSchemaAnalysis,
 } from "../subgraph-schema-change-analysis.ts";
-import { etagSatisfiesIfMatch, formatStrongETag, parseIfMatchHeader } from "../etag.ts";
 import { normalizeSchemaSdl } from "../subgraph-schema.ts";
 
 type OperationHandlers = OpenApiOperationHandlers<
@@ -67,14 +67,18 @@ function createCandidateServiceDefinitions({
       routingUrl: targetSubgraph.routingUrl,
       normalizedSdl: proposedNormalizedSdl,
     },
-  ].toSorted((left, right) => left.slug.localeCompare(right.slug) || left.subgraphId.localeCompare(right.subgraphId));
+  ].toSorted(
+    (left, right) =>
+      left.slug.localeCompare(right.slug) || left.subgraphId.localeCompare(right.subgraphId),
+  );
 }
 
 function createBaselineServiceDefinitions(
   baselineSubgraphs: ReadonlyArray<GraphCompositionServiceDefinition>,
 ): GraphCompositionServiceDefinition[] {
   return baselineSubgraphs.toSorted(
-    (left, right) => left.slug.localeCompare(right.slug) || left.subgraphId.localeCompare(right.subgraphId),
+    (left, right) =>
+      left.slug.localeCompare(right.slug) || left.subgraphId.localeCompare(right.subgraphId),
   );
 }
 
