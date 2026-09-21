@@ -6,6 +6,7 @@ import {
   clearGraphCompositionPointers,
   insertGraphCompositionAttempt,
   insertSupergraphSchemaAndSetCurrentRevision,
+  notifySupergraphSchemaUpdated,
   selectGraphCompositionSubgraphs,
   selectLatestGraphCompositionRevision,
   selectSubgraphsEligibleForGraphComposition,
@@ -121,5 +122,10 @@ export async function attemptGraphComposition(
     createdAt,
     graphId: graph.id,
     supergraphSdl: compositionResult.supergraphSdl,
+  });
+
+  await notifySupergraphSchemaUpdated(transaction, {
+    compositionRevision: storedGraphCompositionAttempt.revision,
+    graphId: graph.id,
   });
 }

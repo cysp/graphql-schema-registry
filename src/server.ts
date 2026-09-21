@@ -26,6 +26,7 @@ import { listSubgraphsHandler } from "./domain/routes/list-subgraphs.ts";
 import { publishSubgraphSchemaHandler } from "./domain/routes/publish-subgraph-schema.ts";
 import { updateGraphHandler } from "./domain/routes/update-graph.ts";
 import { updateSubgraphHandler } from "./domain/routes/update-subgraph.ts";
+import { createSupergraphSchemaUpdateBroker } from "./domain/supergraph-schema-update-broker.ts";
 import type { PostgresJsDatabase } from "./drizzle/types.ts";
 import { bearerAuthenticateHeaders } from "./lib/fastify/authorization/bearer-authenticate-headers.ts";
 import { fastifyHandlerWithDependencies } from "./lib/fastify/handler-with-dependencies.ts";
@@ -95,6 +96,21 @@ export function createFastifyServer({
   }
 
   server.register((server, _options, done) => {
+    const supergraphSchemaUpdateBroker = database
+      ? createSupergraphSchemaUpdateBroker(
+          async (channel, onnotify) => database.$client.listen(channel, onnotify),
+          {
+            logger: server.log,
+          },
+        )
+      : undefined;
+
+    if (supergraphSchemaUpdateBroker) {
+      server.addHook("preClose", async () => {
+        await supergraphSchemaUpdateBroker.close();
+      });
+    }
+
     if (jwtVerification) {
       server.addHook("onRequest", async (request, reply) => {
         const authorizationHeader = request.headers.authorization;
@@ -133,6 +149,10 @@ export function createFastifyServer({
     });
 
     const routeDependencies = { database };
+    const supergraphRouteDependencies = {
+      database,
+      supergraphSchemaUpdateBroker,
+    };
 
     server.register(openApiRoutesPlugin(operationRouteDefinitions), {
       operationHandlers: {
@@ -147,7 +167,7 @@ export function createFastifyServer({
         getGraph: fastifyHandlerWithDependencies(getGraphHandler, routeDependencies),
         getSupergraphSchema: fastifyHandlerWithDependencies(
           getSupergraphSchemaHandler,
-          routeDependencies,
+          supergraphRouteDependencies,
         ),
         getSubgraphSchema: fastifyHandlerWithDependencies(
           getSubgraphSchemaHandler,

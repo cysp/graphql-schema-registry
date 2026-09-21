@@ -25,6 +25,10 @@ export const getSupergraphSchemaRouteDefinition = {
         "if-none-match": {
           "type": "string",
           "pattern": "^(?:[*]|(?:W/)?\"[\\u0021\\u0023-\\u007E\\u0080-\\u00FF]*\"(?:[ \\t]*,[ \\t]*(?:W/)?\"[\\u0021\\u0023-\\u007E\\u0080-\\u00FF]*\")*)$"
+        },
+        "last-event-id": {
+          "type": "string",
+          "pattern": "^(?:(?:W/)?\"[\\u0021\\u0023-\\u007E\\u0080-\\u00FF]*\")$"
         }
       },
       "type": "object"
