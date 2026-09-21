@@ -38,13 +38,26 @@ jobs:
         with:
           ref: ${{ github.event.workflow_run.head_sha }}
 
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with:
+          node-version-file: .nvmrc
+
+      - id: neon_deployment_password
+        env:
+          NEON_API_KEY: ${{ secrets.NEON_API_KEY }}
+          NEON_PROJECT_ID: ${{ vars.NEON_PROJECT_ID }}
+          NEON_HOST: ${{ vars.NEON_HOST }}
+          NEON_DATABASE_NAME: ${{ vars.NEON_DATABASE_NAME || 'neondb' }}
+          NEON_ROLE_NAME: ${{ vars.NEON_ROLE_NAME || 'neondb_owner' }}
+        run: node .github/scripts/get-neon-deployment-password.mjs
+
       - uses: ./.github/actions/pgschema-apply
         env:
           PGHOST: ${{ vars.NEON_HOST }}
           PGPORT: "5432"
           PGDATABASE: ${{ vars.NEON_DATABASE_NAME || 'neondb' }}
           PGUSER: ${{ vars.NEON_ROLE_NAME || 'neondb_owner' }}
-          PGPASSWORD: ${{ secrets.NEON_OWNER_PASSWORD }}
+          PGPASSWORD: ${{ steps.neon_deployment_password.outputs.password }}
         with:
           pgschema-package-version: v1.9.0
           pgschema-package: github.com/pgplex/pgschema
