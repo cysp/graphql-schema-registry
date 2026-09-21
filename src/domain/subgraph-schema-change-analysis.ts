@@ -442,7 +442,11 @@ function deriveInputFieldCoordinate(change: GraphqlSchemaChange): string {
 
 function deriveImplementedInterfaceCoordinate(change: GraphqlSchemaChange): string {
   const match = mustMatch(
-    change.description.match(/^(?<typeName>[_A-Za-z][_0-9A-Za-z]*) /),
+    change.type === DangerousChangeType.IMPLEMENTED_INTERFACE_ADDED
+      ? change.description.match(
+          / added to interfaces implemented by (?<typeName>[_A-Za-z][_0-9A-Za-z]*)\.$/,
+        )
+      : change.description.match(/^(?<typeName>[_A-Za-z][_0-9A-Za-z]*) /),
     change,
   );
   return requireGroup(match, "typeName", change, "interface implementation");

@@ -247,3 +247,124 @@ await test("reports argument default removal as breaking when omission becomes i
   assert.equal(analysis.summary.dangerousChanges, 0);
   assert.equal(analysis.changes[0]?.severity, "breaking");
 });
+
+await test("classifies schema evolution with resolvable coordinates", async (t) => {
+  const cases = [
+    ["scalar Old", "", "TYPE_REMOVED", "Old", "breaking"],
+    ["scalar T", "enum T { A }", "TYPE_CHANGED_KIND", "T", "breaking"],
+    ["enum E { A B }", "enum E { A }", "VALUE_REMOVED_FROM_ENUM", "E.B", "breaking"],
+    [
+      "input I { a: Int }",
+      "input I { a: Int b: Int! }",
+      "REQUIRED_INPUT_FIELD_ADDED",
+      "I.b",
+      "breaking",
+    ],
+    [
+      "input I { a: Int }",
+      "input I { a: Int b: Int }",
+      "OPTIONAL_INPUT_FIELD_ADDED",
+      "I.b",
+      "dangerous",
+    ],
+    [
+      "type A { a: Int } type B { b: Int } union U = A | B",
+      "type A { a: Int } type B { b: Int } union U = A",
+      "TYPE_REMOVED_FROM_UNION",
+      "U",
+      "breaking",
+    ],
+    [
+      "type A { a: Int } type B { b: Int } union U = A",
+      "type A { a: Int } type B { b: Int } union U = A | B",
+      "TYPE_ADDED_TO_UNION",
+      "U",
+      "dangerous",
+    ],
+    [
+      "interface I { a: Int } type T implements I { a: Int }",
+      "interface I { a: Int } type T { a: Int }",
+      "IMPLEMENTED_INTERFACE_REMOVED",
+      "T",
+      "breaking",
+    ],
+    [
+      "interface I { a: Int } type T { a: Int }",
+      "interface I { a: Int } type T implements I { a: Int }",
+      "IMPLEMENTED_INTERFACE_ADDED",
+      "T",
+      "dangerous",
+    ],
+    [
+      "type T { x: Int }",
+      "type T { x(a: Int!): Int }",
+      "REQUIRED_ARG_ADDED",
+      "T.x(a:)",
+      "breaking",
+    ],
+    ["type T { x(a: Int): Int }", "type T { x: Int }", "ARG_REMOVED", "T.x(a:)", "breaking"],
+    [
+      "type T { x(a: Int): Int }",
+      "type T { x(a: String): Int }",
+      "ARG_CHANGED_KIND",
+      "T.x(a:)",
+      "breaking",
+    ],
+    [
+      "type T { x(a: Int = 1): Int }",
+      "type T { x(a: Int = 2): Int }",
+      "ARG_DEFAULT_VALUE_CHANGE",
+      "T.x(a:)",
+      "dangerous",
+    ],
+    ["directive @d on FIELD", "", "DIRECTIVE_REMOVED", "@d", "breaking"],
+    [
+      "directive @d(a: Int) on FIELD",
+      "directive @d on FIELD",
+      "DIRECTIVE_ARG_REMOVED",
+      "@d(a:)",
+      "breaking",
+    ],
+    [
+      "directive @d on FIELD",
+      "directive @d(a: Int!) on FIELD",
+      "REQUIRED_DIRECTIVE_ARG_ADDED",
+      "@d(a:)",
+      "breaking",
+    ],
+    [
+      "directive @d repeatable on FIELD",
+      "directive @d on FIELD",
+      "DIRECTIVE_REPEATABLE_REMOVED",
+      "@d",
+      "breaking",
+    ],
+    [
+      "directive @d on FIELD | QUERY",
+      "directive @d on FIELD",
+      "DIRECTIVE_LOCATION_REMOVED",
+      "@d",
+      "breaking",
+    ],
+    ["interface I { a: Int }", "interface I { a: Int b: Int }", "FIELD_ADDED", "I.b", "safe"],
+    ["", "directive @d(a: Int) on FIELD", "DIRECTIVE_ADDED", "@d", "safe"],
+  ] as const;
+  for (const [before, after, type, coordinate, severity] of cases) {
+    await t.test(type, () => {
+      const result = analyzeComposedSchemaChanges({
+        baselineSchema: buildSchema(`type Query { ping: String } ${before}`),
+        candidateSchema: buildSchema(`type Query { ping: String } ${after}`),
+      });
+      assert.ok(
+        result.changes.some(
+          (change) =>
+            change.type === type &&
+            change.coordinate === coordinate &&
+            change.severity === severity,
+        ),
+        JSON.stringify(result),
+      );
+      assert.equal(result.summary.totalChanges, result.changes.length);
+    });
+  }
+});
