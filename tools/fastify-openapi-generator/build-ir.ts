@@ -44,7 +44,7 @@ function readOperationId(value: unknown, operationContext: string): string | und
 }
 
 function readJsonSchema(value: unknown, context: string): JsonSchema {
-  return readRecord(value, context) as JsonSchema;
+  return readRecord(value, context);
 }
 
 function readParameterLocation(value: unknown, context: string): ResolvedParameter["in"] {
