@@ -7,15 +7,15 @@ import {
   bigint,
   bytea,
   foreignKey,
-  pgTable,
   primaryKey,
+  snakeCase,
   text,
   timestamp,
   uniqueIndex,
   uuid,
 } from "drizzle-orm/pg-core";
 
-export const graphs = pgTable(
+export const graphs = snakeCase.table(
   "graphs",
   {
     id: uuid()
@@ -44,7 +44,7 @@ export const graphs = pgTable(
   ],
 );
 
-export const graphRevisions = pgTable(
+export const graphRevisions = snakeCase.table(
   "graph_revisions",
   {
     graphId: uuid()
@@ -56,7 +56,7 @@ export const graphRevisions = pgTable(
   (table) => [primaryKey({ columns: [table.graphId, table.revision] })],
 );
 
-export const subgraphs = pgTable(
+export const subgraphs = snakeCase.table(
   "subgraphs",
   {
     id: uuid()
@@ -83,7 +83,7 @@ export const subgraphs = pgTable(
   ],
 );
 
-export const subgraphRevisions = pgTable(
+export const subgraphRevisions = snakeCase.table(
   "subgraph_revisions",
   {
     subgraphId: uuid()
@@ -96,7 +96,7 @@ export const subgraphRevisions = pgTable(
   (table) => [primaryKey({ columns: [table.subgraphId, table.revision] })],
 );
 
-export const subgraphSchemaRevisions = pgTable(
+export const subgraphSchemaRevisions = snakeCase.table(
   "subgraph_schema_revisions",
   {
     subgraphId: uuid()
@@ -112,7 +112,7 @@ export const subgraphSchemaRevisions = pgTable(
   (table) => [primaryKey({ columns: [table.subgraphId, table.revision] })],
 );
 
-export const graphCompositions = pgTable(
+export const graphCompositions = snakeCase.table(
   "graph_compositions",
   {
     graphId: uuid()
@@ -124,7 +124,7 @@ export const graphCompositions = pgTable(
   (table) => [primaryKey({ columns: [table.graphId, table.revision] })],
 );
 
-export const supergraphSchemas = pgTable(
+export const supergraphSchemas = snakeCase.table(
   "supergraph_schemas",
   {
     graphId: uuid()
@@ -146,7 +146,7 @@ export const supergraphSchemas = pgTable(
   ],
 );
 
-export const graphCompositionSubgraphs = pgTable(
+export const graphCompositionSubgraphs = snakeCase.table(
   "graph_composition_subgraphs",
   {
     graphId: uuid()
