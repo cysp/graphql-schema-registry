@@ -27,17 +27,40 @@ runs:
   using: composite
   steps:
     - id: password
-      uses: actions/github-script@ed597411d8f924073f98dfc5c65a23a2325f34cd # v8
+      shell: bash
       env:
-        ACTION_PATH: ${{ github.action_path }}
         NEON_API_KEY: ${{ inputs.api-key }}
         NEON_PROJECT_ID: ${{ inputs.project-id }}
         NEON_HOST: ${{ inputs.host }}
         NEON_DATABASE_NAME: ${{ inputs.database }}
         NEON_ROLE_NAME: ${{ inputs.role }}
-      with:
-        script: |
-          const { pathToFileURL } = await import('node:url');
-          const script = pathToFileURL(`${process.env.ACTION_PATH}/index.mjs`);
-          const { getNeonRolePassword } = await import(script.href);
-          await getNeonRolePassword(core);
+      run: |
+        set -euo pipefail
+        trap 'echo "::error::Neon role password lookup failed" >&2' ERR
+        : "${NEON_API_KEY:?}" "${NEON_PROJECT_ID:?}" "${NEON_HOST:?}"
+        : "${NEON_DATABASE_NAME:?}" "${NEON_ROLE_NAME:?}"
+
+        uri() { jq -rn --arg value "$1" '$value | @uri'; }
+        request() {
+          curl --fail --silent --show-error --max-time 30 --proto '=https' \
+            --header "Authorization: Bearer ${NEON_API_KEY}" \
+            "https://console.neon.tech/api/v2$1"
+        }
+
+        project="/projects/$(uri "$NEON_PROJECT_ID")"
+        endpoints="$(request "$project/endpoints")"
+        branch_id="$(jq -er --arg host "$NEON_HOST" '
+          [.endpoints[] | select(.host == $host and .type == "read_write")]
+          | select(length == 1) | .[0].branch_id
+          | select(type == "string" and length > 0)
+        ' <<< "$endpoints" 2>/dev/null)"
+        branch="$project/branches/$(uri "$branch_id")"
+        request "$branch/databases/$(uri "$NEON_DATABASE_NAME")" >/dev/null
+
+        response="$(request "$branch/roles/$(uri "$NEON_ROLE_NAME")/reveal_password")"
+        password="$(jq -er '
+          .password | select(type == "string" and length > 0)
+          | select(explode | all(. != 0 and . != 10 and . != 13))
+        ' <<< "$response" 2>/dev/null)"
+        printf '::add-mask::%s\n' "${password//%/%25}"
+        printf 'password=%s\n' "$password" >> "$GITHUB_OUTPUT"
