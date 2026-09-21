@@ -1,0 +1,43 @@
+name: Neon role password
+description: Retrieve and mask the current role password for an exact Neon read-write endpoint.
+
+inputs:
+  api-key:
+    description: Neon API credential with access to the project.
+    required: true
+  project-id:
+    description: Neon project ID.
+    required: true
+  host:
+    description: Exact read-write endpoint hostname.
+    required: true
+  database:
+    description: Database to verify on the endpoint branch.
+    required: true
+  role:
+    description: Role whose current password is retrieved.
+    required: true
+
+outputs:
+  password:
+    description: Masked role password for subsequent steps in this job.
+    value: ${{ steps.password.outputs.password }}
+
+runs:
+  using: composite
+  steps:
+    - id: password
+      uses: actions/github-script@ed597411d8f924073f98dfc5c65a23a2325f34cd # v8
+      env:
+        ACTION_PATH: ${{ github.action_path }}
+        NEON_API_KEY: ${{ inputs.api-key }}
+        NEON_PROJECT_ID: ${{ inputs.project-id }}
+        NEON_HOST: ${{ inputs.host }}
+        NEON_DATABASE_NAME: ${{ inputs.database }}
+        NEON_ROLE_NAME: ${{ inputs.role }}
+      with:
+        script: |
+          const { pathToFileURL } = await import('node:url');
+          const script = pathToFileURL(`${process.env.ACTION_PATH}/index.mjs`);
+          const { getNeonRolePassword } = await import(script.href);
+          await getNeonRolePassword(core);
