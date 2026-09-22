@@ -23,7 +23,7 @@
   "dependencies": {
     "@apollo/composition": "2.13.3",
     "@fastify/jwt": "10.0.0",
-    "@fastify/sensible": "6.0.4",
+    "@fastify/sensible": "6.0.5",
     "drizzle-orm": "1.0.0-rc.4",
     "fastify": "5.12.1",
     "fastify-plugin": "5.1.0",
