@@ -79,8 +79,6 @@ jobs:
           PGUSER: postgres
           PGPASSWORD: postgres
         with:
-          pgschema-package-version: v1.9.0
-          pgschema-package: github.com/pgplex/pgschema
           file: db/local.sql
 
       - run: node --run test:integration:coverage
