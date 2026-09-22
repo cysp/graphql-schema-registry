@@ -75,8 +75,10 @@ jobs:
 
       - uses: superfly/flyctl-actions/setup-flyctl@ed8efb33836e8b2096c7fd3ba1c8afe303ebbff1
         with:
-          version: 0.4.26
+          version: 0.4.105
 
-      - run: flyctl deploy --remote-only --config fly.toml
+      - run: |
+          flyctl config validate --config fly.toml
+          flyctl deploy --remote-only --config fly.toml
         env:
           FLY_API_TOKEN: ${{ secrets.FLY_API_TOKEN }}
