@@ -43,8 +43,6 @@ jobs:
           PGUSER: ${{ env.NEON_ROLE_NAME }}
           PGPASSWORD: ${{ steps.neon_create_branch.outputs.password }}
         with:
-          pgschema-package-version: v1.9.0
-          pgschema-package: github.com/pgplex/pgschema
           file: db/neon.sql
 
       - if: ${{ always() && steps.neon_create_branch.outputs.branch_id != '' }}
