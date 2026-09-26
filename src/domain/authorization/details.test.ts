@@ -101,7 +101,7 @@ await test("decodeAuthorizationDetailsClaim", async (t) => {
         scope: "graph:manage",
         type: authorizationDetailsType,
       });
-    }, /Invalid input/);
+    }, /Invalid input/u);
   });
 
   await t.test("throws when graph_id is missing", () => {
@@ -112,7 +112,7 @@ await test("decodeAuthorizationDetailsClaim", async (t) => {
           type: authorizationDetailsType,
         },
       ]);
-    }, /Invalid input/);
+    }, /Invalid input/u);
   });
 
   await t.test("throws when subgraph_id is missing for subgraph_schema grants", () => {
@@ -124,7 +124,7 @@ await test("decodeAuthorizationDetailsClaim", async (t) => {
           type: authorizationDetailsType,
         },
       ]);
-    }, /Invalid input/);
+    }, /Invalid input/u);
   });
 
   await t.test("throws when graph_id or subgraph_id are empty strings", () => {
@@ -136,7 +136,7 @@ await test("decodeAuthorizationDetailsClaim", async (t) => {
           type: authorizationDetailsType,
         },
       ]);
-    }, /Invalid input/);
+    }, /Invalid input/u);
 
     assert.throws(() => {
       decodeAuthorizationDetailsClaim([
@@ -147,7 +147,7 @@ await test("decodeAuthorizationDetailsClaim", async (t) => {
           type: authorizationDetailsType,
         },
       ]);
-    }, /Invalid input/);
+    }, /Invalid input/u);
   });
 
   await t.test("throws for details with an unexpected type", () => {
@@ -159,6 +159,6 @@ await test("decodeAuthorizationDetailsClaim", async (t) => {
           type: "other-service",
         },
       ]);
-    }, /Invalid input/);
+    }, /Invalid input/u);
   });
 });

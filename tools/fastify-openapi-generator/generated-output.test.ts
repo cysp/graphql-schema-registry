@@ -108,34 +108,34 @@ await test("generated output uses fastify-aligned operation naming", async (t) =
 
     assert.match(
       source,
-      /import type \{ FastifyRouteDefinition \} from "\.\.\/\.\.\/route-types\.ts";/,
+      /import type \{ FastifyRouteDefinition \} from "\.\.\/\.\.\/route-types\.ts";/u,
     );
-    assert.match(source, /export const updateGraphRouteDefinition = \{/);
-    assert.match(source, /schema: \{/);
-    assert.match(source, /params: \{/);
-    assert.match(source, /body: \{/);
-    assert.match(source, /body: \{[\s\S]*"type": "object"/);
-    assert.match(source, /body: \{[\s\S]*"additionalProperties": false/);
-    assert.match(source, /response: \{[\s\S]*200: \{[\s\S]*400: \{\},[\s\S]*401: \{\},/);
-    assert.doesNotMatch(source, /const updateGraphParamsSchema = /);
-    assert.doesNotMatch(source, /const updateGraphHeadersSchema = /);
-    assert.doesNotMatch(source, /const updateGraphBodySchema = /);
-    assert.doesNotMatch(source, /const updateGraph200ResponseSchema = /);
-    assert.match(source, /\} as const satisfies FastifyRouteDefinition;/);
-    assert.doesNotMatch(source, /from "\.\.\/components\//);
+    assert.match(source, /export const updateGraphRouteDefinition = \{/u);
+    assert.match(source, /schema: \{/u);
+    assert.match(source, /params: \{/u);
+    assert.match(source, /body: \{/u);
+    assert.match(source, /body: \{[\s\S]*"type": "object"/u);
+    assert.match(source, /body: \{[\s\S]*"additionalProperties": false/u);
+    assert.match(source, /response: \{[\s\S]*200: \{[\s\S]*400: \{\},[\s\S]*401: \{\},/u);
+    assert.doesNotMatch(source, /const updateGraphParamsSchema = /u);
+    assert.doesNotMatch(source, /const updateGraphHeadersSchema = /u);
+    assert.doesNotMatch(source, /const updateGraphBodySchema = /u);
+    assert.doesNotMatch(source, /const updateGraph200ResponseSchema = /u);
+    assert.match(source, /\} as const satisfies FastifyRouteDefinition;/u);
+    assert.doesNotMatch(source, /from "\.\.\/components\//u);
     assert.equal(generatedFileMap.has("components/graph.ts"), false);
   });
 
   await t.test("operations index exports only the catalog", () => {
     const source = getGeneratedFile(generatedFileMap, "operations/index.ts");
 
-    assert.match(source, /import \{ listGraphsRouteDefinition \} from "\.\/list-graphs\.ts";/);
-    assert.match(source, /import \{ updateGraphRouteDefinition \} from "\.\/update-graph\.ts";/);
-    assert.doesNotMatch(source, /export \{/);
-    assert.match(source, /export const operationRouteDefinitions = \{/);
-    assert.doesNotMatch(source, /export type FastifyOperationRouteDefinitions/);
-    assert.match(source, /\["listGraphs"\]: listGraphsRouteDefinition,/);
-    assert.match(source, /\["updateGraph"\]: updateGraphRouteDefinition,/);
+    assert.match(source, /import \{ listGraphsRouteDefinition \} from "\.\/list-graphs\.ts";/u);
+    assert.match(source, /import \{ updateGraphRouteDefinition \} from "\.\/update-graph\.ts";/u);
+    assert.doesNotMatch(source, /export \{/u);
+    assert.match(source, /export const operationRouteDefinitions = \{/u);
+    assert.doesNotMatch(source, /export type FastifyOperationRouteDefinitions/u);
+    assert.match(source, /\["listGraphs"\]: listGraphsRouteDefinition,/u);
+    assert.match(source, /\["updateGraph"\]: updateGraphRouteDefinition,/u);
   });
 
   await t.test(
@@ -187,11 +187,11 @@ await test("generated output uses fastify-aligned operation naming", async (t) =
 
       const source = getGeneratedFile(fileMap, "operations/get-health.ts");
 
-      assert.match(source, /"enum": \[\s*"ok",\s*"warn",\s*"error"\s*\]/);
-      assert.match(source, /"additionalProperties": \{/);
-      assert.match(source, /"additionalProperties": \{[\s\S]*"type": "string"/);
-      assert.match(source, /"type": \[\s*"string",\s*"null"\s*\]/);
-      assert.match(source, /response: \{[\s\S]*200: \{/);
+      assert.match(source, /"enum": \[\s*"ok",\s*"warn",\s*"error"\s*\]/u);
+      assert.match(source, /"additionalProperties": \{/u);
+      assert.match(source, /"additionalProperties": \{[\s\S]*"type": "string"/u);
+      assert.match(source, /"type": \[\s*"string",\s*"null"\s*\]/u);
+      assert.match(source, /response: \{[\s\S]*200: \{/u);
     },
   );
 
@@ -216,7 +216,7 @@ await test("generated output uses fastify-aligned operation naming", async (t) =
 
     const source = getGeneratedFile(fileMap, "operations/index.ts");
 
-    assert.match(source, /\["__proto__"\]: __proto__RouteDefinition,/);
+    assert.match(source, /\["__proto__"\]: __proto__RouteDefinition,/u);
   });
 
   await t.test("throws when operation file paths collide after kebab-case normalization", () => {

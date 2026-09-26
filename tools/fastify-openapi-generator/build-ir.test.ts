@@ -181,7 +181,7 @@ await test("buildOpenApiOperations", async (t) => {
         buildOpenApiOperations(document);
       },
       {
-        message: /requestBody must set required: true when a request body is defined/,
+        message: /requestBody must set required: true when a request body is defined/u,
       },
     );
   });
@@ -332,7 +332,7 @@ await test("buildOpenApiOperations", async (t) => {
         buildOpenApiOperations(document);
       },
       {
-        message: /unsupported parameter location "cookie"/,
+        message: /unsupported parameter location "cookie"/u,
       },
     );
   });
@@ -363,7 +363,7 @@ await test("buildOpenApiOperations", async (t) => {
         buildOpenApiOperations(document);
       },
       {
-        message: /must be a valid TypeScript identifier/,
+        message: /must be a valid TypeScript identifier/u,
       },
     );
   });
@@ -401,7 +401,7 @@ await test("buildOpenApiOperations", async (t) => {
         buildOpenApiOperations(document);
       },
       {
-        message: /parameters\[0\]\.schema must be an object/,
+        message: /parameters\[0\]\.schema must be an object/u,
       },
     );
   });
@@ -535,7 +535,7 @@ await test("buildOpenApiOperations", async (t) => {
       },
       {
         message:
-          /path template parameters must match declared path parameters; missing path parameter declarations for: widgetId/,
+          /path template parameters must match declared path parameters; missing path parameter declarations for: widgetId/u,
       },
     );
   });
@@ -577,7 +577,7 @@ await test("buildOpenApiOperations", async (t) => {
       },
       {
         message:
-          /path template parameters must match declared path parameters; declared path parameters not present in template: widgetId/,
+          /path template parameters must match declared path parameters; declared path parameters not present in template: widgetId/u,
       },
     );
   });

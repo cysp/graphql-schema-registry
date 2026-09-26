@@ -199,8 +199,8 @@ await test("[integration] supergraph schema routes integration with postgres", a
       assert.equal(response.statusCode, 200);
       assert.equal(response.headers["content-type"], "text/plain; charset=utf-8");
       assert.equal(response.headers.etag, formatStrongETag(graph.id, 1));
-      assert.match(response.body, /join__Graph/);
-      assert.match(response.body, /inventory\.example\.com\/graphql/);
+      assert.match(response.body, /join__Graph/u);
+      assert.match(response.body, /inventory\.example\.com\/graphql/u);
     } finally {
       await fixture.close();
     }
@@ -327,8 +327,8 @@ await test("[integration] supergraph schema routes integration with postgres", a
 
         assert.equal(response.statusCode, 200);
         assert.equal(response.headers.etag, formatStrongETag(graph.id, 1));
-        assert.match(response.body, /inventory\.example\.com\/graphql/);
-        assert.doesNotMatch(response.body, /warehouse\.example\.com\/graphql/);
+        assert.match(response.body, /inventory\.example\.com\/graphql/u);
+        assert.doesNotMatch(response.body, /warehouse\.example\.com\/graphql/u);
       } finally {
         await fixture.close();
       }

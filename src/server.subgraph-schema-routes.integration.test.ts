@@ -154,7 +154,7 @@ await test("[integration] subgraph schema routes integration with postgres", asy
           url: "/v1/graphs/catalog/subgraphs/inventory/schema.graphqls",
         });
         assert.equal(getPublishedSchemaResponse.statusCode, 200);
-        assert.match(String(getPublishedSchemaResponse.headers["content-type"]), /^text\/plain\b/);
+        assert.match(String(getPublishedSchemaResponse.headers["content-type"]), /^text\/plain\b/u);
         assert.equal(getPublishedSchemaResponse.headers.etag, firstSchemaEtag);
         assert.equal(getPublishedSchemaResponse.body, normalizeSchemaSdl(firstSchemaSdl));
 
