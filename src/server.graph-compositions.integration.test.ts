@@ -187,8 +187,8 @@ await test("[integration] graph composition integration with postgres", async (t
         WHERE graph_id = ${createdGraph.id}
       `;
       assert.ok(supergraphSchemaRow);
-      assert.match(supergraphSchemaRow.supergraphSdl, /join__Graph/);
-      assert.match(supergraphSchemaRow.supergraphSdl, /inventory\.example\.com\/graphql/);
+      assert.match(supergraphSchemaRow.supergraphSdl, /join__Graph/u);
+      assert.match(supergraphSchemaRow.supergraphSdl, /inventory\.example\.com\/graphql/u);
     } finally {
       await fixture.close();
     }

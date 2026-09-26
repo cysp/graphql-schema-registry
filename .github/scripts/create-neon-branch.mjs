@@ -46,6 +46,7 @@ const role = requireEnv("NEON_ROLE_NAME");
 const parentBranch = process.env.NEON_PARENT_BRANCH ?? "";
 const expiresAt = process.env.NEON_EXPIRES_AT ?? "";
 const sslMode = process.env.NEON_SSLMODE ?? "require";
+// oxlint-disable-next-line unicorn/prefer-number-coercion -- Preserve decimal-prefix parsing of the existing workflow input.
 const suspendTimeoutSeconds = Number.parseInt(process.env.NEON_SUSPEND_TIMEOUT ?? "0", 10);
 
 const defaultHeaders = {

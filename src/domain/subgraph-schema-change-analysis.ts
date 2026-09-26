@@ -358,7 +358,7 @@ function requireGroup(
 function toFieldCoordinateFromDescription(change: GraphqlSchemaChange): string {
   const match = mustMatch(
     change.description.match(
-      /^(?<typeName>[_A-Za-z][_0-9A-Za-z]*)\.(?<fieldName>[_A-Za-z][_0-9A-Za-z]*)/,
+      /^(?<typeName>[_A-Za-z][_0-9A-Za-z]*)\.(?<fieldName>[_A-Za-z][_0-9A-Za-z]*)/u,
     ),
     change,
   );
@@ -371,7 +371,7 @@ function toFieldCoordinateFromDescription(change: GraphqlSchemaChange): string {
 function toFieldArgumentCoordinateFromDescription(change: GraphqlSchemaChange): string {
   const match = mustMatch(
     change.description.match(
-      /^(?<typeName>[_A-Za-z][_0-9A-Za-z]*)\.(?<fieldName>[_A-Za-z][_0-9A-Za-z]*) arg (?<argName>[_A-Za-z][_0-9A-Za-z]*) /,
+      /^(?<typeName>[_A-Za-z][_0-9A-Za-z]*)\.(?<fieldName>[_A-Za-z][_0-9A-Za-z]*) arg (?<argName>[_A-Za-z][_0-9A-Za-z]*) /u,
     ),
     change,
   );
@@ -384,7 +384,7 @@ function toFieldArgumentCoordinateFromDescription(change: GraphqlSchemaChange): 
 
 function deriveTypeRemovedCoordinate(change: GraphqlSchemaChange): string {
   const standardScalarMatch = change.description.match(
-    /^Standard scalar (?<typeName>[_A-Za-z][_0-9A-Za-z]*) was removed/,
+    /^Standard scalar (?<typeName>[_A-Za-z][_0-9A-Za-z]*) was removed/u,
   );
   const standardScalarTypeName = standardScalarMatch?.groups?.["typeName"];
   if (standardScalarTypeName) {
@@ -392,7 +392,7 @@ function deriveTypeRemovedCoordinate(change: GraphqlSchemaChange): string {
   }
 
   const match = mustMatch(
-    change.description.match(/^(?<typeName>[_A-Za-z][_0-9A-Za-z]*) was removed\.$/),
+    change.description.match(/^(?<typeName>[_A-Za-z][_0-9A-Za-z]*) was removed\.$/u),
     change,
   );
   return requireGroup(match, "typeName", change, "type");
@@ -400,7 +400,7 @@ function deriveTypeRemovedCoordinate(change: GraphqlSchemaChange): string {
 
 function deriveTypeChangedKindCoordinate(change: GraphqlSchemaChange): string {
   const match = mustMatch(
-    change.description.match(/^(?<typeName>[_A-Za-z][_0-9A-Za-z]*) changed from /),
+    change.description.match(/^(?<typeName>[_A-Za-z][_0-9A-Za-z]*) changed from /u),
     change,
   );
   return requireGroup(match, "typeName", change, "type");
@@ -409,7 +409,7 @@ function deriveTypeChangedKindCoordinate(change: GraphqlSchemaChange): string {
 function deriveUnionCoordinate(change: GraphqlSchemaChange): string {
   const match = mustMatch(
     change.description.match(
-      /^[^ ]+ was (?:removed from|added to) union type (?<unionName>[_A-Za-z][_0-9A-Za-z]*)\.$/,
+      /^[^ ]+ was (?:removed from|added to) union type (?<unionName>[_A-Za-z][_0-9A-Za-z]*)\.$/u,
     ),
     change,
   );
@@ -419,7 +419,7 @@ function deriveUnionCoordinate(change: GraphqlSchemaChange): string {
 function deriveEnumValueCoordinate(change: GraphqlSchemaChange): string {
   const match = mustMatch(
     change.description.match(
-      /^(?<valueName>[_A-Za-z][_0-9A-Za-z]*) was (?:removed from|added to) enum type (?<enumName>[_A-Za-z][_0-9A-Za-z]*)\.$/,
+      /^(?<valueName>[_A-Za-z][_0-9A-Za-z]*) was (?:removed from|added to) enum type (?<enumName>[_A-Za-z][_0-9A-Za-z]*)\.$/u,
     ),
     change,
   );
@@ -431,7 +431,7 @@ function deriveEnumValueCoordinate(change: GraphqlSchemaChange): string {
 function deriveInputFieldCoordinate(change: GraphqlSchemaChange): string {
   const match = mustMatch(
     change.description.match(
-      /^An? (?:required|optional) field (?<fieldName>[_A-Za-z][_0-9A-Za-z]*) on input type (?<typeName>[_A-Za-z][_0-9A-Za-z]*) was added\.$/,
+      /^An? (?:required|optional) field (?<fieldName>[_A-Za-z][_0-9A-Za-z]*) on input type (?<typeName>[_A-Za-z][_0-9A-Za-z]*) was added\.$/u,
     ),
     change,
   );
@@ -444,9 +444,9 @@ function deriveImplementedInterfaceCoordinate(change: GraphqlSchemaChange): stri
   const match = mustMatch(
     change.type === DangerousChangeType.IMPLEMENTED_INTERFACE_ADDED
       ? change.description.match(
-          / added to interfaces implemented by (?<typeName>[_A-Za-z][_0-9A-Za-z]*)\.$/,
+          / added to interfaces implemented by (?<typeName>[_A-Za-z][_0-9A-Za-z]*)\.$/u,
         )
-      : change.description.match(/^(?<typeName>[_A-Za-z][_0-9A-Za-z]*) /),
+      : change.description.match(/^(?<typeName>[_A-Za-z][_0-9A-Za-z]*) /u),
     change,
   );
   return requireGroup(match, "typeName", change, "interface implementation");
@@ -455,7 +455,7 @@ function deriveImplementedInterfaceCoordinate(change: GraphqlSchemaChange): stri
 function deriveFieldArgumentAddedCoordinate(change: GraphqlSchemaChange): string {
   const match = mustMatch(
     change.description.match(
-      /^An? (?:required|optional) arg (?<argName>[_A-Za-z][_0-9A-Za-z]*) on (?<typeName>[_A-Za-z][_0-9A-Za-z]*)\.(?<fieldName>[_A-Za-z][_0-9A-Za-z]*) was added\.$/,
+      /^An? (?:required|optional) arg (?<argName>[_A-Za-z][_0-9A-Za-z]*) on (?<typeName>[_A-Za-z][_0-9A-Za-z]*)\.(?<fieldName>[_A-Za-z][_0-9A-Za-z]*) was added\.$/u,
     ),
     change,
   );
@@ -467,7 +467,7 @@ function deriveFieldArgumentAddedCoordinate(change: GraphqlSchemaChange): string
 
 function deriveDirectiveCoordinate(change: GraphqlSchemaChange): string {
   const directiveRemovedMatch = change.description.match(
-    /from (?<directiveName>[_A-Za-z][_0-9A-Za-z]*)\.$/,
+    /from (?<directiveName>[_A-Za-z][_0-9A-Za-z]*)\.$/u,
   );
   const directiveName = directiveRemovedMatch?.groups?.["directiveName"];
   if (directiveName) {
@@ -475,7 +475,7 @@ function deriveDirectiveCoordinate(change: GraphqlSchemaChange): string {
   }
 
   const simpleDirectiveMatch = mustMatch(
-    change.description.match(/^(?<directiveName>[_A-Za-z][_0-9A-Za-z]*) was removed\.$/),
+    change.description.match(/^(?<directiveName>[_A-Za-z][_0-9A-Za-z]*) was removed\.$/u),
     change,
   );
   return `@${requireGroup(simpleDirectiveMatch, "directiveName", change, "directive")}`;
@@ -484,7 +484,7 @@ function deriveDirectiveCoordinate(change: GraphqlSchemaChange): string {
 function deriveDirectiveArgumentRemovedCoordinate(change: GraphqlSchemaChange): string {
   const match = mustMatch(
     change.description.match(
-      /^(?<argName>[_A-Za-z][_0-9A-Za-z]*) was removed from (?<directiveName>[_A-Za-z][_0-9A-Za-z]*)\.$/,
+      /^(?<argName>[_A-Za-z][_0-9A-Za-z]*) was removed from (?<directiveName>[_A-Za-z][_0-9A-Za-z]*)\.$/u,
     ),
     change,
   );
@@ -496,7 +496,7 @@ function deriveDirectiveArgumentRemovedCoordinate(change: GraphqlSchemaChange): 
 function deriveRequiredDirectiveArgumentAddedCoordinate(change: GraphqlSchemaChange): string {
   const match = mustMatch(
     change.description.match(
-      /^A required arg (?<argName>[_A-Za-z][_0-9A-Za-z]*) on directive (?<directiveName>[_A-Za-z][_0-9A-Za-z]*) was added\.$/,
+      /^A required arg (?<argName>[_A-Za-z][_0-9A-Za-z]*) on directive (?<directiveName>[_A-Za-z][_0-9A-Za-z]*) was added\.$/u,
     ),
     change,
   );

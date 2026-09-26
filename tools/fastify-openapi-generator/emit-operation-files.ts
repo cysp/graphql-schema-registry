@@ -45,9 +45,7 @@ function renderOperationRouteDefinitionSection(operation: NormalizedOperation): 
   for (const [statusCode, schema] of Object.entries(operation.schema.response)) {
     lines.push(...renderSchemaPropertyLines(statusCode, schema ?? {}, 6));
   }
-  lines.push("    },");
-  lines.push("  },");
-  lines.push("} as const satisfies FastifyRouteDefinition;");
+  lines.push("    },", "  },", "} as const satisfies FastifyRouteDefinition;");
 
   return lines;
 }

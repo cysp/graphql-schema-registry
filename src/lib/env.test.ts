@@ -44,7 +44,7 @@ await test("parseEnv HOST", async (t) => {
       withDefaultEnv({
         HOST: "   ",
       }),
-      /HOST: Too small/,
+      /HOST: Too small/u,
     );
   });
 });
@@ -71,7 +71,7 @@ await test("parseEnv PORT", async (t) => {
       withDefaultEnv({
         PORT: "abc",
       }),
-      /PORT: Invalid input/,
+      /PORT: Invalid input/u,
     );
   });
 
@@ -80,7 +80,7 @@ await test("parseEnv PORT", async (t) => {
       withDefaultEnv({
         PORT: "70000",
       }),
-      /PORT: Too big/,
+      /PORT: Too big/u,
     );
   });
 });
@@ -141,7 +141,7 @@ await test("parseEnv JWT verification config", async (t) => {
         AUTH_JWT_PUBLIC_KEY_PATH: "/run/secrets/service-public-key.pem",
         AUTH_JWT_AUDIENCE: "graphql-schema-registry",
       }),
-      /AUTH_JWT_ISSUER: AUTH_JWT_ISSUER is required when AUTH_JWT_PUBLIC_KEY_PATH is set/,
+      /AUTH_JWT_ISSUER: AUTH_JWT_ISSUER is required when AUTH_JWT_PUBLIC_KEY_PATH is set/u,
     );
   });
 
@@ -151,7 +151,7 @@ await test("parseEnv JWT verification config", async (t) => {
         AUTH_JWT_PUBLIC_KEY_PATH: "/run/secrets/service-public-key.pem",
         AUTH_JWT_ISSUER: "https://auth.example.com",
       }),
-      /AUTH_JWT_AUDIENCE: AUTH_JWT_AUDIENCE is required when AUTH_JWT_PUBLIC_KEY_PATH is set/,
+      /AUTH_JWT_AUDIENCE: AUTH_JWT_AUDIENCE is required when AUTH_JWT_PUBLIC_KEY_PATH is set/u,
     );
   });
 
@@ -160,7 +160,7 @@ await test("parseEnv JWT verification config", async (t) => {
       withDefaultEnv({
         AUTH_JWT_ISSUER: "https://auth.example.com",
       }),
-      /AUTH_JWT_PUBLIC_KEY_PATH: AUTH_JWT_PUBLIC_KEY_PATH is required when AUTH_JWT_ISSUER is set/,
+      /AUTH_JWT_PUBLIC_KEY_PATH: AUTH_JWT_PUBLIC_KEY_PATH is required when AUTH_JWT_ISSUER is set/u,
     );
   });
 
@@ -169,7 +169,7 @@ await test("parseEnv JWT verification config", async (t) => {
       withDefaultEnv({
         AUTH_JWT_AUDIENCE: "graphql-schema-registry",
       }),
-      /AUTH_JWT_PUBLIC_KEY_PATH: AUTH_JWT_PUBLIC_KEY_PATH is required when AUTH_JWT_AUDIENCE is set/,
+      /AUTH_JWT_PUBLIC_KEY_PATH: AUTH_JWT_PUBLIC_KEY_PATH is required when AUTH_JWT_AUDIENCE is set/u,
     );
   });
 });

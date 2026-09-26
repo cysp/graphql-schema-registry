@@ -47,7 +47,7 @@ export function assertProblemResponse(
 ): void {
   assert.equal(response.statusCode, status);
   const contentType = requireStringHeader(response.headers["content-type"], "content-type");
-  assert.match(contentType, /^application\/problem\+json\b/);
+  assert.match(contentType, /^application\/problem\+json\b/u);
   assert.deepEqual(JSON.parse(response.body) as unknown, {
     type: "about:blank",
     status,

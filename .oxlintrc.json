@@ -43,6 +43,13 @@
       {
         "checkArguments": false
       }
+    ],
+    "node/no-top-level-await": "off",
+    "eslint/no-use-before-define": [
+      "error",
+      {
+        "functions": false
+      }
     ]
   }
 }

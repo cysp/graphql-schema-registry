@@ -40,7 +40,7 @@ await test("optionalNonBlankString", async (t) => {
         });
       },
       {
-        message: /Invalid input/,
+        message: /Invalid input/u,
       },
     );
   });

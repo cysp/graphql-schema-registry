@@ -1,11 +1,11 @@
-const identifierPattern = /^[A-Za-z_][A-Za-z0-9_]*$/;
+const identifierPattern = /^[A-Za-z_][A-Za-z0-9_]*$/u;
 
 function splitWords(value: string): string[] {
   return value
-    .replaceAll(/([a-z0-9])([A-Z])/g, "$1 $2")
-    .replaceAll(/[^A-Za-z0-9]+/g, " ")
+    .replaceAll(/([a-z0-9])([A-Z])/gu, "$1 $2")
+    .replaceAll(/[^A-Za-z0-9]+/gu, " ")
     .trim()
-    .split(/\s+/)
+    .split(/\s+/u)
     .filter(Boolean);
 }
 
@@ -23,7 +23,7 @@ export function isValidIdentifier(value: string): boolean {
 }
 
 export function toFastifyPath(openApiPath: string): string {
-  return openApiPath.replaceAll(/\{([^}]+)\}/g, ":$1");
+  return openApiPath.replaceAll(/\{([^}]+)\}/gu, ":$1");
 }
 
 export function toKebabCaseFileStem(value: string): string {

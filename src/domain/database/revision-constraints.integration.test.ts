@@ -35,7 +35,7 @@ await test("[integration] revision foreign keys", async (t) => {
           SET current_revision = 2
           WHERE id = ${graphId}
         `,
-        /graphs_current_revision_fkey/,
+        /graphs_current_revision_fkey/u,
       );
     } finally {
       await integrationDatabase.close();
@@ -78,7 +78,7 @@ await test("[integration] revision foreign keys", async (t) => {
           SET current_revision = 2
           WHERE id = ${subgraphId}
         `,
-        /subgraphs_current_revision_fkey/,
+        /subgraphs_current_revision_fkey/u,
       );
     } finally {
       await integrationDatabase.close();
@@ -130,7 +130,7 @@ await test("[integration] revision foreign keys", async (t) => {
           SET current_schema_revision = 2
           WHERE id = ${subgraphId}
         `,
-        /violates foreign key constraint/,
+        /violates foreign key constraint/u,
       );
     } finally {
       await integrationDatabase.close();

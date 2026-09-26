@@ -118,7 +118,7 @@ function mergeParameters(
 function readPathTemplateParameterNames(openApiPath: string): string[] {
   const parameterNames: string[] = [];
 
-  for (const match of openApiPath.matchAll(/\{([^}]+)\}/g)) {
+  for (const match of openApiPath.matchAll(/\{([^}]+)\}/gu)) {
     const parameterName = match[1];
     if (parameterName !== undefined) {
       parameterNames.push(parameterName);
@@ -278,7 +278,7 @@ function readResponseSchemas(
   const responseSchemas = Object.entries(responses)
     .filter(([, responseValue]) => responseValue !== undefined)
     .map(([statusCode, responseValue]) => {
-      if (!/^[0-9]{3}$/.test(statusCode)) {
+      if (!/^[0-9]{3}$/u.test(statusCode)) {
         throw new GeneratorError(
           `${operationContext}.responses has unsupported status key "${statusCode}". Use a three-digit HTTP status code.`,
         );
