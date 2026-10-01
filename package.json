@@ -29,7 +29,7 @@
     "fastify-plugin": "6.0.0",
     "graphql": "16.14.2",
     "postgres": "3.4.9",
-    "zod": "4.3.6"
+    "zod": "4.6.5"
   },
   "devDependencies": {
     "@apidevtools/json-schema-ref-parser": "16.0.3",
