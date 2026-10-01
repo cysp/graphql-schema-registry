@@ -9,8 +9,8 @@ importers:
   .:
     dependencies:
       '@apollo/composition':
-        specifier: 2.13.3
-        version: 2.13.3(graphql@16.14.2)
+        specifier: 2.14.4
+        version: 2.14.4(graphql@16.14.2)
       '@fastify/jwt':
         specifier: 10.2.2
         version: 10.2.2
@@ -90,20 +90,20 @@ packages:
     peerDependencies:
       '@types/json-schema': ^7.0.15
 
-  '@apollo/composition@2.13.3':
-    resolution: {integrity: sha512-0/vr6vbk1BynEKY6/UV0SZUHBV33p5Ok0y6RhkNnX5BA+ysyOkcyTLPlEHo+ce62nqWx4ml3iOxeKIEHqbKelQ==}
+  '@apollo/composition@2.14.4':
+    resolution: {integrity: sha512-3/SOH5Rlnvwm6/SnL8doPFrL+FlJwuq+hIDO2M2t/b1eDNdvTYpl1p5m413Xr0MW1+YiBWB2DxXRme7SKuaksA==}
     engines: {node: '>=18'}
     peerDependencies:
       graphql: ^16.5.0
 
-  '@apollo/federation-internals@2.13.3':
-    resolution: {integrity: sha512-4zHgqznZza5Qx2CZy1qlrh83BB/3Yd8BqD/dmhGzLCvHJQ1LBTyZbWN7xwKs5z5FbxdSPkL5TvPoLm5Rek8/4g==}
+  '@apollo/federation-internals@2.14.4':
+    resolution: {integrity: sha512-z8h/T0N4HROGY8o/l3WQZpj3OKNuPRt14Onm38aaksthDaw8z/nhz426USJVa50ZRU19LIN3RY28dE0tcTmCAQ==}
     engines: {node: '>=18'}
     peerDependencies:
       graphql: ^16.5.0
 
-  '@apollo/query-graphs@2.13.3':
-    resolution: {integrity: sha512-X/bgsIVmamAzd8IFMDo9upO5Oi/uhAZlcBmna6yEFlN0fzdQZMHL5pp1fyzRG1wxCFi3lVjDXw2dc/380uWB9g==}
+  '@apollo/query-graphs@2.14.4':
+    resolution: {integrity: sha512-+1Ro6qDu9A5kUJq0T389rgNixK603J590O8OnVGW45XFdQ1cDIspWwyRIH7YCq7/nqcvS/kxBGu28e1Xsw6LAw==}
     engines: {node: '>=18'}
     peerDependencies:
       graphql: ^16.5.0
@@ -989,8 +989,8 @@ packages:
   es-get-iterator@1.1.3:
     resolution: {integrity: sha512-sPZmqHBe6JIiTfN5q2pEi//TwxmAFHwj/XEuYjTuse78i8KxaqMTTzxPoFKuzRpDpTJ+0NAbpfenkmH2rePtuw==}
 
-  es-object-atoms@1.1.1:
-    resolution: {integrity: sha512-FGgH2h8zKNim9ljj7dankFPcICIK9Cp5bm+c2gQSYePhpaG5+esrLODihIorn+Pe6FGJzWhXQotPv73jTaldXA==}
+  es-object-atoms@1.1.2:
+    resolution: {integrity: sha512-HWcBoN6NileqtSydK2FqHbS/LoDd2pqrnQHLyJzBj4kOp/ky2MWMN694xOfkK8/SnUsW2DH7EfyVlydKCsm1Zw==}
     engines: {node: '>= 0.4'}
 
   esbuild@0.25.12:
@@ -1095,8 +1095,8 @@ packages:
     resolution: {integrity: sha512-NqADB8VjPFLM2V0VvHUewwwsw0ZWBaIdgo+ieHtK3hasLz4qeCRjYcqfB6AQrBggRKppKF8L52/VqdVsO47Dlw==}
     engines: {node: '>= 0.4'}
 
-  hasown@2.0.3:
-    resolution: {integrity: sha512-ej4AhfhfL2Q2zpMmLo7U1Uv9+PyhIZpgQLGT1F9miIGmiCJIoCgSmczFdrc97mWT4kVY72KA+WnnhJ5pghSvSg==}
+  hasown@2.0.4:
+    resolution: {integrity: sha512-T2UbfbBEF32wiepXIsMlTW9+dDYC6wMh/t/vYA4tuOMKqWz/n3vr1NFSxQiyP+zk2mXsoMA/i/7qV6LKut1t1A==}
     engines: {node: '>= 0.4'}
 
   http-errors@2.0.1:
@@ -1398,8 +1398,8 @@ packages:
     resolution: {integrity: sha512-WPS/HvHQTYnHisLo9McqBHOJk2FkHO/tlpvldyrnem4aeQp4hai3gythswg6p01oSoTl58rcpiFAjF2br2Ak2A==}
     engines: {node: '>= 0.4'}
 
-  side-channel@1.1.0:
-    resolution: {integrity: sha512-ZX99e6tRweoUXqR+VBrslhda51Nh5MTQwou5tnUDgbtyM0dBgmhEDtWGP/xbKn6hqfPRHujUNwz5fy/wbbhnpw==}
+  side-channel@1.1.1:
+    resolution: {integrity: sha512-6x6dK6zJdpTzF4sQeNYxwtvBzf6Eg4GtlesS94HOvTudUeyK2WXAaIfmDgsyslYrRBeFIlsi54AYsFGUuhmvrQ==}
     engines: {node: '>= 0.4'}
 
   sonic-boom@4.2.1:
@@ -1480,8 +1480,8 @@ packages:
     resolution: {integrity: sha512-K4jVyjnBdgvc86Y6BkaLZEN933SwYOuBFkdmBu9ZfkcAbdVbpITnDmjvZ/aQjRXQrv5EPkTnD1s39GiiqbngCw==}
     engines: {node: '>= 0.4'}
 
-  which-typed-array@1.1.20:
-    resolution: {integrity: sha512-LYfpUkmqwl0h9A2HL09Mms427Q1RZWuOHsukfVcKRq9q95iQxdw0ix1JQrqbcDR9PH1QDwf5Qo8OZb5lksZ8Xg==}
+  which-typed-array@1.1.24:
+    resolution: {integrity: sha512-wk4Mf4pR5mRP7eYuuTBCIQ9d0ud2Fv2jRLQpfgnRjbOxAFHmjKFValgTpitVKzJJS8ajnYQV2Du1SZ8j6b/EUQ==}
     engines: {node: '>= 0.4'}
 
   xtend@4.0.2:
@@ -1504,13 +1504,13 @@ snapshots:
       js-yaml: 5.4.2
       undici: 8.11.2
 
-  '@apollo/composition@2.13.3(graphql@16.14.2)':
+  '@apollo/composition@2.14.4(graphql@16.14.2)':
     dependencies:
-      '@apollo/federation-internals': 2.13.3(graphql@16.14.2)
-      '@apollo/query-graphs': 2.13.3(graphql@16.14.2)
+      '@apollo/federation-internals': 2.14.4(graphql@16.14.2)
+      '@apollo/query-graphs': 2.14.4(graphql@16.14.2)
       graphql: 16.14.2
 
-  '@apollo/federation-internals@2.13.3(graphql@16.14.2)':
+  '@apollo/federation-internals@2.14.4(graphql@16.14.2)':
     dependencies:
       '@types/uuid': 9.0.8
       chalk: 4.1.2
@@ -1518,9 +1518,9 @@ snapshots:
       js-levenshtein: 1.1.6
       uuid: 9.0.1
 
-  '@apollo/query-graphs@2.13.3(graphql@16.14.2)':
+  '@apollo/query-graphs@2.14.4(graphql@16.14.2)':
     dependencies:
-      '@apollo/federation-internals': 2.13.3(graphql@16.14.2)
+      '@apollo/federation-internals': 2.14.4(graphql@16.14.2)
       deep-equal: 2.2.3
       graphql: 16.14.2
       ts-graphviz: 1.8.2
@@ -1973,10 +1973,10 @@ snapshots:
       object-keys: 1.1.1
       object.assign: 4.1.7
       regexp.prototype.flags: 1.5.4
-      side-channel: 1.1.0
+      side-channel: 1.1.1
       which-boxed-primitive: 1.1.1
       which-collection: 1.0.2
-      which-typed-array: 1.1.20
+      which-typed-array: 1.1.24
 
   define-data-property@1.1.4:
     dependencies:
@@ -2033,7 +2033,7 @@ snapshots:
       isarray: 2.0.5
       stop-iteration-iterator: 1.1.0
 
-  es-object-atoms@1.1.1:
+  es-object-atoms@1.1.2:
     dependencies:
       es-errors: 1.3.0
 
@@ -2154,18 +2154,18 @@ snapshots:
       call-bind-apply-helpers: 1.0.2
       es-define-property: 1.0.1
       es-errors: 1.3.0
-      es-object-atoms: 1.1.1
+      es-object-atoms: 1.1.2
       function-bind: 1.1.2
       get-proto: 1.0.1
       gopd: 1.2.0
       has-symbols: 1.1.0
-      hasown: 2.0.3
+      hasown: 2.0.4
       math-intrinsics: 1.1.0
 
   get-proto@1.0.1:
     dependencies:
       dunder-proto: 1.0.1
-      es-object-atoms: 1.1.1
+      es-object-atoms: 1.1.2
 
   get-tsconfig@4.14.0:
     dependencies:
@@ -2189,7 +2189,7 @@ snapshots:
     dependencies:
       has-symbols: 1.1.0
 
-  hasown@2.0.3:
+  hasown@2.0.4:
     dependencies:
       function-bind: 1.1.2
 
@@ -2206,8 +2206,8 @@ snapshots:
   internal-slot@1.1.0:
     dependencies:
       es-errors: 1.3.0
-      hasown: 2.0.3
-      side-channel: 1.1.0
+      hasown: 2.0.4
+      side-channel: 1.1.1
 
   ipaddr.js@2.5.0: {}
 
@@ -2250,7 +2250,7 @@ snapshots:
       call-bound: 1.0.4
       gopd: 1.2.0
       has-tostringtag: 1.0.2
-      hasown: 2.0.3
+      hasown: 2.0.4
 
   is-set@2.0.3: {}
 
@@ -2345,7 +2345,7 @@ snapshots:
       call-bind: 1.0.9
       call-bound: 1.0.4
       define-properties: 1.2.1
-      es-object-atoms: 1.1.1
+      es-object-atoms: 1.1.2
       has-symbols: 1.1.0
       object-keys: 1.1.1
 
@@ -2524,7 +2524,7 @@ snapshots:
       object-inspect: 1.13.4
       side-channel-map: 1.0.1
 
-  side-channel@1.1.0:
+  side-channel@1.1.1:
     dependencies:
       es-errors: 1.3.0
       object-inspect: 1.13.4
@@ -2623,7 +2623,7 @@ snapshots:
       is-weakmap: 2.0.2
       is-weakset: 2.0.4
 
-  which-typed-array@1.1.20:
+  which-typed-array@1.1.24:
     dependencies:
       available-typed-arrays: 1.0.7
       call-bind: 1.0.9

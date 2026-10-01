@@ -21,7 +21,7 @@
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
-    "@apollo/composition": "2.13.3",
+    "@apollo/composition": "2.14.4",
     "@fastify/jwt": "10.2.2",
     "@fastify/sensible": "6.0.5",
     "drizzle-orm": "1.0.0-rc.4",
