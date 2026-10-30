@@ -13,8 +13,8 @@ WORKDIR /app
 ENV NODE_ENV="production"
 
 # Install pnpm
-ARG PNPM_VERSION=latest
-RUN npm install -g pnpm@$PNPM_VERSION
+COPY package.json ./
+RUN npm install -g "$(node -p 'require("./package.json").packageManager')"
 
 
 # Throw-away build stage to reduce size of final image
@@ -25,7 +25,7 @@ RUN apt-get update -qq && \
     apt-get install --no-install-recommends -y build-essential node-gyp pkg-config python-is-python3
 
 # Install node modules
-COPY .npmrc package.json pnpm-lock.yaml ./
+COPY pnpm-workspace.yaml pnpm-lock.yaml ./
 RUN pnpm install --frozen-lockfile
 
 # Copy application code
