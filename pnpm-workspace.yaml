@@ -10,3 +10,7 @@ pmOnFail: ignore
 
 allowBuilds:
   esbuild: false
+
+autoDedupe: true
+lockfile:
+  includeResolutionSettings: true

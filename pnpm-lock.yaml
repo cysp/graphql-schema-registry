@@ -1,8 +1,12 @@
 lockfileVersion: '9.0'
 
 settings:
+  autoDedupe: true
   autoInstallPeers: false
+  dedupeInjectedDeps: true
+  dedupePeerDependents: true
   excludeLinksFromLockfile: false
+  linkWorkspacePackages: false
 
 importers:
 
@@ -41,7 +45,7 @@ importers:
         version: 16.0.3(@types/json-schema@7.0.15)
       '@fastify/swagger':
         specifier: 9.9.0
-        version: 9.9.0
+        version: 9.9.0(supports-color@7.2.0)
       '@fastify/type-provider-json-schema-to-ts':
         specifier: 5.0.0
         version: 5.0.0
@@ -729,6 +733,11 @@ packages:
 
   ajv-formats@3.0.1:
     resolution: {integrity: sha512-8iUql50EUR+uUcdRQ3HDqa6EVyo3docL8g5WJ3FNcWmu62IbkGUue/pEyLBW8VGKKucTPgqeks4fIU1DA4yowQ==}
+    peerDependencies:
+      ajv: ^8.0.0
+    peerDependenciesMeta:
+      ajv:
+        optional: true
 
   ajv@8.20.0:
     resolution: {integrity: sha512-Thbli+OlOj+iMPYFBVBfJ3OmCAnaSyNn4M1vz9T6Gka5Jt9ba/HIR56joy65tY6kx/FCF5VXNB819Y7/GUrBGA==}
@@ -1649,10 +1658,10 @@ snapshots:
       type-is: 2.1.0
       vary: 1.1.2
 
-  '@fastify/swagger@9.9.0':
+  '@fastify/swagger@9.9.0(supports-color@7.2.0)':
     dependencies:
       fastify-plugin: 6.0.0
-      json-schema-resolver: 3.0.0
+      json-schema-resolver: 3.0.0(supports-color@7.2.0)
       openapi-types: 12.1.3
       rfdc: 1.4.1
       yaml: 2.8.3
@@ -1953,9 +1962,11 @@ snapshots:
 
   cookie@1.1.1: {}
 
-  debug@4.4.3:
+  debug@4.4.3(supports-color@7.2.0):
     dependencies:
       ms: 2.1.3
+    optionalDependencies:
+      supports-color: 7.2.0
 
   deep-equal@2.2.3:
     dependencies:
@@ -2292,9 +2303,9 @@ snapshots:
     dependencies:
       dequal: 2.0.3
 
-  json-schema-resolver@3.0.0:
+  json-schema-resolver@3.0.0(supports-color@7.2.0):
     dependencies:
-      debug: 4.4.3
+      debug: 4.4.3(supports-color@7.2.0)
       fast-uri: 3.1.8
       rfdc: 1.4.1
     transitivePeerDependencies:
